@@ -1,0 +1,236 @@
+{
+  "m_warrior": {
+    "name": "M Warrior",
+    "idle": [
+      "m_warrior_idle_walk1.png",
+      "m_warrior_idle_stand.png",
+      "m_warrior_idle_walk2.png"
+    ],
+    "walk": [
+      "m_warrior_walk_walk1.png",
+      "m_warrior_walk_stand.png",
+      "m_warrior_walk_walk2.png"
+    ]
+  },
+  "f_warrior": {
+    "name": "F Warrior",
+    "idle": [
+      "f_warrior_idle_walk1.png",
+      "f_warrior_idle_stand.png",
+      "f_warrior_idle_walk2.png"
+    ],
+    "walk": [
+      "f_warrior_walk_walk1.png",
+      "f_warrior_walk_stand.png",
+      "f_warrior_walk_walk2.png"
+    ]
+  },
+  "m_mage": {
+    "name": "M Magician",
+    "idle": [
+      "m_mage_idle_walk1.png",
+      "m_mage_idle_stand.png",
+      "m_mage_idle_walk2.png"
+    ],
+    "walk": [
+      "m_mage_walk_walk1.png",
+      "m_mage_walk_stand.png",
+      "m_mage_walk_walk2.png"
+    ]
+  },
+  "f_mage": {
+    "name": "F Magician",
+    "idle": [
+      "f_mage_idle_walk1.png",
+      "f_mage_idle_stand.png",
+      "f_mage_idle_walk2.png"
+    ],
+    "walk": [
+      "f_mage_walk_walk1.png",
+      "f_mage_walk_stand.png",
+      "f_mage_walk_walk2.png"
+    ]
+  },
+  "m_ninja": {
+    "name": "M Ninja",
+    "idle": [
+      "m_ninja_idle_walk1.png",
+      "m_ninja_idle_stand.png",
+      "m_ninja_idle_walk2.png"
+    ],
+    "walk": [
+      "m_ninja_walk_walk1.png",
+      "m_ninja_walk_stand.png",
+      "m_ninja_walk_walk2.png"
+    ]
+  },
+  "f_ninja": {
+    "name": "F Ninja",
+    "idle": [
+      "f_ninja_idle_walk1.png",
+      "f_ninja_idle_stand.png",
+      "f_ninja_idle_walk2.png"
+    ],
+    "walk": [
+      "f_ninja_walk_walk1.png",
+      "f_ninja_walk_stand.png",
+      "f_ninja_walk_walk2.png"
+    ]
+  },
+  "m_samurai": {
+    "name": "M Samurai",
+    "idle": [
+      "m_samurai_idle_walk1.png",
+      "m_samurai_idle_stand.png",
+      "m_samurai_idle_walk2.png"
+    ],
+    "walk": [
+      "m_samurai_walk_walk1.png",
+      "m_samurai_walk_stand.png",
+      "m_samurai_walk_walk2.png"
+    ]
+  },
+  "f_samurai": {
+    "name": "F Samurai",
+    "idle": [
+      "f_samurai_idle_walk1.png",
+      "f_samurai_idle_stand.png",
+      "f_samurai_idle_walk2.png"
+    ],
+    "walk": [
+      "f_samurai_walk_walk1.png",
+      "f_samurai_walk_stand.png",
+      "f_samurai_walk_walk2.png"
+    ]
+  },
+  "paladin": {
+    "name": "Paladin",
+    "idle": [
+      "paladin_idle_walk1.png",
+      "paladin_idle_stand.png",
+      "paladin_idle_walk2.png"
+    ],
+    "walk": [
+      "paladin_walk_walk1.png",
+      "paladin_walk_stand.png",
+      "paladin_walk_walk2.png"
+    ]
+  },
+  "m_monk": {
+    "name": "M Monk",
+    "idle": [
+      "m_monk_idle_walk1.png",
+      "m_monk_idle_stand.png",
+      "m_monk_idle_walk2.png"
+    ],
+    "walk": [
+      "m_monk_walk_walk1.png",
+      "m_monk_walk_stand.png",
+      "m_monk_walk_walk2.png"
+    ]
+  },
+  "f_monk": {
+    "name": "F Monk",
+    "idle": [
+      "f_monk_idle_walk1.png",
+      "f_monk_idle_stand.png",
+      "f_monk_idle_walk2.png"
+    ],
+    "walk": [
+      "f_monk_walk_walk1.png",
+      "f_monk_walk_stand.png",
+      "f_monk_walk_walk2.png"
+    ]
+  },
+  "m_berserker": {
+    "name": "M Berserker",
+    "idle": [
+      "m_berserker_idle_walk1.png",
+      "m_berserker_idle_stand.png",
+      "m_berserker_idle_walk2.png"
+    ],
+    "walk": [
+      "m_berserker_walk_walk1.png",
+      "m_berserker_walk_stand.png",
+      "m_berserker_walk_walk2.png"
+    ]
+  },
+  "f_berserker": {
+    "name": "F Berserker",
+    "idle": [
+      "f_berserker_idle_walk1.png",
+      "f_berserker_idle_stand.png",
+      "f_berserker_idle_walk2.png"
+    ],
+    "walk": [
+      "f_berserker_walk_walk1.png",
+      "f_berserker_walk_stand.png",
+      "f_berserker_walk_walk2.png"
+    ]
+  },
+  "m_dark_knight": {
+    "name": "M Dark Knight",
+    "idle": [
+      "m_dark_knight_idle_walk1.png",
+      "m_dark_knight_idle_stand.png",
+      "m_dark_knight_idle_walk2.png"
+    ],
+    "walk": [
+      "m_dark_knight_walk_walk1.png",
+      "m_dark_knight_walk_stand.png",
+      "m_dark_knight_walk_walk2.png"
+    ]
+  },
+  "f_dark_knight": {
+    "name": "F Dark Knight",
+    "idle": [
+      "f_dark_knight_idle_walk1.png",
+      "f_dark_knight_idle_stand.png",
+      "f_dark_knight_idle_walk2.png"
+    ],
+    "walk": [
+      "f_dark_knight_walk_walk1.png",
+      "f_dark_knight_walk_stand.png",
+      "f_dark_knight_walk_walk2.png"
+    ]
+  },
+  "m_ranger": {
+    "name": "M Ranger",
+    "idle": [
+      "m_ranger_idle_walk1.png",
+      "m_ranger_idle_stand.png",
+      "m_ranger_idle_walk2.png"
+    ],
+    "walk": [
+      "m_ranger_walk_walk1.png",
+      "m_ranger_walk_stand.png",
+      "m_ranger_walk_walk2.png"
+    ]
+  },
+  "m_healer": {
+    "name": "M Healer",
+    "idle": [
+      "m_healer_idle_walk1.png",
+      "m_healer_idle_stand.png",
+      "m_healer_idle_walk2.png"
+    ],
+    "walk": [
+      "m_healer_walk_walk1.png",
+      "m_healer_walk_stand.png",
+      "m_healer_walk_walk2.png"
+    ]
+  },
+  "f_healer": {
+    "name": "F Healer",
+    "idle": [
+      "f_healer_idle_walk1.png",
+      "f_healer_idle_stand.png",
+      "f_healer_idle_walk2.png"
+    ],
+    "walk": [
+      "f_healer_walk_walk1.png",
+      "f_healer_walk_stand.png",
+      "f_healer_walk_walk2.png"
+    ]
+  }
+}

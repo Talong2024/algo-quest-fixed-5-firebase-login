@@ -1,0 +1,5 @@
+res://scripts/chapters/stack/StackGame.gd
+res://scenes/chapters/queue/QueueGame.tscn
+res://scripts/chapters/queue/QueueGame.gd
+res://scenes/world_map/WorldMap.tscn
+res://scripts/world_map/WorldMap.gd

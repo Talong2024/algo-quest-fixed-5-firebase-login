@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoQuest — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08090f;--bg2:#0e1018;--bg3:#151824;--border:#1e2235;--border2:#2a3050;--text:#e8e6f0;--text2:#8a8aaa;--text3:#4a4a6a;--gold:#ffd93d;--blue:#4d96ff;--purple:#c77dff;--green:#6bcb77;--red:#ff6b6b;--font-pixel:'Press Start 2P',monospace;--font-body:'Outfit',sans-serif;--r:10px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.035) 2px,rgba(0,0,0,.035) 4px)}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(77,150,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(77,150,255,.04) 1px,transparent 1px);background-size:48px 48px;animation:gridmove 20s linear infinite}
+@keyframes gridmove{from{background-position:0 0}to{background-position:48px 48px}}
+.glow-blue{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(77,150,255,.12),transparent 70%);top:-200px;left:-100px;pointer-events:none;z-index:0;animation:floatglow 8s ease-in-out infinite}
+.glow-purple{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(199,125,255,.10),transparent 70%);bottom:-150px;right:-100px;pointer-events:none;z-index:0;animation:floatglow 10s ease-in-out infinite reverse}
+@keyframes floatglow{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,20px)}}
+.auth-wrap{position:relative;z-index:1;display:flex;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;overflow:hidden;box-shadow:0 0 80px rgba(0,0,0,.7);width:920px;min-height:580px;animation:cardIn .5s cubic-bezier(.16,1,.3,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.auth-left{flex:1;background:radial-gradient(ellipse 140% 100% at 0% 50%,rgba(77,150,255,.14),transparent 60%),var(--bg3);padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;border-right:1px solid var(--border)}
+.auth-left-logo{font-family:var(--font-pixel);font-size:14px;color:var(--gold);letter-spacing:2px;margin-bottom:8px}
+.auth-left-tagline{font-size:13px;color:var(--text2);line-height:1.6;max-width:240px;margin-bottom:32px}
+.auth-chapters{display:flex;flex-direction:column;gap:12px}
+.auth-chapter-item{display:flex;align-items:center;gap:12px}
+.auth-chapter-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.auth-chapter-name{font-size:13px;font-weight:600;color:var(--text)}
+.auth-chapter-dsa{font-size:11px;color:var(--text3)}
+.auth-left-bottom{font-size:11px;color:var(--text3);line-height:1.7}
+.auth-right{width:420px;padding:44px 36px 36px;display:flex;flex-direction:column}
+.auth-title{font-family:var(--font-pixel);font-size:10px;color:var(--text);letter-spacing:1px;margin-bottom:5px}
+.auth-subtitle{font-size:13px;color:var(--text2);margin-bottom:22px}
+.role-selector{display:flex;gap:10px;margin-bottom:20px}
+.role-btn{flex:1;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;color:var(--text2);text-align:center;cursor:pointer;font-family:var(--font-body);transition:all .2s}
+.role-btn:hover{border-color:var(--border2);color:var(--text)}
+.role-btn.active.student{border-color:rgba(77,150,255,.5);color:var(--blue);background:rgba(77,150,255,.08)}
+.role-btn.active.teacher{border-color:rgba(199,125,255,.5);color:var(--purple);background:rgba(199,125,255,.08)}
+.role-icon{font-size:20px;display:block;margin-bottom:4px}
+.auth-tabs{display:flex;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;border:1px solid var(--border)}
+.auth-tab{flex:1;padding:9px;background:transparent;border-radius:5px;font-size:12px;font-weight:600;color:var(--text2);border:none;cursor:pointer;transition:all .2s;font-family:var(--font-body)}
+.auth-tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.field-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.field{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;font-family:var(--font-body)}
+.field:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(77,150,255,.12)}
+.field.purple:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(199,125,255,.12)}
+.field::placeholder{color:var(--text3)}
+.field-hint{font-size:11px;color:var(--text3);margin-top:-4px;padding-left:2px}
+.btn-submit{width:100%;padding:13px;border-radius:8px;font-size:14px;font-weight:700;color:#fff;border:none;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s;margin-bottom:10px;font-family:var(--font-body)}
+.btn-submit.student{background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 4px 20px rgba(59,130,246,.35)}
+.btn-submit.student:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(59,130,246,.5)}
+.btn-submit.teacher{background:linear-gradient(135deg,#9333ea,#6b21a8);box-shadow:0 4px 20px rgba(147,51,234,.35)}
+.btn-submit.teacher:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(147,51,234,.5)}
+.btn-submit:active{transform:translateY(0)}.btn-submit:disabled{opacity:.5;pointer-events:none}
+.btn-divider{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.btn-divider-line{flex:1;height:1px;background:var(--border)}
+.btn-divider-text{font-size:11px;color:var(--text3)}
+.btn-google{width:100%;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .2s,background .2s;font-family:var(--font-body)}
+.btn-google:hover{border-color:var(--text2);background:var(--bg)}
+.auth-status{min-height:20px;font-size:12px;color:var(--red);margin-top:10px;text-align:center;line-height:1.5}
+.auth-status.ok{color:var(--green)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:720px){.auth-wrap{flex-direction:column;width:95vw;min-height:auto}.auth-left{display:none}.auth-right{width:100%}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="glow-blue"></div>
+<div class="glow-purple"></div>
+
+<div class="auth-wrap">
+  <div class="auth-left">
+    <div>
+      <div class="auth-left-logo">ALGOQUEST</div>
+      <div class="auth-left-tagline">Master Data Structures through epic quests and pixel adventures.</div>
+      <div class="auth-chapters">
+        <div class="auth-chapter-item"><div class="auth-chapter-dot" style="background:#6bcb77"></div><div><div class="auth-chapter-name">🏰 Kingdom Gate</div><div class="auth-chapter-dsa">Queue — FIFO</div></div></div>
+        <div class="auth-chapter-item"><div class="auth-chapter-dot" style="background:#c77dff"></div><div><div class="auth-chapter-name">🗼 Castle of Echoes</div><div class="auth-chapter-dsa">Stack — LIFO</div></div></div>
+        <div class="auth-chapter-item"><div class="auth-chapter-dot" style="background:#ffd93d"></div><div><div class="auth-chapter-name">🚂 Chain Station</div><div class="auth-chapter-dsa">Linked List</div></div></div>
+        <div class="auth-chapter-item"><div class="auth-chapter-dot" style="background:#6bcb77"></div><div><div class="auth-chapter-name">🌲 Oracle's Forest</div><div class="auth-chapter-dsa">BST / Heap</div></div></div>
+        <div class="auth-chapter-item"><div class="auth-chapter-dot" style="background:#4d96ff"></div><div><div class="auth-chapter-name">🗺 Kingdom Roads</div><div class="auth-chapter-dsa">Graph Algorithms</div></div></div>
+      </div>
+    </div>
+    <div class="auth-left-bottom">Learn through gameplay.<br>Track your progress here.</div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-title" id="auth-title">ADVENTURER LOGIN</div>
+    <div class="auth-subtitle" id="auth-subtitle">Sign in to track your progress</div>
+
+    <div class="role-selector">
+      <button class="role-btn active student" id="role-student" onclick="setRole('student')">
+        <span class="role-icon">🧙</span>Student
+      </button>
+      <button class="role-btn" id="role-teacher" onclick="setRole('teacher')">
+        <span class="role-icon">👩‍🏫</span>Teacher
+      </button>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="setMode('login')">Log In</button>
+      <button class="auth-tab" id="tab-reg"   onclick="setMode('register')">Register</button>
+    </div>
+
+    <div class="field-stack">
+      <input class="field" type="email"    id="f-email"   placeholder="Email address"      autocomplete="email">
+      <input class="field" type="password" id="f-pass"    placeholder="Password"           autocomplete="current-password">
+      <input class="field" type="password" id="f-confirm" placeholder="Confirm password"   autocomplete="new-password" style="display:none">
+      <!-- Student registration extras -->
+      <div id="student-reg-fields" style="display:none;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:8px">
+          <input class="field" type="text" id="f-course"  placeholder="Course (e.g. BSIT)" autocomplete="off" style="flex:1">
+          <input class="field" type="text" id="f-section" placeholder="Section (e.g. 2A)"  autocomplete="off" style="width:110px">
+        </div>
+        <input class="field" type="text" id="f-join-code" placeholder="Join code (from your teacher)" autocomplete="off">
+        <div class="field-hint">Your teacher will give you the join code.</div>
+      </div>
+      <!-- Teacher registration code -->
+      <input class="field purple" type="text" id="f-code" placeholder="Teacher registration code" autocomplete="off" style="display:none">
+      <div   class="field-hint"  id="f-code-hint" style="display:none">Ask your administrator for the teacher code.</div>
+    </div>
+
+    <button class="btn-submit student" id="btn-submit" onclick="handleSubmit()">Log In</button>
+
+    <div class="btn-divider" id="google-wrap">
+      <div class="btn-divider-line"></div>
+      <div class="btn-divider-text">or</div>
+      <div class="btn-divider-line"></div>
+    </div>
+    <button class="btn-google" id="btn-google" onclick="handleGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
+      Continue with Google
+    </button>
+    <div class="auth-status" id="auth-status"></div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, TEACHER_CODE, redirectIfAuthed, redirectToDashboard }
+  from "./firebase.js";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword,
+         GoogleAuthProvider, signInWithPopup }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, setDoc, getDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+redirectIfAuthed();
+
+let _mode = "login", _role = "student";
+
+window.setRole = (role) => {
+  _role = role;
+  document.getElementById("role-student").className = "role-btn" + (role==="student"?" active student":"");
+  document.getElementById("role-teacher").className = "role-btn" + (role==="teacher"?" active teacher":"");
+  document.getElementById("btn-submit").className   = "btn-submit " + role;
+  const isTeacher = role === "teacher";
+  document.getElementById("google-wrap").style.display = isTeacher ? "none" : "";
+  document.getElementById("btn-google").style.display  = isTeacher ? "none" : "";
+  updateFields();
+  setStatus("", false);
+};
+
+window.setMode = (mode) => {
+  _mode = mode;
+  document.getElementById("tab-login").classList.toggle("active", mode==="login");
+  document.getElementById("tab-reg").classList.toggle("active",   mode==="register");
+  document.getElementById("auth-subtitle").textContent =
+    mode==="login" ? "Sign in to track your progress" : "Create your account";
+  document.getElementById("auth-title").textContent =
+    (_role==="teacher" ? "TEACHER " : "ADVENTURER ") + mode.toUpperCase();
+  updateFields();
+  setStatus("", false);
+};
+
+function updateFields() {
+  const isReg     = _mode === "register";
+  const isTeacher = _role === "teacher";
+  const isStudent = _role === "student";
+  document.getElementById("f-confirm").style.display         = isReg             ? "" : "none";
+  document.getElementById("student-reg-fields").style.display= isReg && isStudent ? "" : "none";
+  document.getElementById("f-code").style.display            = isReg && isTeacher ? "" : "none";
+  document.getElementById("f-code-hint").style.display       = isReg && isTeacher ? "" : "none";
+}
+
+window.handleSubmit = async () => {
+  const email = document.getElementById("f-email").value.trim();
+  const pass  = document.getElementById("f-pass").value;
+  if (!email || !pass) { setStatus("Please fill in all fields.", true); return; }
+  setBusy(true);
+  try {
+    if (_mode === "login") {
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      await redirectToDashboard(cred.user);
+
+    } else {
+      const confirm = document.getElementById("f-confirm").value;
+      if (pass !== confirm) { setStatus("Passwords do not match.", true); setBusy(false); return; }
+      if (pass.length < 6)  { setStatus("Min 6 characters for password.", true); setBusy(false); return; }
+
+      if (_role === "teacher") {
+        const code = document.getElementById("f-code").value.trim();
+        if (code !== TEACHER_CODE) {
+          setStatus("Invalid teacher code. Contact your administrator.", true);
+          setBusy(false); return;
+        }
+      }
+
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+
+      // Extra fields for students
+      let course = "", section = "", sectionId = "";
+      if (_role === "student") {
+        course  = document.getElementById("f-course").value.trim();
+        section = document.getElementById("f-section").value.trim().toUpperCase();
+        const joinCode = document.getElementById("f-join-code").value.trim().toUpperCase();
+
+        if (!course || !section) {
+          setStatus("Please enter your course and section.", true);
+          setBusy(false);
+          // Delete the just-created auth user to keep things clean
+          await cred.user.delete();
+          return;
+        }
+        if (!joinCode) {
+          setStatus("Please enter the join code from your teacher.", true);
+          setBusy(false);
+          await cred.user.delete();
+          return;
+        }
+
+        // Find section by join code
+        const { collection, query, where, getDocs, addDoc } =
+          await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const q    = query(collection(db, "sections"), where("join_code", "==", joinCode));
+        const snap = await getDocs(q);
+        if (snap.empty) {
+          setStatus("Join code not found. Check with your teacher.", true);
+          setBusy(false);
+          await cred.user.delete();
+          return;
+        }
+        sectionId = snap.docs[0].id;
+
+        // Add student to section
+        await setDoc(
+          doc(db, "sections", sectionId, "students", cred.user.uid),
+          { joined_at: serverTimestamp(), course, section }
+        );
+      }
+
+      // Save user profile
+      await setDoc(doc(db, "users", cred.user.uid), {
+        username:      email.split("@")[0],
+        email,
+        role:          _role,
+        course,
+        section,
+        section_id:    sectionId,
+        title:         "",
+        selected_hero: "",
+        progress:      {},
+        stats: { total_score:0, perfect_clears:0, login_streak:1,
+                 last_login: new Date().toISOString().split("T")[0] },
+        created_at: serverTimestamp(),
+      });
+      await redirectToDashboard(cred.user);
+    }
+  } catch(e) {
+    setStatus(friendlyError(e.code), true);
+    setBusy(false);
+  }
+};
+
+window.handleGoogle = async () => {
+  setBusy(true);
+  try {
+    const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+    const snap = await getDoc(doc(db, "users", cred.user.uid));
+    if (!snap.exists()) {
+      await setDoc(doc(db, "users", cred.user.uid), {
+        username:      cred.user.displayName || cred.user.email.split("@")[0],
+        email:         cred.user.email,
+        role:          "student",
+        title:         "",
+        selected_hero: "",
+        progress:      {},
+        stats: { total_score:0, perfect_clears:0, login_streak:1,
+                 last_login: new Date().toISOString().split("T")[0] },
+        created_at: serverTimestamp(),
+      });
+    }
+    await redirectToDashboard(cred.user);
+  } catch(e) {
+    setStatus(friendlyError(e.code), true);
+    setBusy(false);
+  }
+};
+
+function setStatus(msg, err) {
+  const el = document.getElementById("auth-status");
+  el.textContent = msg;
+  el.className   = "auth-status" + (err ? "" : " ok");
+}
+function setBusy(busy) {
+  const btn = document.getElementById("btn-submit");
+  btn.disabled  = busy;
+  btn.innerHTML = busy ? '<span class="spinner"></span>Please wait…'
+                       : (_mode==="login" ? "Log In" : "Create Account");
+}
+function friendlyError(code) {
+  return ({
+    "auth/user-not-found":      "No account found with that email.",
+    "auth/wrong-password":      "Incorrect password.",
+    "auth/invalid-credential":  "Incorrect email or password.",
+    "auth/email-already-in-use":"That email is already registered.",
+    "auth/weak-password":       "Password must be at least 6 characters.",
+    "auth/invalid-email":       "Please enter a valid email.",
+    "auth/popup-closed-by-user":"Google sign-in was cancelled.",
+    "auth/too-many-requests":   "Too many attempts — try again later.",
+  })[code] || "Something went wrong. Please try again.";
+}
+document.getElementById("f-pass").addEventListener("keydown", e => {
+  if (e.key === "Enter") window.handleSubmit();
+});
+</script>
+</body>
+</html>

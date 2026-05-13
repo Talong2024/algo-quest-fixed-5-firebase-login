@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://b5rh1anr7e4j6"]
+
+[ext_resource type="Script" uid="uid://c3ry523fwb0vg" path="res://scripts/chapters/stack/StackVisualizer.gd" id="1"]
+
+[node name="StackVisualizer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")

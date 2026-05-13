@@ -1,0 +1,85 @@
+[gd_scene load_steps=2 format=3 uid="uid://bxeus2xnlijpa"]
+
+[ext_resource type="Script" uid="uid://uvid4ylrmejl" path="res://scripts/main_menu/MainMenu.gd" id="1"]
+
+[node name="MainMenu" type="Node2D"]
+script = ExtResource("1")
+
+[node name="VideoPlayer" type="VideoStreamPlayer" parent="."]
+z_index = -1
+offset_right = 1280.0
+offset_bottom = 720.0
+expand = true
+loop = true
+
+[node name="Overlay" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0, 0, 0.05, 0.55)
+
+[node name="TitleLabel" type="Label" parent="."]
+z_index = 2
+offset_left = 200.0
+offset_top = 140.0
+offset_right = 1080.0
+offset_bottom = 230.0
+text = "AlgoQuest"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="."]
+z_index = 2
+offset_left = 200.0
+offset_top = 240.0
+offset_right = 1080.0
+offset_bottom = 275.0
+text = "Learn Data Structures & Algorithms Through Adventure"
+horizontal_alignment = 1
+
+[node name="CharacterParade" type="Node2D" parent="."]
+z_index = 2
+
+[node name="ButtonsPanel" type="VBoxContainer" parent="."]
+z_index = 3
+offset_left = 490.0
+offset_top = 330.0
+offset_right = 790.0
+offset_bottom = 520.0
+theme_override_constants/separation = 14
+
+[node name="StartBtn" type="Button" parent="ButtonsPanel"]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "▶  Start Game"
+
+[node name="CreditsBtn" type="Button" parent="ButtonsPanel"]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "★  Credits"
+
+[node name="QuitBtn" type="Button" parent="ButtonsPanel"]
+custom_minimum_size = Vector2(280, 52)
+layout_mode = 2
+text = "✕  Quit"
+
+[node name="CreditsPanel" type="PanelContainer" parent="."]
+visible = false
+z_index = 10
+offset_left = 200.0
+offset_top = 100.0
+offset_right = 1080.0
+offset_bottom = 620.0
+
+[node name="CreditsLabel" type="Label" parent="CreditsPanel"]
+layout_mode = 2
+text = "AlgoQuest Credits"
+autowrap_mode = 2
+
+[node name="VersionLabel" type="Label" parent="."]
+z_index = 2
+offset_left = 1060.0
+offset_top = 695.0
+offset_right = 1275.0
+offset_bottom = 716.0
+text = "v1.0  |  Godot 4"
+horizontal_alignment = 2

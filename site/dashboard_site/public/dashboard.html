@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoQuest — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08090f;--bg2:#0e1018;--bg3:#151824;--border:#1e2235;--border2:#2a3050;--text:#e8e6f0;--text2:#8a8aaa;--text3:#4a4a6a;--gold:#ffd93d;--blue:#4d96ff;--purple:#c77dff;--green:#6bcb77;--red:#ff6b6b;--font-pixel:'Press Start 2P',monospace;--font-vt:'VT323',monospace;--font-body:'Outfit',sans-serif;--r:10px;--r2:16px;--sidebar:240px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex}
+a{color:inherit;text-decoration:none}button{cursor:pointer;font-family:inherit;border:none;outline:none}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+#loading{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .4s}
+#loading.fade{opacity:0;pointer-events:none}
+.load-logo{font-family:var(--font-pixel);font-size:14px;color:var(--gold);letter-spacing:2px}
+.load-bar-bg{width:180px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.load-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));animation:loadrun 1.4s ease-in-out infinite}
+@keyframes loadrun{0%{width:0%;margin-left:0}50%{width:65%;margin-left:0}100%{width:0%;margin-left:100%}}
+.load-txt{font-size:12px;color:var(--text3)}
+.sidebar{width:var(--sidebar);min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border)}
+.sidebar-logo-text{font-family:var(--font-pixel);font-size:10px;color:var(--gold);letter-spacing:1px;display:block;margin-bottom:4px}
+.sidebar-logo-sub{font-size:11px;color:var(--text3)}
+.sidebar-avatar{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.avatar-icon{width:44px;height:44px;background:var(--bg3);border:2px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.avatar-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avatar-title{font-size:11px;color:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-nav{flex:1;padding:12px 0}
+.nav-section-label{font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1.5px;padding:16px 24px 6px;font-family:var(--font-pixel)}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 24px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:background .15s,color .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:rgba(77,150,255,.08);color:var(--blue);border-left-color:var(--blue)}
+.nav-item-icon{font-size:17px;flex-shrink:0}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid var(--border)}
+.btn-logout{width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);transition:border-color .2s,color .2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+.main{margin-left:var(--sidebar);flex:1;padding:36px 36px 60px;max-width:calc(100vw - var(--sidebar))}
+.page{display:none}.page.active{display:block}
+.page-header{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.page-title{font-family:var(--font-pixel);font-size:13px;color:var(--text);letter-spacing:1px;margin-bottom:5px}
+.page-sub{font-size:13px;color:var(--text2)}
+.hero-banner{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:30px 32px;display:flex;align-items:center;gap:28px;margin-bottom:28px;position:relative;overflow:hidden}
+.hero-banner::after{content:'';position:absolute;top:0;right:0;width:300px;height:100%;background:radial-gradient(ellipse at right,rgba(77,150,255,.07),transparent 70%);pointer-events:none}
+.hero-emoji{font-family:var(--font-vt);font-size:80px;line-height:1;flex-shrink:0;filter:drop-shadow(0 0 16px rgba(77,150,255,.4))}
+.hero-info{flex:1}
+.hero-greeting{font-size:12px;color:var(--text2);margin-bottom:5px}
+.hero-name{font-family:var(--font-pixel);font-size:18px;color:var(--gold);margin-bottom:8px;line-height:1.4}
+.hero-title-badge{display:inline-block;padding:4px 14px;background:rgba(199,125,255,.12);border:1px solid rgba(199,125,255,.3);border-radius:20px;font-size:11px;color:var(--purple);font-weight:600;margin-bottom:16px}
+.hero-stats{display:flex;gap:28px;flex-wrap:wrap}
+.h-stat{display:flex;flex-direction:column;gap:2px}
+.h-stat-val{font-family:var(--font-pixel);font-size:14px;color:var(--text)}
+.h-stat-lbl{font-size:11px;color:var(--text2)}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px}
+.grid-5ch{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}.grid-5ch{grid-template-columns:repeat(2,1fr)}}
+.sec-label{font-family:var(--font-pixel);font-size:9px;letter-spacing:1px;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px 20px 18px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.stat-glow{position:absolute;top:-30px;right:-30px;width:100px;height:100px;border-radius:50%;filter:blur(30px);opacity:.12;animation:pglow 4s ease-in-out infinite}
+@keyframes pglow{0%,100%{opacity:.1}50%{opacity:.22}}
+.stat-icon{font-size:24px;margin-bottom:10px;display:block}
+.stat-val{font-family:var(--font-pixel);font-size:20px;color:var(--text);line-height:1;margin-bottom:6px}
+.stat-lbl{font-size:12px;color:var(--text2)}
+.ch-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px 18px 16px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+.ch-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r2) var(--r2) 0 0;background:var(--ch-col,var(--blue))}
+.ch-card:hover{border-color:var(--border2);transform:translateY(-3px)}
+.ch-card.locked{opacity:.4;pointer-events:none}
+.ch-icon{font-size:26px;display:block;margin-bottom:8px}.ch-num{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:3px}
+.ch-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}.ch-dsa{font-size:11px;color:var(--text2);margin-bottom:12px}
+.ch-stars{font-size:16px;letter-spacing:2px;margin-bottom:8px;display:block}.star-on{color:var(--gold)}.star-off{color:var(--border2)}
+.ch-score{font-family:var(--font-pixel);font-size:8px;color:var(--text3)}
+.ch-badge{position:absolute;top:12px;right:12px;padding:2px 9px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.5px}
+.badge-done{background:rgba(107,203,119,.12);color:var(--green);border:1px solid rgba(107,203,119,.3)}
+.badge-lock{background:rgba(74,74,106,.18);color:var(--text3);border:1px solid var(--border)}
+.badge-active{background:rgba(77,150,255,.12);color:var(--blue);border:1px solid rgba(77,150,255,.3)}
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:24px}
+.acc-list{display:flex;flex-direction:column;gap:14px}
+.acc-row{display:grid;grid-template-columns:120px 1fr 46px;align-items:center;gap:12px}
+.acc-lbl{font-size:12px;color:var(--text2);font-weight:500}
+.acc-bg{height:7px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.acc-fill{height:100%;border-radius:4px;background:var(--acc-col,var(--blue));width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.acc-pct{font-family:var(--font-pixel);font-size:8px;color:var(--text2);text-align:right}
+.mastery-wrap{display:flex;flex-direction:column;gap:12px}
+.mastery-pill{display:flex;align-items:center;gap:10px;padding:11px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;color:var(--text2);transition:border-color .2s}
+.mastery-pill.on{border-color:var(--m-col,var(--blue));color:var(--m-col,var(--blue));background:rgba(77,150,255,.05)}
+.m-dot{width:9px;height:9px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.mastery-pill.on .m-dot{background:var(--m-col,var(--blue));box-shadow:0 0 8px var(--m-col,var(--blue))}
+.m-label{flex:1}.m-check{font-size:14px;opacity:0;transition:opacity .2s}.mastery-pill.on .m-check{opacity:1}
+.profile-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:32px;margin-bottom:24px;display:flex;align-items:center;gap:28px}
+.profile-avatar-big{width:80px;height:80px;background:var(--bg3);border:2px solid var(--border2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;flex-shrink:0}
+.profile-info{flex:1}
+.profile-username{font-family:var(--font-pixel);font-size:16px;color:var(--gold);margin-bottom:6px}
+.profile-email{font-size:13px;color:var(--text2);margin-bottom:8px}
+.profile-title-badge{display:inline-block;padding:4px 14px;background:rgba(199,125,255,.12);border:1px solid rgba(199,125,255,.3);border-radius:20px;font-size:11px;color:var(--purple);font-weight:600}
+.profile-fields{display:flex;flex-direction:column;gap:14px}
+.field-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:5px}
+.field-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:14px;color:var(--text);outline:none;font-family:var(--font-body);transition:border-color .2s}
+.field-input:focus{border-color:var(--blue)}.field-input::placeholder{color:var(--text3)}.field-input:read-only{color:var(--text2);cursor:default}
+.btn-save{padding:12px 28px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:8px;font-size:13px;font-weight:700;color:#fff;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 18px rgba(59,130,246,.3);margin-top:8px}
+.btn-save:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(59,130,246,.45)}
+.save-status{font-size:12px;color:var(--green);margin-top:8px;min-height:18px}
+/* PROGRESS */
+.ring-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg3)}.ring-fill{fill:none;stroke-linecap:round;transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1)}
+.ring-label{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px}
+.ring-pct{font-family:var(--font-pixel);font-size:22px;color:var(--text)}.ring-sub{font-size:11px;color:var(--text2)}
+.prog-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)}
+.prog-row-label{font-size:13px;color:var(--text2)}.prog-row-val{font-family:var(--font-pixel);font-size:11px;color:var(--text)}
+.timeline{display:flex;flex-direction:column;gap:0;position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--blue),var(--purple),var(--border))}
+.tl-item{position:relative;padding:0 0 24px 24px}
+.tl-dot{position:absolute;left:-22px;top:6px;width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:var(--bg);transition:all .2s}
+.tl-item.done .tl-dot{background:var(--green);border-color:var(--green);box-shadow:0 0 10px rgba(107,203,119,.5)}
+.tl-item.prog .tl-dot{background:var(--blue);border-color:var(--blue);animation:tldot 1.4s ease-in-out infinite}
+.tl-item.lock .tl-dot{background:var(--bg3);border-color:var(--border);opacity:.5}
+@keyframes tldot{0%,100%{box-shadow:0 0 6px rgba(77,150,255,.4)}50%{box-shadow:0 0 16px rgba(77,150,255,.8)}}
+.tl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;transition:border-color .2s}
+.tl-item.done .tl-card{border-left:3px solid var(--green)}.tl-item.prog .tl-card{border-left:3px solid var(--blue)}.tl-item.lock .tl-card{opacity:.4}
+.tl-card:hover{border-color:var(--border2)}
+.tl-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.tl-icon{font-size:22px}.tl-info{flex:1}.tl-name{font-size:14px;font-weight:700;color:var(--text)}.tl-dsa{font-size:11px;color:var(--text2)}
+.tl-right{text-align:right}.tl-stars{font-size:13px;letter-spacing:2px}.tl-score-sm{font-family:var(--font-pixel);font-size:8px;color:var(--text3);margin-top:2px}
+.tl-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.tl-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);font-weight:500}
+.tl-pill.good{border-color:rgba(107,203,119,.3);color:var(--green);background:rgba(107,203,119,.06)}
+.tl-pill.warn{border-color:rgba(255,159,67,.3);color:#ff9f43;background:rgba(255,159,67,.06)}
+.tl-pill.bad{border-color:rgba(255,107,107,.3);color:var(--red);background:rgba(255,107,107,.06)}
+.tip-card{background:rgba(77,150,255,.06);border:1px solid rgba(77,150,255,.22);border-radius:var(--r);padding:16px 18px;display:flex;gap:14px;align-items:flex-start;margin-top:16px}
+.tip-icon{font-size:22px;flex-shrink:0}.tip-title{font-size:12px;font-weight:700;color:var(--blue);margin-bottom:5px}.tip-text{font-size:12px;color:var(--text2);line-height:1.7}
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.lb-tab{padding:8px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text2);transition:all .2s;font-family:var(--font-body)}
+.lb-tab:hover{border-color:var(--border2);color:var(--text)}.lb-tab.active{background:rgba(77,150,255,.12);border-color:rgba(77,150,255,.4);color:var(--blue)}
+.lb-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.lb-table{width:100%;border-collapse:collapse}
+.lb-table th{padding:12px 16px;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--text3);font-family:var(--font-pixel);border-bottom:1px solid var(--border);text-align:left;background:var(--bg3)}
+.lb-table td{padding:14px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+.lb-table tr:last-child td{border-bottom:none}.lb-table tbody tr{transition:background .15s}
+.lb-table tbody tr:hover{background:var(--bg3)}.lb-table tbody tr.me{background:rgba(77,150,255,.06)}
+.lb-rank{font-family:var(--font-pixel);font-size:11px;color:var(--text2);min-width:32px;display:inline-block}
+.lb-user{display:flex;align-items:center;gap:10px}.lb-em{font-size:20px}
+.lb-uname{font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px}.lb-hero{font-size:11px;color:var(--text2)}
+.lb-score-val{font-family:var(--font-pixel);font-size:11px;color:var(--gold)}
+.lb-stars-val{font-size:13px;color:var(--gold)}
+.lb-done-val{font-size:12px;color:var(--text2)}
+.you-badge{display:inline-block;padding:2px 8px;background:rgba(77,150,255,.15);border:1px solid rgba(77,150,255,.3);border-radius:10px;font-size:9px;color:var(--blue);font-weight:700}
+.lb-empty{text-align:center;padding:48px;color:var(--text3);font-size:13px}
+.lb-loading{text-align:center;padding:48px;color:var(--text2);font-size:13px}
+.lb-my-rank{background:var(--bg3);border-top:1px solid var(--border);padding:14px 16px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:10px}
+.lb-my-rank strong{color:var(--blue);font-family:var(--font-pixel);font-size:11px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fadeUp .45s ease both}.d1{animation-delay:.05s}.d2{animation-delay:.10s}.d3{animation-delay:.15s}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="load-logo">ALGOQUEST</div>
+  <div class="load-bar-bg"><div class="load-bar"></div></div>
+  <div class="load-txt" id="load-msg">Authenticating…</div>
+</div>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span class="sidebar-logo-text">ALGOQUEST</span>
+    <span class="sidebar-logo-sub">Player Dashboard</span>
+  </div>
+  <div class="sidebar-avatar">
+    <div class="avatar-icon" id="sb-avatar">⚔</div>
+    <div>
+      <div class="avatar-name" id="sb-name">—</div>
+      <div class="avatar-title" id="sb-title"></div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">MAIN</div>
+    <div class="nav-item active" onclick="nav('overview')"    id="nav-overview">   <span class="nav-item-icon">🗺</span> Overview</div>
+    <div class="nav-item"        onclick="nav('chapters')"    id="nav-chapters">   <span class="nav-item-icon">📖</span> Chapters</div>
+    <div class="nav-item"        onclick="nav('progress')"    id="nav-progress">   <span class="nav-item-icon">📈</span> Progress</div>
+    <div class="nav-item"        onclick="nav('leaderboard')" id="nav-leaderboard"><span class="nav-item-icon">🏆</span> Leaderboard</div>
+    <div class="nav-item"        onclick="nav('stats')"       id="nav-stats">      <span class="nav-item-icon">📊</span> Statistics</div>
+    <div class="nav-section-label">ACCOUNT</div>
+    <div class="nav-item"        onclick="nav('profile')"     id="nav-profile">    <span class="nav-item-icon">🧙</span> Profile</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="btn-logout" onclick="handleLogout()">↩ Log Out</button>
+  </div>
+</aside>
+
+<main class="main">
+
+  <section class="page active" id="page-overview">
+    <div class="page-header fu"><div class="page-title">OVERVIEW</div><div class="page-sub">Your AlgoQuest journey at a glance</div></div>
+    <div class="hero-banner fu d1">
+      <div class="hero-emoji" id="hero-emoji">⚔️</div>
+      <div class="hero-info">
+        <div class="hero-greeting">Welcome back, adventurer</div>
+        <div class="hero-name" id="h-name">Loading…</div>
+        <div class="hero-title-badge" id="h-title" style="display:none"></div>
+        <div class="hero-stats">
+          <div class="h-stat"><div class="h-stat-val" id="ov-score">—</div><div class="h-stat-lbl">Score</div></div>
+          <div class="h-stat"><div class="h-stat-val" id="ov-streak">—</div><div class="h-stat-lbl">Streak</div></div>
+          <div class="h-stat"><div class="h-stat-val" id="ov-done">—</div><div class="h-stat-lbl">Chapters</div></div>
+          <div class="h-stat"><div class="h-stat-val" id="ov-perf">—</div><div class="h-stat-lbl">Perfects</div></div>
+          <div class="h-stat"><div class="h-stat-val" id="ov-section">—</div><div class="h-stat-lbl">Section</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-label fu d2">QUICK STATS</div>
+    <div class="grid-4 fu d2" id="ov-statcards"></div>
+    <div class="sec-label fu d3">CHAPTERS</div>
+    <div class="grid-5ch fu d3" id="ov-chapters"></div>
+  </section>
+
+  <section class="page" id="page-chapters">
+    <div class="page-header fu"><div class="page-title">CHAPTERS</div><div class="page-sub">Progress through the kingdom</div></div>
+    <div class="grid-5ch fu" id="ch-grid"></div>
+    <div class="grid-2 fu d1">
+      <div class="panel"><div class="sec-label">ACCURACY</div><div class="acc-list" id="ch-acc"></div></div>
+      <div class="panel"><div class="sec-label">DSA MASTERY</div><div class="mastery-wrap" id="ch-mastery"></div></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-progress">
+    <div class="page-header fu"><div class="page-title">PROGRESS TRACKER</div><div class="page-sub">Your learning journey visualised</div></div>
+    <div class="grid-2 fu d1" style="align-items:start">
+      <div class="panel" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:32px 24px">
+        <div class="sec-label" style="width:100%">OVERALL COMPLETION</div>
+        <div class="ring-wrap">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle class="ring-bg" cx="80" cy="80" r="66" stroke-width="12"/>
+            <circle class="ring-fill" id="ring-fill" cx="80" cy="80" r="66" stroke-width="12" stroke="url(#rg)" stroke-dasharray="414.7" stroke-dashoffset="414.7"/>
+            <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#4d96ff"/><stop offset="100%" stop-color="#c77dff"/></linearGradient></defs>
+          </svg>
+          <div class="ring-label"><div class="ring-pct" id="ring-pct">0%</div><div class="ring-sub">complete</div></div>
+        </div>
+      </div>
+      <div class="panel fu d2">
+        <div class="sec-label">SUMMARY</div>
+        <div id="prog-summary" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div id="tip-card" class="tip-card" style="display:none">
+          <div class="tip-icon">💡</div>
+          <div><div class="tip-title" id="tip-title">Focus Area</div><div class="tip-text" id="tip-text"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-label fu d2">CHAPTER TIMELINE</div>
+    <div class="timeline fu d3" id="tl-list"></div>
+  </section>
+
+  <section class="page" id="page-leaderboard">
+    <div class="page-header fu"><div class="page-title">LEADERBOARD</div><div class="page-sub">Top adventurers across the kingdom</div></div>
+    <div class="lb-tabs fu d1">
+      <button class="lb-tab active" onclick="loadLB('global','score')"  id="lbt-gs">🌍 Global — Score</button>
+      <button class="lb-tab"        onclick="loadLB('global','stars')"  id="lbt-gst">⭐ Global — Stars</button>
+      <button class="lb-tab"        onclick="loadLB('ch',1)"            id="lbt-c1">🏰 Ch.1</button>
+      <button class="lb-tab"        onclick="loadLB('ch',2)"            id="lbt-c2">🗼 Ch.2</button>
+      <button class="lb-tab"        onclick="loadLB('ch',3)"            id="lbt-c3">🚂 Ch.3</button>
+      <button class="lb-tab"        onclick="loadLB('ch',4)"            id="lbt-c4">🌲 Ch.4</button>
+      <button class="lb-tab"        onclick="loadLB('ch',5)"            id="lbt-c5">🗺 Ch.5</button>
+    </div>
+    <div class="lb-panel fu d2" id="lb-panel">
+      <div class="lb-loading" id="lb-content">Select a leaderboard above</div>
+    </div>
+  </section>
+
+  <section class="page" id="page-stats">
+    <div class="page-header fu"><div class="page-title">STATISTICS</div><div class="page-sub">Detailed performance breakdown</div></div>
+    <div class="grid-4 fu d1" id="st-cards"></div>
+    <div class="grid-2 fu d2">
+      <div class="panel"><div class="sec-label">MISTAKE BREAKDOWN</div><div class="acc-list" id="st-mistakes"></div></div>
+      <div class="panel"><div class="sec-label">CHAPTER SCORES</div><div class="acc-list" id="st-scores"></div></div>
+    </div>
+  </section>
+
+  <section class="page" id="page-profile">
+    <div class="page-header fu"><div class="page-title">PROFILE</div><div class="page-sub">Manage your account</div></div>
+    <div class="profile-card fu d1">
+      <div class="profile-avatar-big" id="pr-avatar">⚔</div>
+      <div class="profile-info">
+        <div class="profile-username" id="pr-username">—</div>
+        <div class="profile-email" id="pr-email">—</div>
+        <div class="profile-title-badge" id="pr-title" style="display:none"></div>
+      </div>
+    </div>
+    <div class="panel fu d2">
+      <div class="sec-label">EDIT PROFILE</div>
+      <div class="profile-fields">
+        <div><div class="field-label">USERNAME</div><input class="field-input" type="text" id="edit-username" placeholder="Choose a username" maxlength="20"></div>
+        <div><div class="field-label">EMAIL</div><input class="field-input" type="email" id="edit-email" readonly></div>
+        <div><div class="field-label">SELECTED HERO</div><input class="field-input" type="text" id="edit-hero" readonly></div>
+        <div style="display:flex;gap:14px">
+          <div style="flex:1"><div class="field-label">COURSE</div><input class="field-input" type="text" id="edit-course" readonly></div>
+          <div style="width:140px"><div class="field-label">SECTION</div><input class="field-input" type="text" id="edit-section" readonly></div>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+      <div class="save-status" id="save-status"></div>
+    </div>
+    <!-- JOIN SECTION PANEL -->
+    <div class="panel fu d3" style="margin-top:24px" id="join-section-panel">
+      <div class="sec-label">JOIN A SECTION</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+        Already registered but haven't joined a class yet?<br>
+        Enter the join code your teacher gave you.
+      </p>
+      <div id="already-joined" style="display:none;margin-bottom:14px">
+        <div style="padding:12px 16px;background:rgba(107,203,119,.08);border:1px solid rgba(107,203,119,.25);border-radius:8px;font-size:13px;color:var(--green)">
+          ✓ You are enrolled in: <strong id="joined-section-name">—</strong>
+        </div>
+      </div>
+      <div id="join-form" style="display:flex;flex-direction:column;gap:12px;max-width:420px">
+        <div style="display:flex;gap:10px">
+          <input class="field-input" type="text" id="join-course"  placeholder="Course (e.g. BSIT)"  style="flex:1">
+          <input class="field-input" type="text" id="join-section" placeholder="Section (e.g. 2A)"   style="width:130px">
+        </div>
+        <input class="field-input" type="text" id="join-code" placeholder="Join code from your teacher" autocomplete="off">
+        <button class="btn-save" onclick="joinSection()" id="join-btn">Join Section</button>
+        <div id="join-status" style="font-size:12px;min-height:18px"></div>
+      </div>
+    </div>
+
+    <div class="panel fu d3" style="margin-top:24px">
+      <div class="sec-label">SESSION</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Sign out of your account on this device.</p>
+      <button class="btn-logout" style="width:auto;padding:10px 24px" onclick="handleLogout()">↩ Log Out</button>
+    </div>
+  </section>
+
+</main>
+
+<script type="module">
+import { auth, db, requireAuth, logout } from "./firebase.js";
+import { doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const CHAPTERS=[
+  {id:1,name:"Kingdom Gate",   dsa:"Queue — FIFO",   icon:"🏰",col:"#6bcb77"},
+  {id:2,name:"Castle of Echoes",dsa:"Stack — LIFO",  icon:"🗼",col:"#c77dff"},
+  {id:3,name:"Chain Station",  dsa:"Linked List",    icon:"🚂",col:"#ffd93d"},
+  {id:4,name:"Oracle's Forest",dsa:"BST / Heap",     icon:"🌲",col:"#6bcb77"},
+  {id:5,name:"Kingdom Roads",  dsa:"Graph Algorithms",icon:"🗺",col:"#4d96ff"},
+];
+const MASTERY=[
+  {key:"queue",label:"Queue",col:"#6bcb77"},{key:"stack",label:"Stack",col:"#c77dff"},
+  {key:"linked_list",label:"Linked List",col:"#ffd93d"},{key:"tree",label:"BST / Heap",col:"#6bcb77"},
+  {key:"graph",label:"Graphs",col:"#4d96ff"},
+];
+const HE={m_warrior:"⚔️",f_warrior:"🛡️",m_mage:"🔮",f_mage:"✨",m_ninja:"🗡️",f_ninja:"🌸",m_samurai:"⛩️",f_samurai:"🏯",paladin:"⚡",m_monk:"🥋",f_monk:"🌿",m_berserker:"🪓",f_berserker:"🔥",m_dark_knight:"🌑",f_dark_knight:"🖤",m_ranger:"🏹",m_healer:"💚",f_healer:"🌟"};
+const HN={m_warrior:"Warrior",f_warrior:"Shieldmaiden",m_mage:"Mage",f_mage:"Sorceress",m_ninja:"Ninja",f_ninja:"Kunoichi",m_samurai:"Samurai",f_samurai:"Onna-Bugeisha",paladin:"Paladin",m_monk:"Monk",f_monk:"Priestess",m_berserker:"Berserker",f_berserker:"Valkyrie",m_dark_knight:"Dark Knight",f_dark_knight:"Shadow Blade",m_ranger:"Ranger",m_healer:"Healer",f_healer:"Cleric"};
+const TIPS={fifo_violation:"You often tried to skip the queue. In FIFO, only the FRONT citizen can be served. Practice dragging from position 0 only.",wrong_pop:"You popped runes in the wrong order. Ask: what was pushed LAST? That's what the door needs FIRST. Visualize the stack depth before popping.",overflow:"Your stack overflowed too often. Count your depth before pushing — pop one first if you're near the limit.",service_miss:"You selected the wrong service type too often. Always check the icon above the citizen's head before dragging.",lane_miss:"You routed citizens to the wrong lane. Check the lane label before dropping — Tax to A, Food to B.",default:"Keep playing to build your intuition. Focus on understanding WHY each mistake happens, not just avoiding it."};
+
+let _profile=null,_uid=null,_lbCache={};
+
+requireAuth(async(user)=>{
+  _uid=user.uid;
+  setLoadMsg("Loading your profile…");
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(snap.exists()){_profile=snap.data();}
+  else{
+    _profile={username:user.email.split("@")[0],title:"",selected_hero:"",email:user.email,
+      progress:{},stats:{total_score:0,perfect_clears:0,login_streak:1,last_login:new Date().toISOString().split("T")[0]}};
+    await setDoc(doc(db,"users",user.uid),{..._profile,created_at:serverTimestamp()});
+  }
+  _profile.email=user.email;
+  hideLoading();
+  render();
+});
+
+function render(){
+  const p=_profile,st=p.stats||{},pr=p.progress||{};
+  const em=HE[p.selected_hero]||"⚔️",hn=HN[p.selected_hero]||p.selected_hero||"Unknown Hero";
+  const done=Object.values(pr).filter(x=>x.complete).length;
+  $("sb-avatar").textContent=em;$("sb-name").textContent=p.username||"Hero";$("sb-title").textContent=p.title||"";
+  $("hero-emoji").textContent=em;$("h-name").textContent=p.username||"Hero";
+  const htEl=$("h-title");if(p.title){htEl.textContent=p.title;htEl.style.display="";}else htEl.style.display="none";
+  $("ov-score").textContent=(st.total_score||0).toLocaleString();
+  $("ov-streak").textContent=(st.login_streak||0)+" 🔥";
+  $("ov-done").textContent=done+" / 5";
+  $("ov-perf").textContent=st.perfect_clears||0;
+  rStatCards("ov-statcards",st,pr);rChCards("ov-chapters",pr);
+  rChCards("ch-grid",pr);rAccBars("ch-acc",pr);rMastery("ch-mastery",pr);
+  rProgress(pr,st);
+  rStatCards("st-cards",st,pr);rMistakes("st-mistakes",pr);rScoreBars("st-scores",pr);
+  $("pr-avatar").textContent=em;$("pr-username").textContent=p.username||"—";$("pr-email").textContent=p.email||"—";
+  const prt=$("pr-title");if(p.title){prt.textContent=p.title;prt.style.display="";}else prt.style.display="none";
+  $("edit-username").value=p.username||"";$("edit-email").value=p.email||"";
+  $("edit-hero").value=p.selected_hero?hn+" ("+p.selected_hero+")":"Not selected";
+  $("edit-course").value=p.course||"Not enrolled";
+  $("edit-section").value=p.section||"—";
+  renderJoinSection(p);
+  triggerBars();
+}
+
+function rStatCards(id,st,pr){
+  const done=Object.values(pr).filter(x=>x.complete).length;
+  const ts=Object.values(pr).reduce((s,x)=>s+(x.stars||0),0);
+  $(id).innerHTML=[
+    {icon:"🏆",val:(st.total_score||0).toLocaleString(),lbl:"Total Score",g:"#ffd93d"},
+    {icon:"🔥",val:(st.login_streak||0)+"d",lbl:"Login Streak",g:"#ff6b6b"},
+    {icon:"⭐",val:ts+" / 15",lbl:"Stars Earned",g:"#c77dff"},
+    {icon:"✅",val:done+" / 5",lbl:"Chapters Done",g:"#6bcb77"},
+  ].map(c=>`<div class="stat-card"><div class="stat-glow" style="background:${c.g}"></div><span class="stat-icon">${c.icon}</span><div class="stat-val">${c.val}</div><div class="stat-lbl">${c.lbl}</div></div>`).join("");
+}
+
+function rChCards(id,pr){
+  $(id).innerHTML=CHAPTERS.map(ch=>{
+    const p=pr[ch.id]||{},done=!!p.complete,stars=p.stars||0,score=p.best_score||0;
+    const unlocked=ch.id===1||!!(pr[ch.id-1]||{}).complete;
+    const sh=[1,2,3].map(s=>`<span class="${s<=stars?"star-on":"star-off"}">★</span>`).join("");
+    const b=unlocked?(done?'<span class="ch-badge badge-done">DONE</span>':'<span class="ch-badge badge-active">ACTIVE</span>'):'<span class="ch-badge badge-lock">LOCKED</span>';
+    return`<div class="ch-card${unlocked?"":" locked"}" style="--ch-col:${ch.col}">${b}<span class="ch-icon">${ch.icon}</span><div class="ch-num">CHAPTER ${ch.id}</div><div class="ch-name">${ch.name}</div><div class="ch-dsa">${ch.dsa}</div><span class="ch-stars">${sh}</span>${score>0?`<div class="ch-score">Best: ${score.toLocaleString()} pts</div>`:""}</div>`;
+  }).join("");
+}
+
+function rAccBars(id,pr){
+  $(id).innerHTML=CHAPTERS.map(ch=>{
+    const acc=Math.round((pr[ch.id]||{}).accuracy||0);
+    return`<div class="acc-row"><div class="acc-lbl">${ch.icon} ${ch.name}</div><div class="acc-bg"><div class="acc-fill" data-pct="${acc}" style="--acc-col:${ch.col};width:0%"></div></div><div class="acc-pct">${acc?acc+"%":"—"}</div></div>`;
+  }).join("");
+}
+
+function rMastery(id,pr){
+  $(id).innerHTML=MASTERY.map(m=>{
+    const ci={queue:1,stack:2,linked_list:3,tree:4,graph:5}[m.key];
+    const on=(pr[ci]||{}).stars>=3;
+    return`<div class="mastery-pill${on?" on":""}" style="--m-col:${m.col}"><div class="m-dot"></div><div class="m-label">${m.label}</div><div class="m-check">✓</div></div>`;
+  }).join("");
+}
+
+function rMistakes(id,pr){
+  const types=[{key:"fifo_violation",lbl:"FIFO Violations",col:"#ff6b6b"},{key:"service_miss",lbl:"Service Misses",col:"#ffd93d"},{key:"lane_miss",lbl:"Lane Misses",col:"#c77dff"},{key:"wrong_pop",lbl:"Wrong Pops",col:"#ff9f43"},{key:"overflow",lbl:"Overflows",col:"#ff6b6b"}];
+  const totals={};
+  Object.values(pr).forEach(p=>{const s=p.mistakes||{};types.forEach(t=>{totals[t.key]=(totals[t.key]||0)+(s[t.key]||0);});});
+  const max=Math.max(1,...Object.values(totals));
+  $(id).innerHTML=types.map(t=>{const v=totals[t.key]||0,pct=Math.round((v/max)*100);return`<div class="acc-row"><div class="acc-lbl">${t.lbl}</div><div class="acc-bg"><div class="acc-fill" data-pct="${pct}" style="--acc-col:${t.col};width:0%"></div></div><div class="acc-pct">${v}</div></div>`;}).join("");
+}
+
+function rScoreBars(id,pr){
+  const maxS=Math.max(1,...CHAPTERS.map(ch=>(pr[ch.id]||{}).best_score||0));
+  $(id).innerHTML=CHAPTERS.map(ch=>{const score=(pr[ch.id]||{}).best_score||0,pct=Math.round((score/maxS)*100);return`<div class="acc-row"><div class="acc-lbl">${ch.icon} ${ch.name}</div><div class="acc-bg"><div class="acc-fill" data-pct="${pct}" style="--acc-col:${ch.col};width:0%"></div></div><div class="acc-pct">${score>0?score.toLocaleString():"—"}</div></div>`;}).join("");
+}
+
+function rProgress(pr,st){
+  const done=Object.values(pr).filter(x=>x.complete).length;
+  const ts=Object.values(pr).reduce((s,x)=>s+(x.stars||0),0);
+  const pct=Math.round((done/5)*100);
+  setTimeout(()=>{$("ring-fill").style.strokeDashoffset=414.7-(414.7*(pct/100));},300);
+  $("ring-pct").textContent=pct+"%";
+  $("prog-summary").innerHTML=[
+    {l:"Chapters Complete",v:done+" / 5"},{l:"Stars Collected",v:ts+" / 15"},
+    {l:"Perfect Clears",v:st.perfect_clears||0},{l:"Total Score",v:(st.total_score||0).toLocaleString()+" pts"},
+    {l:"Login Streak",v:(st.login_streak||0)+" days 🔥"},
+  ].map(r=>`<div class="prog-row"><span class="prog-row-label">${r.l}</span><span class="prog-row-val">${r.v}</span></div>`).join("");
+  const mk={};const mkeys=["fifo_violation","wrong_pop","overflow","service_miss","lane_miss"];
+  Object.values(pr).forEach(p=>{const s=p.mistakes||{};mkeys.forEach(k=>{mk[k]=(mk[k]||0)+(s[k]||0);});});
+  let top="default",topV=0;mkeys.forEach(k=>{if((mk[k]||0)>topV){topV=mk[k];top=k;}});
+  const tipEl=$("tip-card");
+  if(topV>0){tipEl.style.display="";$("tip-title").textContent="💡 Focus: "+top.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());$("tip-text").textContent=TIPS[top]||TIPS.default;}
+  $("tl-list").innerHTML=CHAPTERS.map(ch=>{
+    const p=pr[ch.id]||{},isDone=!!p.complete,unlocked=ch.id===1||!!(pr[ch.id-1]||{}).complete;
+    const stars=p.stars||0,score=p.best_score||0,acc=Math.round(p.accuracy||0);
+    const cls=isDone?"done":(unlocked?"prog":"lock");
+    const sh=[1,2,3].map(s=>`<span class="${s<=stars?"star-on":"star-off"}">★</span>`).join("");
+    let pills="";
+    if(isDone){const ac=acc>=80?"good":acc>=60?"warn":"bad";pills+=`<span class="tl-pill ${ac}">🎯 ${acc}% accuracy</span>`;if(stars===3)pills+=`<span class="tl-pill good">⭐ Perfect clear</span>`;if(score>0)pills+=`<span class="tl-pill">🏆 ${score.toLocaleString()} pts</span>`;}
+    else if(unlocked){pills+=`<span class="tl-pill" style="color:var(--blue);border-color:rgba(77,150,255,.3)">▶ In progress</span>`;}
+    else{pills+=`<span class="tl-pill">🔒 Locked</span>`;}
+    return`<div class="tl-item ${cls}"><div class="tl-dot"></div><div class="tl-card"><div class="tl-top"><div class="tl-icon">${ch.icon}</div><div class="tl-info"><div class="tl-name">${ch.name}</div><div class="tl-dsa">${ch.dsa}</div></div><div class="tl-right"><div class="tl-stars">${sh}</div>${score>0?`<div class="tl-score-sm">${score.toLocaleString()} pts</div>`:""}</div></div><div class="tl-pills">${pills}</div></div></div>`;
+  }).join("");
+}
+
+window.loadLB=async(mode,arg)=>{
+  document.querySelectorAll(".lb-tab").forEach(t=>t.classList.remove("active"));
+  const tabId=mode==="global"&&arg==="score"?"gs":mode==="global"&&arg==="stars"?"gst":"c"+arg;
+  const tabEl=document.getElementById("lbt-"+tabId);if(tabEl)tabEl.classList.add("active");
+  const cKey=mode+":"+arg;
+  if(_lbCache[cKey]){renderLB(_lbCache[cKey],mode,arg);return;}
+  $("lb-content").className="lb-loading";$("lb-content").innerHTML="Loading leaderboard…";
+  try{
+    const snap=await getDocs(collection(db,"users"));
+    const rows=[];
+    snap.forEach(d=>{
+      const u=d.data(),pr=u.progress||{},st=u.stats||{};
+      rows.push({uid:d.id,username:u.username||"Hero",hero:u.selected_hero||"",
+        totalScore:st.total_score||0,totalStars:Object.values(pr).reduce((s,x)=>s+(x.stars||0),0),
+        chDone:Object.values(pr).filter(x=>x.complete).length,
+        chScore:(pr[arg]||{}).best_score||0,isMe:d.id===_uid});
+    });
+    _lbCache[cKey]=rows;renderLB(rows,mode,arg);
+  }catch(e){$("lb-content").className="lb-empty";$("lb-content").innerHTML="Failed to load.<br><small>"+e.message+"</small>";}
+};
+
+function renderLB(rows,mode,arg){
+  const sorted=[...rows].sort((a,b)=>{
+    if(mode==="global"&&arg==="stars")return b.totalStars-a.totalStars||b.totalScore-a.totalScore;
+    if(mode==="ch")return b.chScore-a.chScore;
+    return b.totalScore-a.totalScore;
+  });
+  const top20=sorted.slice(0,20),myRank=sorted.findIndex(r=>r.isMe)+1;
+  if(!top20.length){$("lb-content").className="lb-empty";$("lb-content").innerHTML="No players yet. Be the first!";return;}
+  const medals=["🥇","🥈","🥉"],isStars=mode==="global"&&arg==="stars",isCh=mode==="ch";
+  let html=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>${isStars?"STARS":isCh?"SCORE":"TOTAL SCORE"}</th>${mode==="global"?"<th>CHAPTERS</th>":""}</tr></thead><tbody>`;
+  top20.forEach((r,i)=>{
+    const rank=i+1,rankHtml=rank<=3?`<span style="font-size:20px">${medals[rank-1]}</span>`:`<span class="lb-rank">#${rank}</span>`;
+    const scoreHtml=isStars?`<span class="lb-stars-val">${"★".repeat(r.totalStars)}${"☆".repeat(Math.max(0,15-r.totalStars))}</span>`:`<span class="lb-score-val">${(isCh?r.chScore:r.totalScore).toLocaleString()}</span>`;
+    html+=`<tr${r.isMe?' class="me"':''}><td>${rankHtml}</td><td><div class="lb-user"><span class="lb-em">${HE[r.hero]||"⚔️"}</span><div><div class="lb-uname">${esc(r.username)}${r.isMe?'<span class="you-badge">YOU</span>':''}</div><div class="lb-hero">${HN[r.hero]||r.hero||"—"}</div></div></div></td><td>${scoreHtml}</td>${mode==="global"?`<td><span class="lb-done-val">${r.chDone}/5 ✅</span></td>`:""}</tr>`;
+  });
+  html+="</tbody></table>";
+  if(myRank>20){const me=sorted[myRank-1];html+=`<div class="lb-my-rank">Your rank: <strong>#${myRank}</strong> · ${HE[me.hero]||"⚔️"} ${esc(me.username)} · ${(isStars?me.totalStars+"★":isCh?me.chScore.toLocaleString():me.totalScore.toLocaleString())}</div>`;}
+  $("lb-content").className="";$("lb-content").innerHTML=html;
+}
+
+window.nav=(page)=>{
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  $("page-"+page).classList.add("active");$("nav-"+page).classList.add("active");
+  if(page==="leaderboard"&&!_lbCache["global:score"])window.loadLB("global","score");
+  setTimeout(triggerBars,80);
+};
+
+window.saveProfile=async()=>{
+  const n=document.getElementById("edit-username").value.trim();
+  if(!n||n.length<3){showSave("Min 3 characters.",true);return;}
+  await updateDoc(doc(db,"users",_uid),{username:n,updated_at:serverTimestamp()});
+  _profile.username=n;
+  ["pr-username","h-name","sb-name"].forEach(id=>$(id).textContent=n);
+  showSave("✓ Saved!",false);
+};
+function showSave(m,e){const el=$("save-status");el.textContent=m;el.style.color=e?"var(--red)":"var(--green)";setTimeout(()=>el.textContent="",3000);}
+window.handleLogout=logout;
+
+// ── JOIN SECTION ────────────────────────────────────────────────────────────
+window.joinSection = async () => {
+  const course     = document.getElementById("join-course").value.trim();
+  const section    = document.getElementById("join-section").value.trim().toUpperCase();
+  const joinCode   = document.getElementById("join-code").value.trim().toUpperCase();
+
+  if (!course)    { showJoinStatus("Please enter your course.", true);    return; }
+  if (!section)   { showJoinStatus("Please enter your section.", true);   return; }
+  if (!joinCode)  { showJoinStatus("Please enter the join code.", true);  return; }
+
+  const btn = document.getElementById("join-btn");
+  btn.disabled   = true;
+  btn.textContent = "Joining…";
+
+  try {
+    const { collection, query, where, getDocs, setDoc, doc: fdoc, updateDoc, serverTimestamp }
+      = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+    // Find section by join code
+    const q    = query(collection(db, "sections"), where("join_code", "==", joinCode));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      showJoinStatus("❌ Join code not found. Check with your teacher.", true);
+      btn.disabled = false; btn.textContent = "Join Section";
+      return;
+    }
+
+    const sectionDoc  = snap.docs[0];
+    const sectionId   = sectionDoc.id;
+    const sectionName = sectionDoc.data().name || "Section";
+
+    // Add student to section/students subcollection
+    await setDoc(
+      fdoc(db, "sections", sectionId, "students", _uid),
+      { joined_at: serverTimestamp(), course, section }
+    );
+
+    // Update user profile with course, section, section_id
+    await updateDoc(fdoc(db, "users", _uid), {
+      course,
+      section,
+      section_id: sectionId,
+    });
+
+    // Update local profile
+    _profile.course     = course;
+    _profile.section    = section;
+    _profile.section_id = sectionId;
+
+    // Update UI
+    document.getElementById("edit-course").value  = course;
+    document.getElementById("edit-section").value = section;
+    document.getElementById("ov-section").textContent = course + " " + section;
+
+    // Show enrolled badge and hide form
+    document.getElementById("already-joined").style.display = "";
+    document.getElementById("joined-section-name").textContent = sectionName + " (" + course + " " + section + ")";
+    document.getElementById("join-form").style.display = "none";
+
+    showJoinStatus("✓ Successfully joined " + sectionName + "!", false);
+
+  } catch(e) {
+    showJoinStatus("Something went wrong: " + e.message, true);
+    btn.disabled = false; btn.textContent = "Join Section";
+  }
+};
+
+function showJoinStatus(msg, err) {
+  const el = document.getElementById("join-status");
+  if (!el) return;
+  el.textContent  = msg;
+  el.style.color  = err ? "var(--red)" : "var(--green)";
+}
+
+// Show/hide join form based on whether student is already enrolled
+function renderJoinSection(p) {
+  const alreadyEl = document.getElementById("already-joined");
+  const formEl    = document.getElementById("join-form");
+  if (!alreadyEl || !formEl) return;
+
+  if (p.section_id) {
+    // Already in a section — show badge, hide form
+    alreadyEl.style.display = "";
+    formEl.style.display    = "none";
+    const name = p.course && p.section ? p.course + " " + p.section : "a section";
+    document.getElementById("joined-section-name").textContent = name;
+  } else {
+    // Not enrolled — show form
+    alreadyEl.style.display = "none";
+    formEl.style.display    = "";
+  }
+}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function triggerBars(){requestAnimationFrame(()=>{document.querySelectorAll(".acc-fill[data-pct]").forEach(el=>{el.style.width="0%";requestAnimationFrame(()=>{el.style.width=el.dataset.pct+"%";});});});}
+function setLoadMsg(m){$("load-msg").textContent=m;}
+function hideLoading(){const el=$("loading");el.classList.add("fade");setTimeout(()=>el.style.display="none",450);}
+setTimeout(triggerBars,700);
+</script>
+</body>
+</html>

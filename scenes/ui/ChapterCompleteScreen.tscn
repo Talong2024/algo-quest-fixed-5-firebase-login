@@ -1,0 +1,79 @@
+[gd_scene load_steps=2 format=3 uid="uid://d0qtt2sy3jlcq"]
+
+[ext_resource type="Script" uid="uid://nevavxkpoci7" path="res://scripts/ui/ChapterCompleteScreen.gd" id="1"]
+
+[node name="ChapterCompleteScreen" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1")
+
+[node name="BG" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0, 0, 0, 0.7)
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 240.0
+offset_top = 80.0
+offset_right = 1040.0
+offset_bottom = 640.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "CHAPTER COMPLETE!"
+horizontal_alignment = 1
+
+[node name="ChapterLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "Chapter 1 — Kingdom Queue"
+horizontal_alignment = 1
+
+[node name="GradeLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "A"
+horizontal_alignment = 1
+
+[node name="StarsRow" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="Separator" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="StatsGrid" type="GridContainer" parent="Panel/VBox"]
+layout_mode = 2
+columns = 2
+
+[node name="Separator2" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="ConceptLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "FIFO: First In, First Out."
+autowrap_mode = 2
+
+[node name="Separator3" type="HSeparator" parent="Panel/VBox"]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="RetryBtn" type="Button" parent="Panel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "↺ Retry"
+
+[node name="NextBtn" type="Button" parent="Panel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "▶ Next"
+
+[node name="MapBtn" type="Button" parent="Panel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "🗺 Map"

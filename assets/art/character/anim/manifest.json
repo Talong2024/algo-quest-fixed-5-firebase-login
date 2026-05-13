@@ -1,0 +1,254 @@
+{
+  "noble_king": {
+    "idle": [
+      "noble_king_idle_walk1.png",
+      "noble_king_idle_stand.png",
+      "noble_king_idle_walk2.png"
+    ],
+    "walk": [
+      "noble_king_walk_walk1.png",
+      "noble_king_walk_stand.png",
+      "noble_king_walk_walk2.png"
+    ]
+  },
+  "noble_queen": {
+    "idle": [
+      "noble_queen_idle_walk1.png",
+      "noble_queen_idle_stand.png",
+      "noble_queen_idle_walk2.png"
+    ],
+    "walk": [
+      "noble_queen_walk_walk1.png",
+      "noble_queen_walk_stand.png",
+      "noble_queen_walk_walk2.png"
+    ]
+  },
+  "merchant": {
+    "idle": [
+      "merchant_idle_walk1.png",
+      "merchant_idle_stand.png",
+      "merchant_idle_walk2.png"
+    ],
+    "walk": [
+      "merchant_walk_walk1.png",
+      "merchant_walk_stand.png",
+      "merchant_walk_walk2.png"
+    ]
+  },
+  "peasant_mid_man": {
+    "idle": [
+      "peasant_mid_man_idle_walk1.png",
+      "peasant_mid_man_idle_stand.png",
+      "peasant_mid_man_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_mid_man_walk_walk1.png",
+      "peasant_mid_man_walk_stand.png",
+      "peasant_mid_man_walk_walk2.png"
+    ]
+  },
+  "peasant_mid_woman": {
+    "idle": [
+      "peasant_mid_woman_idle_walk1.png",
+      "peasant_mid_woman_idle_stand.png",
+      "peasant_mid_woman_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_mid_woman_walk_walk1.png",
+      "peasant_mid_woman_walk_stand.png",
+      "peasant_mid_woman_walk_walk2.png"
+    ]
+  },
+  "peasant_young_man_a": {
+    "idle": [
+      "peasant_young_man_a_idle_walk1.png",
+      "peasant_young_man_a_idle_stand.png",
+      "peasant_young_man_a_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_young_man_a_walk_walk1.png",
+      "peasant_young_man_a_walk_stand.png",
+      "peasant_young_man_a_walk_walk2.png"
+    ]
+  },
+  "peasant_young_man_b": {
+    "idle": [
+      "peasant_young_man_b_idle_walk1.png",
+      "peasant_young_man_b_idle_stand.png",
+      "peasant_young_man_b_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_young_man_b_walk_walk1.png",
+      "peasant_young_man_b_walk_stand.png",
+      "peasant_young_man_b_walk_walk2.png"
+    ]
+  },
+  "peasant_young_woman_a": {
+    "idle": [
+      "peasant_young_woman_a_idle_walk1.png",
+      "peasant_young_woman_a_idle_stand.png",
+      "peasant_young_woman_a_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_young_woman_a_walk_walk1.png",
+      "peasant_young_woman_a_walk_stand.png",
+      "peasant_young_woman_a_walk_walk2.png"
+    ]
+  },
+  "peasant_young_woman_b": {
+    "idle": [
+      "peasant_young_woman_b_idle_walk1.png",
+      "peasant_young_woman_b_idle_stand.png",
+      "peasant_young_woman_b_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_young_woman_b_walk_walk1.png",
+      "peasant_young_woman_b_walk_stand.png",
+      "peasant_young_woman_b_walk_walk2.png"
+    ]
+  },
+  "peasant_boy": {
+    "idle": [
+      "peasant_boy_idle_walk1.png",
+      "peasant_boy_idle_stand.png",
+      "peasant_boy_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_boy_walk_walk1.png",
+      "peasant_boy_walk_stand.png",
+      "peasant_boy_walk_walk2.png"
+    ]
+  },
+  "peasant_girl": {
+    "idle": [
+      "peasant_girl_idle_walk1.png",
+      "peasant_girl_idle_stand.png",
+      "peasant_girl_idle_walk2.png"
+    ],
+    "walk": [
+      "peasant_girl_walk_walk1.png",
+      "peasant_girl_walk_stand.png",
+      "peasant_girl_walk_walk2.png"
+    ]
+  },
+  "elder_old_man": {
+    "idle": [
+      "elder_old_man_idle_walk1.png",
+      "elder_old_man_idle_stand.png",
+      "elder_old_man_idle_walk2.png"
+    ],
+    "walk": [
+      "elder_old_man_walk_walk1.png",
+      "elder_old_man_walk_stand.png",
+      "elder_old_man_walk_walk2.png"
+    ]
+  },
+  "elder_old_woman": {
+    "idle": [
+      "elder_old_woman_idle_walk1.png",
+      "elder_old_woman_idle_stand.png",
+      "elder_old_woman_idle_walk2.png"
+    ],
+    "walk": [
+      "elder_old_woman_walk_walk1.png",
+      "elder_old_woman_walk_stand.png",
+      "elder_old_woman_walk_walk2.png"
+    ]
+  },
+  "monster_cultist": {
+    "idle": [
+      "monster_cultist_idle_walk1.png",
+      "monster_cultist_idle_stand.png",
+      "monster_cultist_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_cultist_walk_walk1.png",
+      "monster_cultist_walk_stand.png",
+      "monster_cultist_walk_walk2.png"
+    ]
+  },
+  "monster_water_elemental": {
+    "idle": [
+      "monster_water_elemental_idle_walk1.png",
+      "monster_water_elemental_idle_stand.png",
+      "monster_water_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_water_elemental_walk_walk1.png",
+      "monster_water_elemental_walk_stand.png",
+      "monster_water_elemental_walk_walk2.png"
+    ]
+  },
+  "monster_wind_elemental": {
+    "idle": [
+      "monster_wind_elemental_idle_walk1.png",
+      "monster_wind_elemental_idle_stand.png",
+      "monster_wind_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_wind_elemental_walk_walk1.png",
+      "monster_wind_elemental_walk_stand.png",
+      "monster_wind_elemental_walk_walk2.png"
+    ]
+  },
+  "monster_earth_elemental": {
+    "idle": [
+      "monster_earth_elemental_idle_walk1.png",
+      "monster_earth_elemental_idle_stand.png",
+      "monster_earth_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_earth_elemental_walk_walk1.png",
+      "monster_earth_elemental_walk_stand.png",
+      "monster_earth_elemental_walk_walk2.png"
+    ]
+  },
+  "monster_vampire": {
+    "idle": [
+      "monster_vampire_idle_walk1.png",
+      "monster_vampire_idle_stand.png",
+      "monster_vampire_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_vampire_walk_walk1.png",
+      "monster_vampire_walk_stand.png",
+      "monster_vampire_walk_walk2.png"
+    ]
+  },
+  "monster_fire_elemental": {
+    "idle": [
+      "monster_fire_elemental_idle_walk1.png",
+      "monster_fire_elemental_idle_stand.png",
+      "monster_fire_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_fire_elemental_walk_walk1.png",
+      "monster_fire_elemental_walk_stand.png",
+      "monster_fire_elemental_walk_walk2.png"
+    ]
+  },
+  "monster_light_elemental": {
+    "idle": [
+      "monster_light_elemental_idle_walk1.png",
+      "monster_light_elemental_idle_stand.png",
+      "monster_light_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_light_elemental_walk_walk1.png",
+      "monster_light_elemental_walk_stand.png",
+      "monster_light_elemental_walk_walk2.png"
+    ]
+  },
+  "monster_dark_elemental": {
+    "idle": [
+      "monster_dark_elemental_idle_walk1.png",
+      "monster_dark_elemental_idle_stand.png",
+      "monster_dark_elemental_idle_walk2.png"
+    ],
+    "walk": [
+      "monster_dark_elemental_walk_walk1.png",
+      "monster_dark_elemental_walk_stand.png",
+      "monster_dark_elemental_walk_walk2.png"
+    ]
+  }
+}
