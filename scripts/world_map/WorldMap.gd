@@ -76,14 +76,6 @@ const UNLOCK_CHAIN: Dictionary = {
 @onready var _tooltip_bg:   Control         = $HUD/TooltipBG
 @onready var _tooltip_lbl:  Label           = $HUD/TooltipBG/TooltipLbl
 
-# InfoPanel refs (defined in WorldMap.tscn — lives inside SelectionLayer CanvasLayer)
-@onready var _info_panel:   Control         = $SelectionLayer/InfoPanel
-@onready var _info_title:   Label           = $SelectionLayer/InfoPanel/VBox/ChapterTitle
-@onready var _info_desc:    Label           = $SelectionLayer/InfoPanel/VBox/ChapterDesc
-@onready var _info_score:   Label           = $SelectionLayer/InfoPanel/VBox/BestScore
-@onready var _info_play:    Button          = $SelectionLayer/InfoPanel/VBox/PlayBtn
-@onready var _stars_row:    HBoxContainer   = $SelectionLayer/InfoPanel/VBox/StarsRow
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  STATE
 # ─────────────────────────────────────────────────────────────────────────────
@@ -94,9 +86,14 @@ var _hover_id:     int         = -1
 var _avatar_pos:   Vector2     = Vector2(300, 380)
 var _av_sprite:    AnimatedSprite2D = null
 
-# Tier-panel state
-var _selected_chapter: Dictionary = {}   # the chapter dict the panel is showing
-var _tier_buttons:     Array       = []  # Button nodes inside the panel
+# Tier-panel — built entirely in code on a CanvasLayer so it always floats
+# centred on screen above the map, independent of world-space transforms.
+var _panel_layer:   CanvasLayer = null   # layer that hosts the modal
+var _panel_dim:     ColorRect   = null   # full-screen dark overlay
+var _panel_root:    PanelContainer = null # the visible card
+var _panel_vbox:    VBoxContainer  = null # content inside card
+var _tier_nodes:    Array          = []   # dynamically added nodes (cleared on close)
+var _selected_chapter: Dictionary  = {}  # chapter currently shown
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  READY
@@ -136,7 +133,7 @@ func _build_player_avatar() -> void:
 	_av_sprite = AnimatedSprite2D.new()
 	_av_sprite.sprite_frames  = _make_sprite_frames(hero_key)
 	_av_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_av_sprite.scale          = Vector2(3.5, 3.5)
+	_av_sprite.scale          = Vector2(-3.5, 3.5)   # negative X → faces right/forward
 	_av_sprite.z_index        = 5
 	_av_sprite.play("idle")
 	_avatar.add_child(_av_sprite)
@@ -254,159 +251,244 @@ func _build_region_areas() -> void:
 		add_child(area)
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  INFO PANEL — built once, populated dynamically on each click
+#  INFO PANEL — a centred modal built entirely in code on a CanvasLayer
+#  so it always sits at a fixed screen position above all world-space nodes.
 # ─────────────────────────────────────────────────────────────────────────────
 func _build_info_panel() -> void:
-	if not is_instance_valid(_info_panel):
-		return
+	# CanvasLayer so the panel ignores world-space camera/transforms
+	_panel_layer = CanvasLayer.new()
+	_panel_layer.layer = 20          # above HUD (layer 10) and everything else
+	_panel_layer.visible = false
+	add_child(_panel_layer)
 
-	# Style the panel
-	_info_panel.visible = false
+	# Full-screen dim overlay — clicking it closes the panel
+	_panel_dim = ColorRect.new()
+	_panel_dim.color             = Color(0.0, 0.0, 0.0, 0.55)
+	_panel_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_panel_dim.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton:
+			var mb := ev as InputEventMouseButton
+			if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+				_close_info_panel())
+	_panel_layer.add_child(_panel_dim)
 
-	# Apply pixel font to static labels with larger sizes
-	for lbl in [_info_title, _info_desc, _info_score, _info_play]:
-		if is_instance_valid(lbl) and _pixel_font:
-			lbl.add_theme_font_override("font", _pixel_font)
-	if is_instance_valid(_info_title):
-		_info_title.add_theme_font_size_override("font_size", 22)
-	if is_instance_valid(_info_desc):
-		_info_desc.add_theme_font_size_override("font_size", 16)
-	if is_instance_valid(_info_score):
-		_info_score.add_theme_font_size_override("font_size", 15)
-	# Add spacing to the VBox
-	var vbox_init: VBoxContainer = _info_panel.get_node("VBox") as VBoxContainer
-	if is_instance_valid(vbox_init):
-		vbox_init.add_theme_constant_override("separation", 10)
+	# Card — centred on screen
+	_panel_root = PanelContainer.new()
+	_panel_root.custom_minimum_size = Vector2(300, 0)
+	_panel_root.set_anchors_preset(Control.PRESET_CENTER)
+	# Offset so it's centred properly (PanelContainer grows downward from anchor)
+	_panel_root.pivot_offset = Vector2(150, 0)
 
-	# Hide the default single Play button — we replace it with per-tier buttons
-	if is_instance_valid(_info_play):
-		_info_play.visible = false
+	# Dark styled background
+	var sb := StyleBoxFlat.new()
+	sb.bg_color          = Color("#12121e")
+	sb.border_color      = Color("#FFD93D")
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left   = 20
+	sb.content_margin_right  = 20
+	sb.content_margin_top    = 16
+	sb.content_margin_bottom = 20
+	_panel_root.add_theme_stylebox_override("panel", sb)
+	_panel_layer.add_child(_panel_root)
 
-	# Panel closes when clicking outside (handled in _input)
+	_panel_vbox = VBoxContainer.new()
+	_panel_vbox.add_theme_constant_override("separation", 8)
+	_panel_root.add_child(_panel_vbox)
 
-# Populate and show the info panel for a given chapter
 func _open_info_panel(ch: Dictionary) -> void:
-	if not is_instance_valid(_info_panel):
-		return
-
 	_selected_chapter = ch
-	var cid:   int    = ch["id"]   as int
-	var tiers: int    = ch.get("tiers", 1) as int
-	var col:   Color  = ch["color"] as Color
+	var cid:   int        = ch["id"]    as int
+	var tiers: int        = ch.get("tiers", 1) as int
+	var col:   Color      = ch["color"] as Color
 	var d:     Dictionary = _map_data.get(cid, {}) as Dictionary
-	var score: int    = d.get("best_score", 0) as int
+	var score: int        = d.get("best_score", 0) as int
 
-	# Fill static labels
-	if is_instance_valid(_info_title):
-		_info_title.text = "%s %s" % [ch["icon"] as String, ch["name"] as String]
-		_info_title.add_theme_color_override("font_color", col)
+	# Clear previous dynamic nodes
+	for n in _tier_nodes:
+		if is_instance_valid(n): n.queue_free()
+	_tier_nodes.clear()
 
-	if is_instance_valid(_info_desc):
-		_info_desc.text = ch["dsa"] as String
+	# ── Header row: icon + title + close button ───────────────────────────────
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	_panel_vbox.add_child(header)
+	_tier_nodes.append(header)
 
-	if is_instance_valid(_info_score):
-		_info_score.text = "Best: %d pts" % score if score > 0 else "Not yet played"
+	var icon_lbl := Label.new()
+	icon_lbl.text = ch["icon"] as String
+	icon_lbl.add_theme_font_size_override("font_size", 26)
+	header.add_child(icon_lbl)
 
-	# ── Star row (one star per completed tier) ────────────────────────────────
-	if is_instance_valid(_stars_row):
-		for child in _stars_row.get_children():
-			child.queue_free()
-		for t in range(tiers):
-			var tier_id: int  = cid + t
-			var done:    bool = (_map_data.get(tier_id, {}) as Dictionary)\
-				.get("complete", false) as bool
-			var star := Label.new()
-			star.text = "⭐" if done else "☆"
-			if _pixel_font: star.add_theme_font_override("font", _pixel_font)
-			star.add_theme_font_size_override("font_size", 24)
-			star.add_theme_color_override("font_color",
-				Color("#FFD93D") if done else Color("#555530"))
-			_stars_row.add_child(star)
+	var title_lbl := Label.new()
+	title_lbl.text = ch["name"] as String
+	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if _pixel_font: title_lbl.add_theme_font_override("font", _pixel_font)
+	title_lbl.add_theme_font_size_override("font_size", 18)
+	title_lbl.add_theme_color_override("font_color", col)
+	header.add_child(title_lbl)
+
+	var close_btn := Button.new()
+	close_btn.text = "✕"
+	close_btn.flat = true
+	close_btn.custom_minimum_size = Vector2(28, 28)
+	if _pixel_font: close_btn.add_theme_font_override("font", _pixel_font)
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.add_theme_color_override("font_color", Color("#aaaaaa"))
+	close_btn.pressed.connect(_close_info_panel)
+	header.add_child(close_btn)
+
+	# ── Divider ───────────────────────────────────────────────────────────────
+	var div := HSeparator.new()
+	var div_sb := StyleBoxFlat.new()
+	div_sb.bg_color = col.darkened(0.3)
+	div_sb.content_margin_top = 1
+	div.add_theme_stylebox_override("separator", div_sb)
+	_panel_vbox.add_child(div)
+	_tier_nodes.append(div)
+
+	# ── DSA subtitle ─────────────────────────────────────────────────────────
+	var dsa_lbl := Label.new()
+	dsa_lbl.text = ch["dsa"] as String
+	if _pixel_font: dsa_lbl.add_theme_font_override("font", _pixel_font)
+	dsa_lbl.add_theme_font_size_override("font_size", 12)
+	dsa_lbl.add_theme_color_override("font_color", Color("#888860"))
+	_panel_vbox.add_child(dsa_lbl)
+	_tier_nodes.append(dsa_lbl)
+
+	# ── Star row ──────────────────────────────────────────────────────────────
+	var stars_hbox := HBoxContainer.new()
+	stars_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	stars_hbox.add_theme_constant_override("separation", 4)
+	_panel_vbox.add_child(stars_hbox)
+	_tier_nodes.append(stars_hbox)
+	for t in range(tiers):
+		var done: bool = (_map_data.get(cid + t, {}) as Dictionary)\
+			.get("complete", false) as bool
+		var star := Label.new()
+		star.text = "⭐" if done else "☆"
+		star.add_theme_font_size_override("font_size", 18)
+		star.add_theme_color_override("font_color",
+			Color("#FFD93D") if done else Color("#333322"))
+		stars_hbox.add_child(star)
+
+	# ── Best score ────────────────────────────────────────────────────────────
+	var score_lbl := Label.new()
+	score_lbl.text = "Best: %d pts" % score if score > 0 else "Not yet played"
+	score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if _pixel_font: score_lbl.add_theme_font_override("font", _pixel_font)
+	score_lbl.add_theme_font_size_override("font_size", 12)
+	score_lbl.add_theme_color_override("font_color",
+		Color("#FFD93D") if score > 0 else Color("#666650"))
+	_panel_vbox.add_child(score_lbl)
+	_tier_nodes.append(score_lbl)
+
+	# ── Difficulty heading ────────────────────────────────────────────────────
+	var diff_lbl := Label.new()
+	diff_lbl.text = "— Select Difficulty —"
+	diff_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if _pixel_font: diff_lbl.add_theme_font_override("font", _pixel_font)
+	diff_lbl.add_theme_font_size_override("font_size", 11)
+	diff_lbl.add_theme_color_override("font_color", Color("#666650"))
+	_panel_vbox.add_child(diff_lbl)
+	_tier_nodes.append(diff_lbl)
 
 	# ── Tier buttons ──────────────────────────────────────────────────────────
-	# Remove old tier buttons
-	for old_btn in _tier_buttons:
-		if is_instance_valid(old_btn):
-			old_btn.queue_free()
-	_tier_buttons.clear()
-
-	# Insert tier buttons into the VBox, above the (hidden) PlayBtn
-	var vbox: VBoxContainer = _info_panel.get_node("VBox") as VBoxContainer
-
-	# Separator label
-	var sep_lbl := Label.new()
-	sep_lbl.text = "── Select Difficulty ──"
-	if _pixel_font: sep_lbl.add_theme_font_override("font", _pixel_font)
-	sep_lbl.add_theme_font_size_override("font_size", 14)
-	sep_lbl.add_theme_color_override("font_color", Color("#888860"))
-	sep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(sep_lbl)
-	_tier_buttons.append(sep_lbl)
-
 	for t in range(tiers):
-		var tier_id:   int    = cid + t
-		var tier_done: bool   = (_map_data.get(tier_id, {}) as Dictionary)\
+		var tier_id:   int  = cid + t
+		var tier_done: bool = (_map_data.get(tier_id, {}) as Dictionary)\
 			.get("complete", false) as bool
-		# A tier is accessible if:
-		#   • it's the first tier of the family, OR
-		#   • the previous tier is complete (sequential unlock), OR
-		#   • the tier itself is already complete (free replay)
 		var prev_done: bool = t == 0 or \
-			(_map_data.get(cid + t - 1, {}) as Dictionary).get("complete", false) as bool
+			(_map_data.get(cid + t - 1, {}) as Dictionary)\
+			.get("complete", false) as bool
 		var accessible: bool = prev_done or tier_done
 
+		var label_text: String = TIER_LABELS[t] \
+			if t < TIER_LABELS.size() else "Tier %d" % (t + 1)
+
 		var btn := Button.new()
-		var label_text := TIER_LABELS[t] if t < TIER_LABELS.size() \
-			else "Tier %d" % (t + 1)
-		var status_icon := "✓ " if tier_done else ("▶ " if accessible else "🔒 ")
-		btn.text = "%s%s" % [status_icon, label_text]
+		btn.text = label_text
 		btn.disabled = not accessible
-		btn.custom_minimum_size = Vector2(340, 52)
+		btn.custom_minimum_size = Vector2(260, 40)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if _pixel_font:
 			btn.add_theme_font_override("font", _pixel_font)
-			btn.add_theme_font_size_override("font_size", 18)
-		# Colour: completed = gold, available = chapter colour, locked = grey
-		var btn_col: Color
-		if tier_done:
-			btn_col = Color("#FFD93D")
-		elif accessible:
-			btn_col = col
-		else:
-			btn_col = Color("#444430")
-		btn.add_theme_color_override("font_color", btn_col)
+		btn.add_theme_font_size_override("font_size", 15)
 
-		# Capture tier_id for the closure
-		var captured_tid: int = tier_id
+		# Build coloured StyleBoxFlat for each state
+		var btn_sb_normal  := StyleBoxFlat.new()
+		var btn_sb_hover   := StyleBoxFlat.new()
+		var btn_sb_pressed := StyleBoxFlat.new()
+		var btn_sb_dis     := StyleBoxFlat.new()
+
+		var base_col: Color
+		if tier_done:
+			base_col = Color("#7a6000")          # gold-ish for completed
+		elif accessible:
+			base_col = col.darkened(0.55)        # chapter colour, darker fill
+		else:
+			base_col = Color("#1a1a14")          # near-black for locked
+
+		for sb in [btn_sb_normal, btn_sb_hover, btn_sb_pressed, btn_sb_dis]:
+			sb.set_corner_radius_all(5)
+			sb.set_border_width_all(1)
+
+		btn_sb_normal.bg_color  = base_col
+		btn_sb_normal.border_color = col if accessible else Color("#333322")
+		btn_sb_hover.bg_color   = base_col.lightened(0.18) if accessible else base_col
+		btn_sb_hover.border_color = col.lightened(0.3) if accessible else Color("#333322")
+		btn_sb_pressed.bg_color = base_col.darkened(0.2)
+		btn_sb_pressed.border_color = Color("#FFD93D")
+		btn_sb_dis.bg_color     = Color("#111110")
+		btn_sb_dis.border_color = Color("#222218")
+
+		for sb in [btn_sb_normal, btn_sb_hover, btn_sb_pressed, btn_sb_dis]:
+			sb.content_margin_left  = 12
+			sb.content_margin_right = 12
+
+		btn.add_theme_stylebox_override("normal",   btn_sb_normal)
+		btn.add_theme_stylebox_override("hover",    btn_sb_hover)
+		btn.add_theme_stylebox_override("pressed",  btn_sb_pressed)
+		btn.add_theme_stylebox_override("disabled", btn_sb_dis)
+
+		# Icon prefix + text colour
+		var status_icon: String
+		var txt_col: Color
+		if tier_done:
+			status_icon = "✓  "; txt_col = Color("#FFD93D")
+		elif accessible:
+			status_icon = "▶  "; txt_col = col.lightened(0.4)
+		else:
+			status_icon = "🔒 "; txt_col = Color("#444430")
+		btn.text = status_icon + label_text
+		btn.add_theme_color_override("font_color",          txt_col)
+		btn.add_theme_color_override("font_disabled_color", Color("#333322"))
+		btn.add_theme_color_override("font_hover_color",    txt_col.lightened(0.2))
+		btn.add_theme_color_override("font_pressed_color",  Color("#FFD93D"))
+
+		var captured_tid: int    = tier_id
 		var captured_pos: Vector2 = ch["pos"] as Vector2
 		btn.pressed.connect(func():
 			_close_info_panel()
 			_walk_avatar_to(captured_pos, func():
 				GameRouter.go_to_chapter(captured_tid)))
 
-		vbox.add_child(btn)
-		_tier_buttons.append(btn)
+		_panel_vbox.add_child(btn)
+		_tier_nodes.append(btn)
 
-	_info_panel.visible = true
+	# Recentre card vertically now that we know its height
+	_panel_root.set_anchors_preset(Control.PRESET_CENTER)
+	_panel_root.position -= Vector2(150, 0)   # shift left by half min-width
+
+	_panel_layer.visible = true
 
 func _close_info_panel() -> void:
-	if is_instance_valid(_info_panel):
-		_info_panel.visible = false
-	# Remove dynamically added tier buttons so the next open is clean
-	for old_btn in _tier_buttons:
-		if is_instance_valid(old_btn):
-			old_btn.queue_free()
-	_tier_buttons.clear()
+	if is_instance_valid(_panel_layer):
+		_panel_layer.visible = false
+	for n in _tier_nodes:
+		if is_instance_valid(n): n.queue_free()
+	_tier_nodes.clear()
 	_selected_chapter = {}
-
-# Close panel when clicking anywhere outside it
-func _input(event: InputEvent) -> void:
-	if not is_instance_valid(_info_panel) or not _info_panel.visible:
-		return
-	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
-			if not _info_panel.get_global_rect().has_point(mb.global_position):
-				_close_info_panel()
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  UNLOCK LOGIC
@@ -567,35 +649,69 @@ func _walk_avatar_to(target: Vector2, after: Callable) -> void:
 		after.call(); return
 	if is_instance_valid(_av_sprite):
 		_av_sprite.play("walk")
-		_av_sprite.flip_h = target.x < _avatar.position.x
+		# scale.x is -3.5 (mirrored), so flip_h reverses that mirror:
+		#   walking right → flip_h false  (keeps the -X mirror → faces right)
+		#   walking left  → flip_h true   (cancels mirror → faces left)
+		_av_sprite.flip_h = target.x > _avatar.position.x
 	var tw := create_tween()
 	tw.tween_property(_avatar, "position", target, 0.6).set_trans(Tween.TRANS_SINE)
 	tw.tween_callback(func():
 		_avatar_pos = target
 		if is_instance_valid(_av_sprite):
 			_av_sprite.play("idle")
-			_av_sprite.flip_h = false
+			_av_sprite.flip_h = false   # idle default: faces right (forward)
 		after.call())
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SPRITE FRAMES
+#
+#  Prefers {key}_sheet.png (full CGabriel spritesheet, 10 cols × N rows, 24px).
+#  Row 0 = south (faces player). Slices col 0 / col 3 / col 6 for walk cycle.
+#  Falls back to individually exported PNGs when the sheet is absent.
 # ─────────────────────────────────────────────────────────────────────────────
 func _make_sprite_frames(hero_key: String) -> SpriteFrames:
 	if hero_key in _frames_cache: return _frames_cache[hero_key]
+
 	var sf := SpriteFrames.new()
 	sf.remove_animation("default")
+
+	var sheet_path := "%s%s_sheet.png" % [HERO_BASE, hero_key]
+	var use_sheet  := ResourceLoader.exists(sheet_path)
+	var sheet_tex: Texture2D = null
+	if use_sheet:
+		sheet_tex = load(sheet_path) as Texture2D
+
+	var _atlas := func(col_x: int, row_y: int) -> AtlasTexture:
+		var a        := AtlasTexture.new()
+		a.atlas       = sheet_tex
+		a.region      = Rect2(col_x, row_y, 24, 24)
+		a.filter_clip = true
+		return a
+
+	# idle — south row (y=0), cols 0 / 72 / 144
 	sf.add_animation("idle")
 	sf.set_animation_loop("idle", true)
 	sf.set_animation_speed("idle", IDLE_FPS)
-	for frame_name in ANIM_FRAME_NAMES:
-		var path := "%s%s_idle_%s.png" % [HERO_BASE, hero_key, frame_name]
-		if ResourceLoader.exists(path): sf.add_frame("idle", load(path))
+	if use_sheet:
+		for col_x in [0, 72, 144]:
+			sf.add_frame("idle", _atlas.call(col_x, 0))
+	else:
+		for frame_name in ANIM_FRAME_NAMES:
+			var path := "%s%s_idle_%s.png" % [HERO_BASE, hero_key, frame_name]
+			if ResourceLoader.exists(path): sf.add_frame("idle", load(path))
+
+	# walk — same south row, faster playback
 	sf.add_animation("walk")
 	sf.set_animation_loop("walk", true)
 	sf.set_animation_speed("walk", WALK_FPS)
-	for frame_name in ANIM_FRAME_NAMES:
-		var path := "%s%s_walk_%s.png" % [HERO_BASE, hero_key, frame_name]
-		if ResourceLoader.exists(path): sf.add_frame("walk", load(path))
+	if use_sheet:
+		for col_x in [0, 72, 144]:
+			sf.add_frame("walk", _atlas.call(col_x, 0))
+	else:
+		for frame_name in ANIM_FRAME_NAMES:
+			var path := "%s%s_walk_%s.png" % [HERO_BASE, hero_key, frame_name]
+			if ResourceLoader.exists(path): sf.add_frame("walk", load(path))
+
 	_frames_cache[hero_key] = sf
 	return sf
 

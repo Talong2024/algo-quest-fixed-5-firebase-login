@@ -7,7 +7,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#08090f;--bg2:#0e1018;--bg3:#151824;--border:#1e2235;--border2:#2a3050;--text:#e8e6f0;--text2:#8a8aaa;--text3:#4a4a6a;--gold:#ffd93d;--blue:#4d96ff;--purple:#c77dff;--green:#6bcb77;--red:#ff6b6b;--orange:#ff9f43;--font-pixel:'Press Start 2P',monospace;--font-body:'Outfit',sans-serif;--r:10px;--r2:16px;--sidebar:260px}
+:root{
+  --bg:#08090f;--bg2:#0e1018;--bg3:#151824;
+  --border:#1e2235;--border2:#2a3050;
+  --text:#e8e6f0;--text2:#8a8aaa;--text3:#4a4a6a;
+  --gold:#ffd93d;--blue:#4d96ff;--purple:#c77dff;
+  --green:#6bcb77;--red:#ff6b6b;--orange:#ff9f43;
+  --font-pixel:'Press Start 2P',monospace;
+  --font-body:'Outfit',sans-serif;
+  --r:10px;--r2:16px;--sidebar:260px;
+  --shadow:rgba(0,0,0,.4);
+}
+[data-theme="light"]{
+  --bg:#f0f2f8;--bg2:#ffffff;--bg3:#e8ecf5;
+  --border:#d0d5e8;--border2:#b8bfda;
+  --text:#1a1c2e;--text2:#4a4f6a;--text3:#9098b8;
+  --gold:#c89000;--blue:#2563eb;--purple:#7c3aed;
+  --green:#16a34a;--red:#dc2626;--orange:#d97706;
+  --shadow:rgba(0,0,0,.12);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
@@ -170,6 +188,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .export-menu-item{padding:12px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px;border:none;background:transparent;width:100%;text-align:left;font-family:var(--font-body)}
 .export-menu-item:hover{background:var(--bg3);color:var(--text)}
 .export-divider{height:1px;background:var(--border);margin:4px 0}
+.theme-toggle{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.theme-toggle:hover{border-color:var(--border2);transform:scale(1.08)}
 .create-section-btn{padding:10px 20px;background:linear-gradient(135deg,var(--purple),#7c3aed);border-radius:8px;font-size:12px;font-weight:700;color:#fff;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 16px rgba(199,125,255,.3)}
 .create-section-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(199,125,255,.45)}
 .section-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
@@ -251,6 +271,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     <div class="nav-item"        onclick="nav('alerts')"    id="nav-alerts">   <span class="nav-item-icon">⚠️</span> Alerts <span id="alert-count" style="display:none;background:var(--red);color:#fff;border-radius:10px;font-size:9px;padding:2px 7px;margin-left:4px"></span></div>
   </nav>
   <div class="sidebar-bottom">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+      <span style="font-size:11px;color:var(--text2)" id="theme-label">Dark mode</span>
+    </div>
     <button class="btn-student-view" onclick="window.location.href='dashboard.html'">👁 Student View</button>
     <button class="btn-logout" onclick="handleLogout()">↩ Log Out</button>
   </div>
@@ -934,6 +958,29 @@ window.exportExcel = (type) => {
     new Date().toISOString().split("T")[0] + ".xlsx";
   XLSX.writeFile(wb, filename);
 };
+
+// ── THEME TOGGLE ─────────────────────────────────────────────────────────────
+window.toggleTheme = () => {
+  const html    = document.documentElement;
+  const isLight = html.getAttribute("data-theme") === "light";
+  const next    = isLight ? "dark" : "light";
+  html.setAttribute("data-theme", next === "dark" ? "" : "light");
+  document.getElementById("theme-toggle").textContent = next === "light" ? "☀️" : "🌙";
+  document.getElementById("theme-label").textContent  = next === "light" ? "Light mode" : "Dark mode";
+  localStorage.setItem("aq-theme", next);
+};
+(function(){
+  const saved = localStorage.getItem("aq-theme") || "dark";
+  if (saved === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("theme-toggle");
+      const lbl = document.getElementById("theme-label");
+      if (btn) btn.textContent = "☀️";
+      if (lbl) lbl.textContent = "Light mode";
+    });
+  }
+})();
 
 window.handleLogout=logout;
 </script>

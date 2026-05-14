@@ -80,8 +80,8 @@ const CITY_ICONS: Array[String] = [
 # ─────────────────────────────────────────────────────────────────────────────
 #  LAYOUT & COLORS
 # ─────────────────────────────────────────────────────────────────────────────
-const CITY_SCALE := Vector2(0.40, 0.40)  # tallest sprite 320px * 0.40 ≈ 128px
-const CITY_HIT   := 28.0
+const CITY_SCALE := Vector2(0.65, 0.65)  # tallest sprite 320px * 0.65 ≈ 208px — large & readable
+const CITY_HIT   := 44.0                 # larger hit radius to match bigger sprites
 const SNAP_DIST  := 80.0
 const MAGNET_R   := 120.0
 
@@ -247,6 +247,7 @@ const TUTORIAL_TEXTURES: Dictionary = {
 @onready var _city_layer:      Node2D         = $CityLayer
 @onready var _wt_layer:        Node2D         = $WeightLayer
 @onready var _path_layer:      Node2D         = $PathLayer
+@onready var _label_layer:     CanvasLayer    = $LabelLayer
 @onready var _live_edge:       Line2D         = $LiveEdge
 @onready var _edge_timer:      Timer          = $EdgeTimer
 @onready var _game_timer:      Timer          = $GameTimer
@@ -310,6 +311,11 @@ var _running_cost: float = 0.0
 
 # Dijkstra distance table (node_id → best known cost)
 var _dist_table: Dictionary = {}
+
+# Per-city glow tweens — keyed by city id — for adjacent-node pulse effect
+var _glow_tweens: Dictionary = {}
+# Canvas-layer label nodes — keyed by city id
+var _city_labels: Dictionary = {}
 
 # Analytics
 var _stat := {
@@ -530,13 +536,16 @@ func _spawn_cities(count: int) -> void:
 		var lbl := Label.new()
 		lbl.text = char(65 + i)
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 26)
+		lbl.add_theme_font_size_override("font_size", 36)   # larger, easy to read
 		lbl.add_theme_color_override("font_color", COL_WHITE)
-		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-		lbl.add_theme_constant_override("shadow_offset_x", 2)
-		lbl.add_theme_constant_override("shadow_offset_y", 2)
-		lbl.position = Vector2(-8, 58)  # below sprite
-		sprite.add_child(lbl)
+		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
+		lbl.add_theme_constant_override("shadow_offset_x", 3)
+		lbl.add_theme_constant_override("shadow_offset_y", 3)
+		lbl.set_meta("city_label_id", i)
+		# Place on the CanvasLayer so it always renders on top, unaffected by world transforms
+		_label_layer.add_child(lbl)
+		# Position will be synced every frame in _process; store reference
+		_city_labels[i] = lbl
 
 		var city_data := {
 			"id":        i,
@@ -802,6 +811,17 @@ func _process(delta: float) -> void:
 	if _edge_src_id >= 0 and _live_edge != null:
 		_update_snap_glow(get_viewport().get_mouse_position())
 
+	# Sync CanvasLayer city labels to follow their sprite world positions
+	for cid: int in _city_labels:
+		var lbl_node := _city_labels[cid] as Label
+		if not is_instance_valid(lbl_node): continue
+		if cid >= _cities.size(): continue
+		var sp := _cities[cid]["sprite"] as Node2D
+		if not is_instance_valid(sp): continue
+		# Convert world position to screen position for CanvasLayer
+		var screen_pos := get_viewport().get_canvas_transform() * sp.global_position
+		lbl_node.position = screen_pos + Vector2(-14, 52)
+
 func _update_snap_glow(mouse_pos: Vector2) -> void:
 	var best_d  := MAGNET_R
 	var best_id := -1
@@ -906,13 +926,15 @@ func _city_at(pos: Vector2) -> int:
 #  OBSERVE MODE  (tier 0 — what is a graph?)
 # ─────────────────────────────────────────────────────────────────────────────
 func _on_observe_click(id: int) -> void:
-	# Reset all cities to white first
+	# Reset all cities to their base color and stop any active glow tweens
 	for c: Dictionary in _cities:
+		_stop_glow(c["id"] as int)
 		(c["sprite"] as Node2D).modulate = Color.WHITE
-	# Highlight clicked city and its neighbors
+	# Highlight clicked city in gold
 	(_cities[id]["sprite"] as Node2D).modulate = PATH_COLOR
+	# Start pulsing glow on all adjacent neighbors
 	for nb: int in _cities[id]["neighbors"]:
-		(_cities[nb]["sprite"] as Node2D).modulate = BFS_NEXT_COL
+		_start_glow(nb)
 	_task_lbl.text = "%s connects to: %s" % [
 		_cities[id]["label"],
 		", ".join((_cities[id]["neighbors"] as Array).map(func(n): return (_city_by_id[n]["label"] as String) if n in _city_by_id else "?"))
@@ -968,6 +990,10 @@ func _on_path_click(id: int) -> void:
 		_selected_path.append(id)
 		(_cities[id]["sprite"] as Node2D).modulate = PATH_COLOR
 		_task_lbl.text = "Start at %s — now click a destination city." % _cities[id]["label"]
+		# Glow adjacent cities so player can see valid next steps
+		_stop_all_glows()
+		for nb: int in _cities[id]["neighbors"]:
+			_start_glow(nb)
 		return
 
 	var last: int = _selected_path.back()
@@ -981,12 +1007,17 @@ func _on_path_click(id: int) -> void:
 		)
 		return
 
+	_stop_all_glows()
 	_selected_path.append(id)
 	(_cities[id]["sprite"] as Node2D).modulate = PATH_COLOR
 	_draw_path_edge(_selected_path[_selected_path.size() - 2], id)
 	_task_lbl.text = "Path so far: %s  (%d hops)" % [
 		_path_label(_selected_path), _selected_path.size() - 1,
 	]
+	# Glow next valid neighbors (excluding already visited)
+	for nb: int in _cities[id]["neighbors"]:
+		if nb not in _selected_path:
+			_start_glow(nb)
 
 	if id != _selected_path[0]:
 		for cid: int in _selected_path:
@@ -996,6 +1027,7 @@ func _on_path_click(id: int) -> void:
 		_score += length_bonus
 		_score_lbl.text = "Score: %d" % _score
 		_task_lbl.text = "✓ Path found: %s" % _path_label(_selected_path)
+		_stop_all_glows()
 		_play_completion()
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1016,6 +1048,11 @@ func _on_dijkstra_click(id: int) -> void:
 		_update_cost_label()
 		_task_lbl.text = "Good — now click the next city on your path to %s." % \
 			_cities[_dst_id]["label"]
+		# Glow adjacent neighbors so player can see valid next steps
+		_stop_all_glows()
+		for nb: int in _cities[id]["neighbors"]:
+			if nb not in _selected_path:
+				_start_glow(nb)
 		return
 
 	var last: int = _selected_path.back()
@@ -1044,6 +1081,11 @@ func _on_dijkstra_click(id: int) -> void:
 	_task_lbl.text = "Cost so far: %d — keep building toward %s." % [
 		int(_running_cost), _cities[_dst_id]["label"],
 	]
+	# Glow valid next neighbors
+	_stop_all_glows()
+	for nb: int in _cities[id]["neighbors"]:
+		if nb not in _selected_path:
+			_start_glow(nb)
 
 	if id == _dst_id:
 		var optimal := _dijkstra_cost(_src_id, _dst_id)
@@ -1207,10 +1249,24 @@ func _update_bfs_display() -> void:
 func _highlight_bfs_expected() -> void:
 	var step := _selected_path.size()
 	if step >= _bfs_order.size(): return
+	# Glow all currently-valid BFS candidates (same level as expected next)
 	var nxt: int = _bfs_order[step]
-	(_cities[nxt]["sprite"] as Node2D).modulate = BFS_NEXT_COL
+	_stop_all_glows()
+	_start_glow(nxt)
+	# Also glow any other same-level candidates for fairness
+	for i in range(step + 1, _bfs_order.size()):
+		var cid: int = _bfs_order[i]
+		if _are_neighbors_of_any(_selected_path, cid):
+			_start_glow(cid)
+
+func _are_neighbors_of_any(visited: Array, cid: int) -> bool:
+	for vid: int in visited:
+		if _are_neighbors(vid, cid):
+			return true
+	return false
 
 func _clear_bfs_hint() -> void:
+	_stop_all_glows()
 	for c: Dictionary in _cities:
 		if c["id"] not in _selected_path:
 			(c["sprite"] as Node2D).modulate = c["color"]
@@ -1246,6 +1302,7 @@ func _draw_path_edge(a: int, b: int) -> void:
 	_path_lines.append(ln)
 
 func _reset_path() -> void:
+	_stop_all_glows()
 	for ln in _path_lines:
 		if is_instance_valid(ln): (ln as Node2D).queue_free()
 	_path_lines.clear()
@@ -1354,6 +1411,37 @@ func _play_completion() -> void:
 
 	await get_tree().create_timer(2.5).timeout
 	_end_game(true)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  GLOW PULSE  (adjacent-node animation on CanvasLayer — no green tint)
+# ─────────────────────────────────────────────────────────────────────────────
+# Pulsing colors: a warm amber-gold that fades in/out to give a clear magical glow.
+const GLOW_COLOR_A := Color(1.00, 0.85, 0.20, 1.0)   # bright gold peak
+const GLOW_COLOR_B := Color(0.55, 0.35, 0.05, 0.55)  # dim amber trough
+
+func _start_glow(city_id: int) -> void:
+	if city_id < 0 or city_id >= _cities.size(): return
+	var nd := _cities[city_id]["sprite"] as Node2D
+	if not is_instance_valid(nd): return
+	# Kill any previous tween on this city
+	_stop_glow(city_id)
+	# Create a looping ping-pong tween on the modulate color
+	var tw := nd.create_tween().set_loops().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(nd, "modulate", GLOW_COLOR_A, 0.45)
+	tw.tween_property(nd, "modulate", GLOW_COLOR_B, 0.45)
+	_glow_tweens[city_id] = tw
+
+func _stop_glow(city_id: int) -> void:
+	if city_id in _glow_tweens:
+		var tw = _glow_tweens[city_id]
+		if tw != null and tw is Tween:
+			tw.kill()
+		_glow_tweens.erase(city_id)
+
+func _stop_all_glows() -> void:
+	for cid in _glow_tweens.keys():
+		_stop_glow(cid)
+	_glow_tweens.clear()
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  FEEDBACK

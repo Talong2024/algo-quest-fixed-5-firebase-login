@@ -75,6 +75,9 @@ script = ExtResource("1_graphgame")
 
 [node name="CityLayer" type="Node2D" parent="."]
 
+[node name="LabelLayer" type="CanvasLayer" parent="."]
+layer = 10
+
 [node name="LiveEdge" type="Line2D" parent="."]
 visible = false
 width = 8.0

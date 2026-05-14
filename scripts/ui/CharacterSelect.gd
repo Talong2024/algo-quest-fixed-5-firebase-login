@@ -256,10 +256,10 @@ func _refresh_preview() -> void:
 	if _filtered.is_empty(): return
 	var hero: Dictionary = _filtered[_current_idx]
 
-	# Animated sprite
+	# Animated sprite — negative X scale mirrors the sprite so it faces forward
 	_preview_sprite.sprite_frames  = _make_sprite_frames(hero["key"])
 	_preview_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_preview_sprite.scale          = Vector2(8.0, 8.0)
+	_preview_sprite.scale          = Vector2(-8.0, 8.0)   # flip X → faces player
 	_preview_sprite.play("idle")
 
 	# Labels
@@ -308,16 +308,35 @@ func _refresh_portraits() -> void:
 		holder.custom_minimum_size = Vector2(80 if is_cur else 60,
 											 90 if is_cur else 70)
 
-		# Portrait sprite (static stand frame)
+		# Portrait sprite — south-facing stand frame sliced from master sheet.
+		# col 3 (x=72) is the clean idle/stand frame; south row = block * 96.
 		var portrait := TextureRect.new()
-		var path     := "%s%s_portrait.png" % [HERO_BASE, hero["key"]]
-		if ResourceLoader.exists(path):
-			portrait.texture             = load(path)
-			portrait.texture_filter      = CanvasItem.TEXTURE_FILTER_NEAREST
-			portrait.expand_mode         = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-			portrait.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			portrait.custom_minimum_size = Vector2(60 if is_cur else 44,
-												   60 if is_cur else 44)
+		var portrait_loaded := false
+		if ResourceLoader.exists(MASTER_SHEET) and hero["key"] in HERO_SHEET_ROW:
+			var s_y: int  = (HERO_SHEET_ROW[hero["key"]] as int) * 4 * 24
+			var atlas     := AtlasTexture.new()
+			atlas.atlas    = load(MASTER_SHEET) as Texture2D
+			atlas.region   = Rect2(72, s_y, 24, 24)   # col 3, south row
+			atlas.filter_clip = true
+			portrait.texture  = atlas
+			portrait_loaded   = true
+		if not portrait_loaded:
+			var per_sheet := "%s%s_sheet.png" % [HERO_BASE, hero["key"]]
+			var port_path := "%s%s_portrait.png" % [HERO_BASE, hero["key"]]
+			if ResourceLoader.exists(per_sheet):
+				var atlas     := AtlasTexture.new()
+				atlas.atlas    = load(per_sheet) as Texture2D
+				atlas.region   = Rect2(72, 0, 24, 24)
+				atlas.filter_clip = true
+				portrait.texture  = atlas
+			elif ResourceLoader.exists(port_path):
+				portrait.texture = load(port_path)
+		portrait.texture_filter      = CanvasItem.TEXTURE_FILTER_NEAREST
+		portrait.expand_mode         = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		portrait.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		portrait.flip_h              = true   # mirror to match preview (scale.x = -8)
+		portrait.custom_minimum_size = Vector2(60 if is_cur else 44,
+											   60 if is_cur else 44)
 		holder.add_child(portrait)
 
 		# Name label under portrait
@@ -381,7 +400,53 @@ func _play_sfx(path: String) -> void:
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ANIMATION HELPERS
+#
+#  Master sheet: CGabrielChars24x24.png  (10 cols × 159 rows, 24 px/frame)
+#  Each character occupies a BLOCK of 4 rows:
+#    block_row + 0  = South / facing player  ← ALWAYS USE THIS
+#    block_row + 1  = West  (left)
+#    block_row + 2  = East  (right)
+#    block_row + 3  = North (back)
+#
+#  Column layout within any row (10 cols total):
+#    x=  0  col 0  walk frame A
+#    x= 24  col 1  walk frame B  (mid-stride)
+#    x= 48  col 2  walk frame C
+#    x= 72  col 3  idle / stand  ← best single preview frame
+#    x= 96  col 4  walk frame D
+#    x=120  col 5  walk frame E  (mid-stride)
+#    x=144  col 6  walk frame F
+#    x=168  col 7  attack / alt A
+#    x=192  col 8  attack / alt B
+#    x=216  col 9  attack / alt C
+#
+#  HERO_SHEET_ROW maps each hero key → its block index in the master sheet.
+#  block_start_y = block_index * 4 * 24  (south row pixel y)
 # ─────────────────────────────────────────────────────────────────────────────
+const MASTER_SHEET := "res://assets/art/character/CGabrielChars24x24.png"
+
+const HERO_SHEET_ROW: Dictionary = {
+	# key            block_index  (south row y = index * 96)
+	"m_warrior":     1,
+	"f_warrior":     2,
+	"m_berserker":   3,
+	"f_berserker":   4,
+	"m_dark_knight": 5,
+	"f_dark_knight": 6,
+	"paladin":        7,
+	"m_mage":         9,
+	"f_mage":         8,
+	"m_healer":      10,
+	"f_healer":      11,   # Cleric — south block y = 11*96 = 1056
+	"m_monk":        12,
+	"f_monk":        13,
+	"m_ninja":       14,
+	"f_ninja":       15,
+	"m_ranger":      16,
+	"m_samurai":     17,
+	"f_samurai":     18,
+}
+
 func _make_sprite_frames(hero_key: String) -> SpriteFrames:
 	if hero_key in _frames_cache:
 		return _frames_cache[hero_key]
@@ -389,21 +454,60 @@ func _make_sprite_frames(hero_key: String) -> SpriteFrames:
 	var sf := SpriteFrames.new()
 	sf.remove_animation("default")
 
+	# ── Resolve texture source ────────────────────────────────────────────────
+	# Priority 1: master CGabriel sheet (correct south row via HERO_SHEET_ROW)
+	# Priority 2: per-hero sheet  {key}_sheet.png
+	# Priority 3: individual PNGs {key}_idle_walk1.png etc. (may face wrong way)
+	var sheet_tex:  Texture2D = null
+	var south_y:    int       = 0     # pixel y of the south row for this hero
+	var use_master: bool      = false
+	var use_sheet:  bool      = false
+
+	if ResourceLoader.exists(MASTER_SHEET) and hero_key in HERO_SHEET_ROW:
+		sheet_tex  = load(MASTER_SHEET) as Texture2D
+		south_y    = (HERO_SHEET_ROW[hero_key] as int) * 4 * 24
+		use_master = true
+	else:
+		var per_sheet := "%s%s_sheet.png" % [HERO_BASE, hero_key]
+		if ResourceLoader.exists(per_sheet):
+			sheet_tex = load(per_sheet) as Texture2D
+			south_y   = 0   # per-hero sheet: south row is always row 0
+			use_sheet = true
+
+	# AtlasTexture factory — slices one 24×24 frame from the resolved sheet
+	var make_atlas := func(col_x: int, row_y: int) -> AtlasTexture:
+		var a        := AtlasTexture.new()
+		a.atlas       = sheet_tex
+		a.region      = Rect2(col_x, row_y, 24, 24)
+		a.filter_clip = true
+		return a
+
+	# ── idle animation — south row, 3 walk frames ─────────────────────────────
 	sf.add_animation("idle")
 	sf.set_animation_loop("idle", true)
 	sf.set_animation_speed("idle", IDLE_FPS)
-	for frame_name in ANIM_FRAME_NAMES:
-		var path := "%s%s_idle_%s.png" % [HERO_BASE, hero_key, frame_name]
-		if ResourceLoader.exists(path):
-			sf.add_frame("idle", load(path))
+	if use_master or use_sheet:
+		# cols x=0, x=72, x=144 give a smooth 3-frame south walk cycle
+		for col_x in [0, 72, 144]:
+			sf.add_frame("idle", make_atlas.call(col_x, south_y))
+	else:
+		for frame_name in ANIM_FRAME_NAMES:
+			var path := "%s%s_idle_%s.png" % [HERO_BASE, hero_key, frame_name]
+			if ResourceLoader.exists(path):
+				sf.add_frame("idle", load(path))
 
+	# ── walk animation — same south row, faster playback ─────────────────────
 	sf.add_animation("walk")
 	sf.set_animation_loop("walk", true)
 	sf.set_animation_speed("walk", WALK_FPS)
-	for frame_name in ANIM_FRAME_NAMES:
-		var path := "%s%s_walk_%s.png" % [HERO_BASE, hero_key, frame_name]
-		if ResourceLoader.exists(path):
-			sf.add_frame("walk", load(path))
+	if use_master or use_sheet:
+		for col_x in [0, 72, 144]:
+			sf.add_frame("walk", make_atlas.call(col_x, south_y))
+	else:
+		for frame_name in ANIM_FRAME_NAMES:
+			var path := "%s%s_walk_%s.png" % [HERO_BASE, hero_key, frame_name]
+			if ResourceLoader.exists(path):
+				sf.add_frame("walk", load(path))
 
 	_frames_cache[hero_key] = sf
 	return sf

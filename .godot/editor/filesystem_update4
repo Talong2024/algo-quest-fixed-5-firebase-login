@@ -1,5 +1,3 @@
-res://scripts/chapters/stack/StackGame.gd
-res://scenes/chapters/queue/QueueGame.tscn
-res://scripts/chapters/queue/QueueGame.gd
-res://scenes/world_map/WorldMap.tscn
+res://scenes/ui/CharacterSelect.tscn
+res://scripts/ui/CharacterSelect.gd
 res://scripts/world_map/WorldMap.gd
