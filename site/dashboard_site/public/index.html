@@ -50,7 +50,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .role-btn:hover{border-color:var(--border2);color:var(--text)}
 .role-btn.active.student{border-color:rgba(77,150,255,.5);color:var(--blue);background:rgba(77,150,255,.08)}
 .role-btn.active.teacher{border-color:rgba(199,125,255,.5);color:var(--purple);background:rgba(199,125,255,.08)}
-.role-icon{font-size:20px;display:block;margin-bottom:4px}
 .auth-tabs{display:flex;background:var(--bg3);border-radius:8px;padding:4px;margin-bottom:20px;border:1px solid var(--border)}
 .auth-tab{flex:1;padding:9px;background:transparent;border-radius:5px;font-size:12px;font-weight:600;color:var(--text2);border:none;cursor:pointer;transition:all .2s;font-family:var(--font-body)}
 .auth-tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -76,11 +75,50 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:720px){.auth-wrap{flex-direction:column;width:95vw;min-height:auto}.auth-left{display:none}.auth-right{width:100%}}
+
+
+/* ── THEME BAR ── */
+.theme-bar{position:fixed;top:0;right:0;z-index:10000;padding:8px 16px;display:flex;align-items:center;gap:10px;background:var(--bg2);border-bottom:1px solid var(--border);border-left:1px solid var(--border);border-radius:0 0 0 12px;box-shadow:0 2px 12px rgba(0,0,0,.25);transition:background .3s,border-color .3s}
+.theme-bar-label{font-size:11px;color:var(--text2);font-family:var(--font-body,'Outfit',sans-serif);min-width:32px}
+.theme-switch{position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0}
+.theme-switch input{opacity:0;width:0;height:0;position:absolute}
+.theme-slider{position:absolute;inset:0;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:28px;transition:background .3s,border-color .3s}
+.theme-slider::before{content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:transform .3s,background .3s}
+.theme-switch input:checked + .theme-slider{background:var(--blue);border-color:var(--blue)}
+.theme-switch input:checked + .theme-slider::before{transform:translateX(24px);background:#fff}
+.theme-emoji{font-size:15px;line-height:1}
 </style>
 </head>
+<script>
+// ── THEME SYSTEM (plain script — must be global, not inside a module) ─────────
+function applyTheme(isLight) {
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  var cb  = document.getElementById("theme-checkbox");
+  var lbl = document.getElementById("theme-label");
+  if (cb)  cb.checked      = isLight;
+  if (lbl) lbl.textContent = isLight ? "Light" : "Dark";
+  try { localStorage.setItem("aq-theme", isLight ? "light" : "dark"); } catch(e){}
+}
+(function(){
+  var isLight = false;
+  try { isLight = localStorage.getItem("aq-theme") === "light"; } catch(e){}
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  document.addEventListener("DOMContentLoaded", function(){ applyTheme(isLight); });
+})();
+</script>
 <body>
+<!-- THEME TOGGLE BAR -->
+<div class="theme-bar">
+  <span class="theme-emoji">🌑</span>
+  <label class="theme-switch" title="Toggle light / dark mode">
+    <input type="checkbox" id="theme-checkbox" onchange="applyTheme(this.checked)">
+    <span class="theme-slider"></span>
+  </label>
+  <span class="theme-emoji">☀️</span>
+  <span class="theme-bar-label" id="theme-label">Dark</span>
+</div>
+
 <div class="bg-grid"></div>
-<button onclick="toggleTheme()" id="theme-toggle" style="position:fixed;top:16px;right:16px;z-index:100;width:40px;height:40px;background:rgba(255,255,255,.08);border:1px solid var(--border2);border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s" title="Toggle light/dark mode">🌙</button>
 <div class="glow-blue"></div>
 <div class="glow-purple"></div>
 
@@ -106,10 +144,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
     <div class="role-selector">
       <button class="role-btn active student" id="role-student" onclick="setRole('student')">
-        <span class="role-icon">🧙</span>Student
+        Student
       </button>
       <button class="role-btn" id="role-teacher" onclick="setRole('teacher')">
-        <span class="role-icon">👩‍🏫</span>Teacher
+        Teacher
       </button>
     </div>
 
@@ -339,25 +377,8 @@ document.getElementById("f-pass").addEventListener("keydown", e => {
   if (e.key === "Enter") window.handleSubmit();
 });
 
-window.toggleTheme = () => {
-  const html    = document.documentElement;
-  const isLight = html.getAttribute("data-theme") === "light";
-  const next    = isLight ? "dark" : "light";
-  html.setAttribute("data-theme", next === "dark" ? "" : "light");
-  document.getElementById("theme-toggle").textContent = next === "light" ? "☀️" : "🌙";
-  localStorage.setItem("aq-theme", next);
-};
-// Apply saved theme on load
-(function(){
-  const saved = localStorage.getItem("aq-theme") || "dark";
-  if (saved === "light") {
-    document.documentElement.setAttribute("data-theme","light");
-    document.addEventListener("DOMContentLoaded",()=>{
-      const btn=document.getElementById("theme-toggle");
-      if(btn) btn.textContent="☀️";
-    });
-  }
-})();
+
+
 </script>
 </body>
 </html>

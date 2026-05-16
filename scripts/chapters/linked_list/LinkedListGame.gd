@@ -279,15 +279,14 @@ func _ready() -> void:
 				_highlight_cycle_nodes()
 				_start_cycle_dot_animation()
 			elif _p["insert"]:
-				# Build the existing chain first, THEN add the insert node on top
 				_prebuild_chain()
 				_spawn_insert_node()
 				_set_task_by_concept()
 			else:
 				_set_task_by_concept()
 
-			if _p["concept"] == "CONNECT":
-				await _show_contrast_intro()
+	# Show paginated intro for every tier
+	await _show_tier_intro()
 
 	# v6: hint box always visible — shows unlink reminder on all tiers
 	if _p["concept"] == "ARRAY_FEEL":
@@ -458,38 +457,57 @@ func _set_task_by_concept() -> void:
 			_task_lbl.text = "⚠ A cycle exists! Break it to form a valid list.\nRight-click the car whose arrow loops back to remove the bad link."
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  CONNECT TIER — step-by-step tutorial (replaces old contrast intro wall)
-#
-#  4 slides, each dismissed by the player:
-#   Step 1 — What is a linked list?  (concept)
-#   Step 2 — What is a pointer / node?  (vocabulary + visual)
-#   Step 3 — HOW to draw a link  (mechanics demo with arrow to port dot)
-#   Step 4 — Goal + go  (task stated, game begins)
+#  PER-TIER INTRO  — paginated slides shown before every tier starts.
+#  Mirrors the GraphGame pattern: Back / Next / "Begin!" buttons, dark overlay,
+#  game input blocked until player dismisses the last slide.
 # ─────────────────────────────────────────────────────────────────────────────
-func _show_contrast_intro() -> void:
-	_alive = false
-	_task_lbl.text = ""
-	_hint_box.visible = false
-
-	var steps: Array = [
+const TIER_SLIDES: Dictionary = {
+	"ARRAY_FEEL": [
 		{
-			"title":      "Step 1 of 4 — What is a Linked List?",
-			"title_col":  COL_HEAD,
+			"title": "Arrays vs Linked Lists",
+			"title_col": COL_HEAD,
 			"lines": [
-				["", "An array stores items side by side in memory — like assigned seats on a train.", COL_WHITE],
-				["", "A linked list is different.  Each car can sit ANYWHERE in memory.", COL_OK],
-				["", "Order is created by POINTERS — each car remembers the address of the next one.", COL_OK],
+				["", "An ARRAY stores items in fixed slots — like assigned seats on a train.", COL_WHITE],
+				["", "To insert at position [1], every car from [1] onward must SHIFT one space.", COL_WRONG],
 				["", "", COL_WHITE],
-				["ARRAY",  "[0] [1] [2] [3]  — slots are fixed, neighbours are physical", COL_WRONG],
-				["LIST",   "0x3A → 0x11 → 0xF2 → NULL  — neighbours are pointers, not positions", COL_CHEAP],
+				["ARRAY",  "[0] [1] [2] [3] — order comes from physical position", COL_WRONG],
+				["LIST",   "0x3A → 0xF7 → 0x11 → NULL — order comes from pointers", COL_CHEAP],
+				["", "", COL_WHITE],
+				["", "This level lets you feel the cost of shifting firsthand.", COL_OK],
+			],
+		},
+		{
+			"title": "Your Task",
+			"title_col": COL_OK,
+			"lines": [
+				["PHASE 1", "Drag-sort the train cars into the TARGET ORDER shown above.", COL_OK],
+				["", "Every swap displaces cars — that is the O(n) shift cost.", COL_WRONG],
+				["", "", COL_WHITE],
+				["PHASE 2", "Re-chain the same cars as a linked list using pointer arrows.", COL_CHEAP],
+				["", "Inserting in a linked list costs 0 shifts — just two pointer changes.", COL_CHEAP],
+				["", "", COL_WHITE],
+				["", "Compare the shift counters after both phases — that is the lesson!", COL_HEAD],
+			],
+		},
+	],
+	"CONNECT": [
+		{
+			"title": "Step 1 — What is a Linked List?",
+			"title_col": COL_HEAD,
+			"lines": [
+				["", "An array stores items side by side in memory — like assigned seats.", COL_WHITE],
+				["", "A linked list is different.  Each car can sit ANYWHERE in memory.", COL_OK],
+				["", "Order is created by POINTERS — each car remembers the address of the next.", COL_OK],
+				["", "", COL_WHITE],
+				["ARRAY", "[0] [1] [2] [3]  — slots are fixed, neighbours are physical", COL_WRONG],
+				["LIST",  "0x3A → 0x11 → 0xF2 → NULL  — neighbours are pointers", COL_CHEAP],
 				["", "", COL_WHITE],
 				["", "This lets you insert or delete in O(1) time — just change a pointer.", COL_CHEAP],
 			],
-			"btn": "Next  →",
 		},
 		{
-			"title":      "Step 2 of 4 — Nodes and Pointers",
-			"title_col":  COL_HEAD,
+			"title": "Step 2 — Nodes and Pointers",
+			"title_col": COL_HEAD,
 			"lines": [
 				["", "Each train car is a NODE.  Every node has two things:", COL_WHITE],
 				["", "", COL_WHITE],
@@ -501,50 +519,143 @@ func _show_contrast_intro() -> void:
 				["", "", COL_WHITE],
 				["", "In code:   node.next = &other_node      ← that is what the arrow represents.", COL_HINT],
 			],
-			"btn": "Next  →",
 		},
 		{
-			"title":      "Step 3 of 4 — How to Connect Two Cars",
-			"title_col":  COL_CHEAP,
+			"title": "Step 3 — How to Connect Two Cars",
+			"title_col": COL_CHEAP,
 			"lines": [
 				["", "Each car has a cyan ▶ dot on its RIGHT side.  That dot IS the pointer.", COL_ARROW],
 				["", "", COL_WHITE],
-				["WAY 1",  "DRAG the ▶ dot from one car and DROP it onto another car.", COL_OK],
-				["WAY 2",  "CLICK a car (cyan ring appears), then CLICK the car to link to.", COL_OK],
+				["WAY 1", "DRAG the ▶ dot from one car and DROP it onto another car.", COL_OK],
+				["WAY 2", "CLICK a car (cyan ring appears), then CLICK the car to link to.", COL_OK],
 				["", "", COL_WHITE],
-				["UNDO",   "RIGHT-CLICK any car to remove its outgoing pointer.", COL_COST],
+				["UNDO",  "RIGHT-CLICK any car to remove its outgoing pointer.", COL_COST],
 				["", "", COL_WHITE],
-				["", "The arrow that appears is the pointer.  It stores the memory address.", COL_WHITE],
-				["", "Hover near a car while dragging — it glows cyan when you are close enough to snap.", COL_HINT],
+				["", "Hover near a car while dragging — it glows cyan when close enough to snap.", COL_HINT],
 			],
-			"btn": "Next  →",
 		},
 		{
-			"title":      "Step 4 of 4 — Your Goal",
-			"title_col":  COL_OK,
+			"title": "Step 4 — Your Goal",
+			"title_col": COL_OK,
 			"lines": [
-				["", "Connect ALL the cars into ONE chain — left to right.", COL_WHITE],
+				["", "Connect ALL cars into ONE chain ending at NULL.", COL_WHITE],
 				["", "", COL_WHITE],
 				["RULE 1", "Every car must be reachable from the HEAD.", COL_OK],
 				["RULE 2", "No car may be pointed to by more than ONE other car.", COL_OK],
 				["RULE 3", "The last car's ▶ must reach the NULL marker on the right.", COL_OK],
 				["", "", COL_WHITE],
-				["", "The HUD at the top shows:  HEAD address | TAIL address | Links made / needed.", COL_HINT],
-				["", "", COL_WHITE],
-				["", "When all rules are satisfied, the level completes automatically.  Good luck!", COL_CHEAP],
+				["", "The level completes automatically when all rules are satisfied!", COL_CHEAP],
 			],
-			"btn": "Start!",
 		},
-	]
+	],
+	"INSERT": [
+		{
+			"title": "Inserting into a Linked List",
+			"title_col": COL_HEAD,
+			"lines": [
+				["", "In an array, inserting at position [1] forces every element after it to shift.", COL_WRONG],
+				["", "That is O(n) time — slow for large arrays.", COL_WRONG],
+				["", "", COL_WHITE],
+				["", "In a linked list, insertion is only 3 pointer changes: O(1).", COL_CHEAP],
+				["", "", COL_WHITE],
+				["STEP 1", "Remove A's existing pointer  (right-click A)", COL_OK],
+				["STEP 2", "Draw A's ▶ to the NEW node", COL_OK],
+				["STEP 3", "Draw NEW node's ▶ to B", COL_OK],
+			],
+		},
+		{
+			"title": "Your Task",
+			"title_col": COL_OK,
+			"lines": [
+				["", "A chain already exists.  A PURPLE car is waiting in the tray above.", COL_WHITE],
+				["", "", COL_WHITE],
+				["", "Insert the purple car BETWEEN two adjacent cars of your choice.", COL_OK],
+				["", "Both connections (incoming and outgoing) are required for a valid chain.", COL_OK],
+				["", "", COL_WHITE],
+				["UNDO", "Right-click any car to remove its outgoing pointer.", COL_COST],
+			],
+		},
+	],
+	"REVERSE": [
+		{
+			"title": "Reversing a Linked List",
+			"title_col": COL_HEAD,
+			"lines": [
+				["", "To reverse a list, every pointer must flip direction.", COL_WHITE],
+				["", "", COL_WHITE],
+				["BEFORE", "A → B → C → D → NULL", COL_WRONG],
+				["AFTER",  "D → C → B → A → NULL", COL_CHEAP],
+				["", "", COL_WHITE],
+				["", "The old TAIL becomes the new HEAD.", COL_HEAD],
+			],
+		},
+		{
+			"title": "How to Reverse",
+			"title_col": COL_OK,
+			"lines": [
+				["", "Faint ghost arrows show you the TARGET direction for each pointer.", COL_HINT],
+				["", "", COL_WHITE],
+				["STEP 1", "Right-click a car to remove its current outgoing link.", COL_OK],
+				["STEP 2", "Drag the ▶ dot BACKWARD to the car that used to point here.", COL_OK],
+				["STEP 3", "Repeat until every arrow matches its ghost.", COL_OK],
+				["", "", COL_WHITE],
+				["⏱", "Time limit applies — work quickly!", COL_COST],
+			],
+		},
+	],
+	"CYCLE": [
+		{
+			"title": "Cycles in a Linked List",
+			"title_col": COL_WRONG,
+			"lines": [
+				["", "A valid linked list ends at NULL.", COL_WHITE],
+				["", "A CYCLE happens when a node's pointer loops back to an earlier node.", COL_WRONG],
+				["", "The traversal never terminates — this is a real and dangerous bug!", COL_WRONG],
+				["", "", COL_WHITE],
+				["", "The animated dot shows a traversal pointer circling endlessly.", COL_HINT],
+				["", "Highlighted cars are inside the loop.", COL_HINT],
+			],
+		},
+		{
+			"title": "Your Task",
+			"title_col": COL_OK,
+			"lines": [
+				["", "Find the car whose arrow creates the loop.", COL_WHITE],
+				["", "", COL_WHITE],
+				["STEP 1", "Right-click the offending car to remove its bad link.", COL_OK],
+				["STEP 2", "Re-draw its ▶ to the correct next car (or NULL) to fix the chain.", COL_OK],
+				["", "", COL_WHITE],
+				["⏱", "Time limit applies — act fast!", COL_COST],
+			],
+		},
+	],
+}
 
-	for step_idx in range(steps.size()):
-		var step: Dictionary = steps[step_idx]
+func _show_tier_intro() -> void:
+	var concept: String = _p["concept"]
+	if concept not in TIER_SLIDES: return
+	var slides: Array = TIER_SLIDES[concept]
+	_alive = false
+
+	for i in slides.size():
+		var slide: Dictionary = slides[i]
+		var is_last: bool = (i == slides.size() - 1)
+		var btn_text: String = "Begin!" if is_last else "Next  →"
+		# Re-use existing slide builder — just needs title/title_col/lines/btn keys
+		var step: Dictionary = {
+			"title":     slide["title"],
+			"title_col": slide["title_col"],
+			"lines":     slide["lines"],
+			"btn":       btn_text,
+		}
 		await _show_tutorial_slide(step)
 
-	_alive = true
-	_task_lbl.text = "Connect all cars into one chain ending at NULL.\nDrag the ▶ dot  OR  click a car then click another.\nRight-click any car to remove its link."
-	_hint_box.visible = true
-	_hint_lbl.text = _unlink_reminder_text()
+# ─────────────────────────────────────────────────────────────────────────────
+#  CONNECT TIER — kept for compatibility; _show_tier_intro supersedes it
+# ─────────────────────────────────────────────────────────────────────────────
+func _show_contrast_intro() -> void:
+	pass  # now handled by _show_tier_intro above
+
 
 # Builds and shows one tutorial slide, waits for player to dismiss it.
 func _show_tutorial_slide(step: Dictionary) -> void:
@@ -907,7 +1018,7 @@ func _spawn_list_car(uid: int, val: int, pos: Vector2) -> void:
 	var val_lbl := Label.new()
 	val_lbl.text = str(val)
 	val_lbl.add_theme_font_override("font", _pixel_font)
-	val_lbl.add_theme_font_size_override("font_size", 26)
+	val_lbl.add_theme_font_size_override("font_size", 36)
 	val_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.0))
 	val_lbl.add_theme_color_override("font_shadow_color", Color.BLACK)
 	val_lbl.add_theme_constant_override("shadow_offset_x", 2)
@@ -1500,7 +1611,7 @@ func _make_node(pos: Vector2, staged: bool) -> Dictionary:
 	var lbl := Label.new()
 	lbl.text = addr
 	lbl.add_theme_font_override("font", _pixel_font)
-	lbl.add_theme_font_size_override("font_size", 22)   # larger
+	lbl.add_theme_font_size_override("font_size", 36)   # larger
 	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.0))
 	lbl.add_theme_color_override("font_shadow_color", Color(0,0,0,0.9))
 	lbl.add_theme_constant_override("shadow_offset_x", 2)
@@ -1696,12 +1807,53 @@ func _process(delta: float) -> void:
 		if _combo_decay <= 0.0: _combo = 0; _combo_lbl.text = ""
 	if _p["concept"] not in ["ARRAY_FEEL"]:
 		_update_null_marker()
-		_update_hover()       # v6: hover highlight
+		_update_hover()
 	if _live_arrow != null:
 		_update_snap_glow(get_viewport().get_mouse_position())
 	# Drag ghost follow
 	if is_instance_valid(_drag_ghost):
 		_drag_ghost.global_position = get_viewport().get_mouse_position() + _drag_offset
+	# Live arrow tracking — update endpoints in-place every frame while dragging
+	if _drag_id >= 0 and _p["concept"] != "ARRAY_FEEL":
+		_update_arrows_for_node(_drag_id)
+
+# Update the two arrows affected when a node moves: the one leaving it (tail)
+# and any arrow pointing to it (head). Updates Line2D points in-place — no rebuild.
+func _update_arrows_for_node(nid: int) -> void:
+	var dragged: Dictionary = _data_by_id(nid)
+	if not dragged: return
+	var drag_nd := dragged["sprite"] as Node2D
+	if not is_instance_valid(drag_nd): return
+	var drag_pos := drag_nd.global_position
+
+	for data: Dictionary in _nodes:
+		var arrow: Variant = data["arrow"]
+		if not arrow or not is_instance_valid(arrow as Node2D): continue
+		var line := arrow as Line2D
+		if line.get_point_count() < 5: continue
+
+		# (a) Arrow LEAVING the dragged node — move its tail (point 0)
+		if data["id"] == nid:
+			var new_tail := _arrow_layer.to_local(drag_pos + PORT_OFFSET)
+			var head     := line.get_point_position(1)
+			line.set_point_position(0, new_tail)
+			_set_arrowhead(line, new_tail, head)
+
+		# (b) Arrow pointing TO the dragged node — move its head (points 1-4)
+		elif data["next_id"] == nid:
+			var src_nd := data["sprite"] as Node2D
+			if not is_instance_valid(src_nd): continue
+			var tail     := _arrow_layer.to_local(src_nd.global_position + PORT_OFFSET)
+			var new_head := _arrow_layer.to_local(drag_pos)
+			_set_arrowhead(line, tail, new_head)
+
+func _set_arrowhead(line: Line2D, local_tail: Vector2, local_head: Vector2) -> void:
+	var dir := (local_head - local_tail).normalized()
+	if dir == Vector2.ZERO: return
+	line.set_point_position(1, local_head)
+	line.set_point_position(2, local_head - dir * 14.0 + dir.rotated(deg_to_rad(140.0))  * 12.0)
+	line.set_point_position(3, local_head)
+	line.set_point_position(4, local_head - dir * 14.0 + dir.rotated(deg_to_rad(-140.0)) * 12.0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  v6: HOVER HIGHLIGHT
@@ -1871,7 +2023,7 @@ func _input(event: InputEvent) -> void:
 					# Keep port indicator in sync with sprite
 					if d.has("port") and is_instance_valid(d["port"] as Node2D):
 						(d["port"] as Node2D).global_position = nd.global_position + PORT_OFFSET
-					_redraw_all_arrows()
+					# Arrow endpoints updated live in _process — no rebuild here
 				# Move select ring with the node
 				if is_instance_valid(_select_ring) and _selected_id == _drag_id:
 					var d2: Dictionary = _data_by_id(_drag_id)
@@ -2571,22 +2723,22 @@ func _redraw_all_arrows() -> void:
 func _make_perm_line(from: Vector2, to: Vector2) -> Line2D:
 	var line := Line2D.new()
 	line.default_color = COL_ARROW
-	line.width = 5.0
+	line.width = 9.0
 	var local_from := _arrow_layer.to_local(from)
 	var local_to   := _arrow_layer.to_local(to)
 	var dir := (local_to - local_from).normalized()
 	line.add_point(local_from)
 	line.add_point(local_to)
-	line.add_point(local_to - dir * 14 + dir.rotated(deg_to_rad(140)) * 12)
+	line.add_point(local_to - dir * 20 + dir.rotated(deg_to_rad(140)) * 16)
 	line.add_point(local_to)
-	line.add_point(local_to - dir * 14 + dir.rotated(deg_to_rad(-140)) * 12)
+	line.add_point(local_to - dir * 20 + dir.rotated(deg_to_rad(-140)) * 16)
 	_arrow_layer.add_child(line)
 	return line
 
 func _make_temp_line(from: Vector2, to: Vector2) -> Line2D:
 	var line := Line2D.new()
 	line.default_color = COL_LIVE
-	line.width = 4.0
+	line.width = 7.0
 	line.add_point(from)
 	line.add_point(to)
 	_arrow_layer.add_child(line)

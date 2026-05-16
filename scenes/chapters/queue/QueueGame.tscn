@@ -1,266 +1,303 @@
-[gd_scene load_steps=2 format=3 uid="uid://do58wikheuayg"]
+[gd_scene load_steps=8 format=3 uid="uid://bq47xmcneua0h"]
 
 [ext_resource type="Script" uid="uid://cv74xdaqn8bu7" path="res://scripts/chapters/queue/QueueGame.gd" id="1_qgame"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_peek"]
+bg_color = Color(0.2, 0.15, 0.04, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.95, 0.78, 0.2, 0.85)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
+bg_color = Color(0.05, 0.05, 0.15, 0.82)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.6, 1, 0.5)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_intro"]
+bg_color = Color(0.06, 0.05, 0.18, 0.97)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.55, 0.45, 0.2, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.3, 0.22, 0.08, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.6, 0.2, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.45, 0.33, 0.1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.95, 0.78, 0.25, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.04, 0.04, 0.12, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.4, 0.8, 0.4)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="QueueGame" type="Node2D"]
 script = ExtResource("1_qgame")
 
-[node name="Background" type="Sprite2D" parent="."]
-z_index = -10
-position = Vector2(640, 360)
+[node name="WorldLayer" type="Node2D" parent="."]
 
-[node name="QueueLine_A" type="Node2D" parent="."]
-position = Vector2(0, 490)
-
-[node name="QueueLine_B" type="Node2D" parent="."]
+[node name="SubmitZone" type="Node2D" parent="WorldLayer"]
 visible = false
-position = Vector2(0, 490)
-
-[node name="ServiceWindow_A" type="Node2D" parent="."]
-position = Vector2(55, 490)
-
-[node name="ServiceWindow_B" type="Node2D" parent="."]
-visible = false
-position = Vector2(55, 490)
-
-[node name="CombatWindow_A" type="Node2D" parent="."]
-visible = false
-position = Vector2(55, 360)
-
-[node name="CombatWindow_B" type="Node2D" parent="."]
-visible = false
-position = Vector2(55, 240)
-
-[node name="FrontArrow_A" type="Node2D" parent="."]
-position = Vector2(160, 434)
-
-[node name="ArrowLabel_A" type="Label" parent="FrontArrow_A"]
-offset_left = -6.0
-offset_right = -6.0
-text = "▼"
-
-[node name="FrontArrow_B" type="Node2D" parent="."]
-visible = false
-position = Vector2(160, 434)
-
-[node name="ArrowLabel_B" type="Label" parent="FrontArrow_B"]
-offset_left = -6.0
-offset_right = -6.0
-text = "▼"
+z_index = 5
 
 [node name="DragGhost" type="Node2D" parent="."]
 visible = false
-z_index = 100
+z_index = 200
 
-[node name="DragGhostSprite" type="Sprite2D" parent="DragGhost"]
-modulate = Color(1, 1, 1, 0.45)
-scale = Vector2(3, 3)
+[node name="GhostBG" type="ColorRect" parent="DragGhost"]
+offset_left = -36.0
+offset_top = -36.0
+offset_right = 36.0
+offset_bottom = 36.0
+color = Color(1, 1, 1, 0.12)
 
-[node name="SpawnTimer" type="Timer" parent="."]
-wait_time = 10.0
+[node name="ValueLabel" type="Label" parent="DragGhost"]
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+theme_override_font_sizes/font_size = 20
+text = "?"
+horizontal_alignment = 1
 
 [node name="GameTimer" type="Timer" parent="."]
 
-[node name="TutorialBlocker" type="ColorRect" parent="."]
-visible = false
-z_index = 180
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-mouse_filter = 2
-color = Color(0, 0, 0, 0.5)
+[node name="SpawnTimer" type="Timer" parent="."]
 
 [node name="HUD" type="CanvasLayer" parent="."]
 layer = 10
 
 [node name="ScoreLabel" type="Label" parent="HUD"]
-offset_left = 16.0
+offset_left = 12.0
 offset_top = 8.0
-offset_right = 220.0
+offset_right = 280.0
 offset_bottom = 36.0
+theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
-[node name="ComboLabel" type="Label" parent="HUD"]
-offset_left = 16.0
-offset_top = 36.0
-offset_right = 260.0
-offset_bottom = 60.0
-theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
+[node name="RoundLabel" type="Label" parent="HUD"]
+offset_left = 12.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 66.0
+theme_override_font_sizes/font_size = 16
+text = "Round 1 / 3"
 
-[node name="TimerLabel" type="Label" parent="HUD"]
+[node name="MovesLabel" type="Label" parent="HUD"]
 visible = false
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -60.0
-offset_top = 8.0
-offset_right = 60.0
-offset_bottom = 34.0
-text = "⏱ 0"
-horizontal_alignment = 1
-
-[node name="GoalLabel" type="Label" parent="HUD"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -220.0
-offset_top = 8.0
-offset_right = -16.0
-offset_bottom = 34.0
-text = "Goal: 0 pts"
-horizontal_alignment = 2
+offset_left = 12.0
+offset_top = 70.0
+offset_right = 280.0
+offset_bottom = 96.0
+theme_override_colors/font_color = Color(0.922, 0.745, 0.216, 1)
+theme_override_font_sizes/font_size = 16
+text = "Moves left: 12"
 
 [node name="AccuracyLabel" type="Label" parent="HUD"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -220.0
-offset_top = 34.0
-offset_right = -16.0
-offset_bottom = 58.0
-text = "Accuracy: -"
-horizontal_alignment = 2
+offset_left = 12.0
+offset_top = 100.0
+offset_right = 280.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 14
+text = "Accuracy: —"
+
+[node name="ComboLabel" type="Label" parent="HUD"]
+offset_left = 12.0
+offset_top = 128.0
+offset_right = 280.0
+offset_bottom = 152.0
+theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
+theme_override_font_sizes/font_size = 16
 
 [node name="LivesRow" type="HBoxContainer" parent="HUD"]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -60.0
-offset_top = 34.0
-offset_right = 60.0
-offset_bottom = 62.0
-alignment = 1
+offset_left = 12.0
+offset_top = 156.0
+offset_right = 180.0
+offset_bottom = 186.0
+
+[node name="PeekBanner" type="PanelContainer" parent="HUD"]
+visible = false
+z_index = 30
+offset_left = 280.0
+offset_top = 8.0
+offset_right = 1040.0
+offset_bottom = 50.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_peek")
+
+[node name="PeekLabel" type="Label" parent="HUD/PeekBanner"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "peek()  →  front() = ?"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HintBox" type="PanelContainer" parent="HUD"]
-z_index = 200
 anchors_preset = -1
-anchor_left = 0.05
-anchor_top = 0.5
-anchor_right = 0.78
+anchor_top = 1.0
+anchor_right = 0.38
 anchor_bottom = 1.0
-offset_top = 10.0
+offset_top = -105.0
 offset_bottom = -8.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
 
 [node name="HintLabel" type="Label" parent="HUD/HintBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.15, 0.08, 0.02, 1)
+theme_override_colors/font_color = Color(0.88, 0.94, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "Drag HOLDING → queue to enqueue
+Drag [0] → HOLDING to dequeue
+Click citizen to peek"
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="RightPanel" type="VBoxContainer" parent="HUD"]
+offset_left = 1040.0
+offset_top = 60.0
+offset_right = 1275.0
+offset_bottom = 700.0
+theme_override_constants/separation = 10
+
+[node name="QueueDisplay" type="VBoxContainer" parent="HUD/RightPanel"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 3
+
+[node name="QueueHeader" type="Label" parent="HUD/RightPanel/QueueDisplay"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.78, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "— Queue State —"
+horizontal_alignment = 1
+
+[node name="ConceptPanel" type="VBoxContainer" parent="HUD/RightPanel"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ConceptHeader" type="Label" parent="HUD/RightPanel/ConceptPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.78, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "— Last Operation —"
+horizontal_alignment = 1
+
+[node name="ConceptLabel" type="Label" parent="HUD/RightPanel/ConceptPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 13
+text = "enqueue() | dequeue()
+peek() | isEmpty() | isFull()
+
+Sort citizens: lowest → FRONT [0]"
+autowrap_mode = 3
+
+[node name="IntroOverlay" type="PanelContainer" parent="HUD"]
+visible = false
+z_index = 50
+offset_left = 260.0
+offset_top = 110.0
+offset_right = 1020.0
+offset_bottom = 610.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_intro")
+
+[node name="Margin" type="MarginContainer" parent="HUD/IntroOverlay"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 40
+
+[node name="VBox" type="VBoxContainer" parent="HUD/IntroOverlay/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.25, 1)
+text = "Queue Town — Sort the Line!"
+horizontal_alignment = 1
+
+[node name="BodyLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+text = "..."
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="ServiceRow" type="HBoxContainer" parent="HUD"]
-visible = false
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -180.0
-offset_top = -56.0
-offset_right = 180.0
-offset_bottom = -12.0
+[node name="NavRow" type="HBoxContainer" parent="HUD/IntroOverlay/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
 alignment = 1
 
-[node name="BtnTax" type="Button" parent="HUD/ServiceRow"]
-custom_minimum_size = Vector2(100, 36)
+[node name="BackBtn" type="Button" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
+custom_minimum_size = Vector2(110, 42)
 layout_mode = 2
-text = "💰 TAX"
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_panel")
+disabled = true
+text = "◀ Back"
 
-[node name="BtnFood" type="Button" parent="HUD/ServiceRow"]
-custom_minimum_size = Vector2(100, 36)
+[node name="PageLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
+custom_minimum_size = Vector2(70, 0)
 layout_mode = 2
-text = "🍞 FOOD"
-
-[node name="BtnPermit" type="Button" parent="HUD/ServiceRow"]
-custom_minimum_size = Vector2(100, 36)
-layout_mode = 2
-text = "📜 PERMIT"
-
-[node name="LaneLabel_A" type="Label" parent="HUD"]
-visible = false
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 8.0
-offset_top = 62.0
-offset_right = 360.0
-offset_bottom = 86.0
-theme_override_colors/font_color = Color(0.35, 0.75, 1, 1)
-text = "💰 TAX QUEUE"
-
-[node name="LaneLabel_B" type="Label" parent="HUD"]
-visible = false
-anchors_preset = 4
-anchor_top = 0.5
-anchor_bottom = 0.5
-offset_left = 8.0
-offset_top = 86.0
-offset_right = 360.0
-offset_bottom = 110.0
-theme_override_colors/font_color = Color(0.35, 1, 0.5, 1)
-text = "🍞 FOOD QUEUE"
-
-[node name="VIPAlert" type="PanelContainer" parent="HUD"]
-visible = false
-z_index = 160
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = 62.0
-offset_right = 220.0
-offset_bottom = 150.0
-
-[node name="VIPLabel" type="Label" parent="HUD/VIPAlert"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
+text = "1 / 2"
 horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
 
-[node name="MonsterAlert" type="PanelContainer" parent="HUD"]
-visible = false
-z_index = 160
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -240.0
-offset_top = 62.0
-offset_right = 240.0
-offset_bottom = 164.0
-
-[node name="MonsterLabel" type="Label" parent="HUD/MonsterAlert"]
+[node name="NextBtn" type="Button" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
+custom_minimum_size = Vector2(110, 42)
 layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="FailSummary" type="PanelContainer" parent="HUD"]
-visible = false
-z_index = 220
-anchors_preset = -1
-anchor_left = 0.05
-anchor_top = 1.0
-anchor_right = 0.95
-anchor_bottom = 1.0
-offset_top = -56.0
-offset_bottom = -8.0
-
-[node name="FailLabel" type="Label" parent="HUD/FailSummary"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "Next ▶"

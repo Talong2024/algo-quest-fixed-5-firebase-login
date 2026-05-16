@@ -313,7 +313,7 @@ func _refresh_portraits() -> void:
 		var portrait := TextureRect.new()
 		var portrait_loaded := false
 		if ResourceLoader.exists(MASTER_SHEET) and hero["key"] in HERO_SHEET_ROW:
-			var s_y: int  = (HERO_SHEET_ROW[hero["key"]] as int) * 4 * 24
+			var s_y: int  = (HERO_SHEET_ROW[hero["key"]] as int) * 4 * 24 + 2 * 24
 			var atlas     := AtlasTexture.new()
 			atlas.atlas    = load(MASTER_SHEET) as Texture2D
 			atlas.region   = Rect2(72, s_y, 24, 24)   # col 3, south row
@@ -423,28 +423,30 @@ func _play_sfx(path: String) -> void:
 #  HERO_SHEET_ROW maps each hero key → its block index in the master sheet.
 #  block_start_y = block_index * 4 * 24  (south row pixel y)
 # ─────────────────────────────────────────────────────────────────────────────
-const MASTER_SHEET := "res://assets/art/character/CGabrielChars24x24.png"
+const MASTER_SHEET := "res://assets/sprites/characters/CGabrielChars24x24.png"
 
+# Direction order per block: +0=back(N), +1=left(W), +2=SOUTH/front, +3=right(E)
+# south_pixel_y = (block_index * 4 + 2) * 24
+# Block indices verified by pixel inspection of CGabrielChars24x24.png
 const HERO_SHEET_ROW: Dictionary = {
-	# key            block_index  (south row y = index * 96)
-	"m_warrior":     1,
-	"f_warrior":     2,
-	"m_berserker":   3,
-	"f_berserker":   4,
-	"m_dark_knight": 5,
-	"f_dark_knight": 6,
-	"paladin":        7,
-	"m_mage":         9,
-	"f_mage":         8,
-	"m_healer":      10,
-	"f_healer":      11,   # Cleric — south block y = 11*96 = 1056
-	"m_monk":        12,
-	"f_monk":        13,
-	"m_ninja":       14,
-	"f_ninja":       15,
-	"m_ranger":      16,
-	"m_samurai":     17,
-	"f_samurai":     18,
+	"m_warrior":    1,   # dark checker armour male
+	"f_warrior":    3,   # silver hair shieldmaiden
+	"m_berserker":  10,  # spiky hair male
+	"f_berserker":  5,   # tan female (Valkyrie)
+	"m_dark_knight":12,  # dark grey heavy armour
+	"f_dark_knight":15,  # green outfit female (Shadow Blade)
+	"paladin":      13,  # golden armour
+	"m_mage":       17,  # blue robes male
+	"f_mage":       2,   # purple robes female (Sorceress)
+	"m_healer":     9,   # brown healer male
+	"f_healer":     7,   # teal gem helmet (Cleric) south=row30
+	"m_monk":       14,  # brown disciplined male
+	"f_monk":       8,   # pink hair female (Priestess)
+	"m_ninja":      4,   # green hood male
+	"f_ninja":      6,   # pink checker female (Kunoichi)
+	"m_ranger":     11,  # brown armour male
+	"m_samurai":    13,  # golden armour (update if separate char exists)
+	"f_samurai":    16,  # green-gold female
 }
 
 func _make_sprite_frames(hero_key: String) -> SpriteFrames:
@@ -465,7 +467,7 @@ func _make_sprite_frames(hero_key: String) -> SpriteFrames:
 
 	if ResourceLoader.exists(MASTER_SHEET) and hero_key in HERO_SHEET_ROW:
 		sheet_tex  = load(MASTER_SHEET) as Texture2D
-		south_y    = (HERO_SHEET_ROW[hero_key] as int) * 4 * 24
+		south_y    = (HERO_SHEET_ROW[hero_key] as int) * 4 * 24 + 2 * 24
 		use_master = true
 	else:
 		var per_sheet := "%s%s_sheet.png" % [HERO_BASE, hero_key]

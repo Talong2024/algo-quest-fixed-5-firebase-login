@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "algoquest-3f812",
     "public": "public",
     "ignore": [
       "firebase.json",

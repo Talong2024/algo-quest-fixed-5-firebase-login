@@ -8,6 +8,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#08090f;--bg2:#0e1018;--bg3:#151824;--border:#1e2235;--border2:#2a3050;--text:#e8e6f0;--text2:#8a8aaa;--text3:#4a4a6a;--gold:#ffd93d;--blue:#4d96ff;--purple:#c77dff;--green:#6bcb77;--red:#ff6b6b;--font-pixel:'Press Start 2P',monospace;--font-vt:'VT323',monospace;--font-body:'Outfit',sans-serif;--r:10px;--r2:16px;--sidebar:240px}
+[data-theme="light"]{
+  --bg:#f0f2f8;--bg2:#ffffff;--bg3:#e8ecf5;
+  --border:#d0d5e8;--border2:#b8bfda;
+  --text:#1a1c2e;--text2:#4a4f6a;--text3:#9098b8;
+  --gold:#c89000;--blue:#2563eb;--purple:#7c3aed;
+  --green:#16a34a;--red:#dc2626;--orange:#d97706;
+  --shadow:rgba(0,0,0,.12);
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex}
 a{color:inherit;text-decoration:none}button{cursor:pointer;font-family:inherit;border:none;outline:none}
@@ -155,12 +163,37 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .lb-loading{text-align:center;padding:48px;color:var(--text2);font-size:13px}
 .lb-my-rank{background:var(--bg3);border-top:1px solid var(--border);padding:14px 16px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:10px}
 .lb-my-rank strong{color:var(--blue);font-family:var(--font-pixel);font-size:11px}
-.theme-toggle{width:40px;height:40px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
-.theme-toggle:hover{border-color:var(--border2);transform:scale(1.08)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .fu{animation:fadeUp .45s ease both}.d1{animation-delay:.05s}.d2{animation-delay:.10s}.d3{animation-delay:.15s}
+
+
+/* ── THEME TOGGLE (sidebar-embedded) ── */
+.theme-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.theme-switch input{opacity:0;width:0;height:0;position:absolute}
+.theme-slider{position:absolute;inset:0;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:24px;transition:background .3s,border-color .3s}
+.theme-slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:transform .3s,background .3s}
+.theme-switch input:checked + .theme-slider{background:var(--blue);border-color:var(--blue)}
+.theme-switch input:checked + .theme-slider::before{transform:translateX(20px);background:#fff}
+.theme-emoji{font-size:14px;line-height:1}
 </style>
 </head>
+<script>
+// ── THEME SYSTEM (plain script — must be global, not inside a module) ─────────
+function applyTheme(isLight) {
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  var cb   = document.getElementById("theme-checkbox");
+  var lbl  = document.getElementById("theme-label-sidebar");
+  if (cb)  cb.checked     = isLight;
+  if (lbl) lbl.textContent = isLight ? "Light mode" : "Dark mode";
+  try { localStorage.setItem("aq-theme", isLight ? "light" : "dark"); } catch(e){}
+}
+(function(){
+  var isLight = false;
+  try { isLight = localStorage.getItem("aq-theme") === "light"; } catch(e){}
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  document.addEventListener("DOMContentLoaded", function(){ applyTheme(isLight); });
+})();
+</script>
 <body>
 
 <div id="loading">
@@ -193,8 +226,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
   </nav>
   <div class="sidebar-bottom">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-      <span style="font-size:11px;color:var(--text2)" id="theme-label">Dark mode</span>
+      <span class="theme-emoji">🌑</span>
+      <label class="theme-switch" title="Toggle light / dark mode">
+        <input type="checkbox" id="theme-checkbox" onchange="applyTheme(this.checked)">
+        <span class="theme-slider"></span>
+      </label>
+      <span class="theme-emoji">☀️</span>
+      <span style="font-size:11px;color:var(--text2)" id="theme-label-sidebar">Dark mode</span>
     </div>
     <button class="btn-logout" onclick="handleLogout()">↩ Log Out</button>
   </div>
@@ -541,30 +579,6 @@ window.saveProfile=async()=>{
   showSave("✓ Saved!",false);
 };
 function showSave(m,e){const el=$("save-status");el.textContent=m;el.style.color=e?"var(--red)":"var(--green)";setTimeout(()=>el.textContent="",3000);}
-// ── THEME TOGGLE ────────────────────────────────────────────────────────────
-window.toggleTheme = () => {
-  const html    = document.documentElement;
-  const isLight = html.getAttribute("data-theme") === "light";
-  const next    = isLight ? "dark" : "light";
-  html.setAttribute("data-theme", next === "dark" ? "" : "light");
-  document.getElementById("theme-toggle").textContent = next === "light" ? "☀️" : "🌙";
-  document.getElementById("theme-label").textContent  = next === "light" ? "Light mode" : "Dark mode";
-  localStorage.setItem("aq-theme", next);
-};
-
-// Load saved theme on startup
-(function(){
-  const saved = localStorage.getItem("aq-theme") || "dark";
-  if (saved === "light") {
-    document.documentElement.setAttribute("data-theme", "light");
-    document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.getElementById("theme-toggle");
-      const lbl = document.getElementById("theme-label");
-      if (btn) btn.textContent = "☀️";
-      if (lbl) lbl.textContent = "Light mode";
-    });
-  }
-})();
 
 window.handleLogout=logout;
 
@@ -667,6 +681,7 @@ function triggerBars(){requestAnimationFrame(()=>{document.querySelectorAll(".ac
 function setLoadMsg(m){$("load-msg").textContent=m;}
 function hideLoading(){const el=$("loading");el.classList.add("fade");setTimeout(()=>el.style.display="none",450);}
 setTimeout(triggerBars,700);
+
 </script>
 </body>
 </html>

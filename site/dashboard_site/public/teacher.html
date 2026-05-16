@@ -183,13 +183,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .btn-export:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(22,163,74,.45)}
 .btn-export:disabled{opacity:.5;pointer-events:none}
 .export-dropdown{position:relative;display:inline-block}
-.export-menu{position:absolute;top:100%;right:0;margin-top:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);min-width:220px;z-index:200;overflow:hidden;display:none}
+.export-menu{position:absolute;top:100%;right:0;margin-top:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);min-width:220px;z-index:500;overflow:hidden;display:none;box-shadow:0 8px 24px var(--shadow)}
 .export-menu.open{display:block}
 .export-menu-item{padding:12px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px;border:none;background:transparent;width:100%;text-align:left;font-family:var(--font-body)}
 .export-menu-item:hover{background:var(--bg3);color:var(--text)}
 .export-divider{height:1px;background:var(--border);margin:4px 0}
-.theme-toggle{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
-.theme-toggle:hover{border-color:var(--border2);transform:scale(1.08)}
 .create-section-btn{padding:10px 20px;background:linear-gradient(135deg,var(--purple),#7c3aed);border-radius:8px;font-size:12px;font-weight:700;color:#fff;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 16px rgba(199,125,255,.3)}
 .create-section-btn:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(199,125,255,.45)}
 .section-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
@@ -213,8 +211,35 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 /* ANIMATIONS */
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .fu{animation:fadeUp .4s ease both}.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}
+
+
+/* ── THEME TOGGLE (sidebar-embedded) ── */
+.theme-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.theme-switch input{opacity:0;width:0;height:0;position:absolute}
+.theme-slider{position:absolute;inset:0;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:24px;transition:background .3s,border-color .3s}
+.theme-slider::before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:transform .3s,background .3s}
+.theme-switch input:checked + .theme-slider{background:var(--blue);border-color:var(--blue)}
+.theme-switch input:checked + .theme-slider::before{transform:translateX(20px);background:#fff}
+.theme-emoji{font-size:14px;line-height:1}
 </style>
 </head>
+<script>
+// ── THEME SYSTEM (plain script — must be global, not inside a module) ─────────
+function applyTheme(isLight) {
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  var cb   = document.getElementById("theme-checkbox");
+  var lbl  = document.getElementById("theme-label-sidebar");
+  if (cb)  cb.checked     = isLight;
+  if (lbl) lbl.textContent = isLight ? "Light mode" : "Dark mode";
+  try { localStorage.setItem("aq-theme", isLight ? "light" : "dark"); } catch(e){}
+}
+(function(){
+  var isLight = false;
+  try { isLight = localStorage.getItem("aq-theme") === "light"; } catch(e){}
+  document.documentElement.setAttribute("data-theme", isLight ? "light" : "");
+  document.addEventListener("DOMContentLoaded", function(){ applyTheme(isLight); });
+})();
+</script>
 <body>
 
 <div id="loading">
@@ -272,8 +297,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
   </nav>
   <div class="sidebar-bottom">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-      <span style="font-size:11px;color:var(--text2)" id="theme-label">Dark mode</span>
+      <span class="theme-emoji">🌑</span>
+      <label class="theme-switch" title="Toggle light / dark mode">
+        <input type="checkbox" id="theme-checkbox" onchange="applyTheme(this.checked)">
+        <span class="theme-slider"></span>
+      </label>
+      <span class="theme-emoji">☀️</span>
+      <span style="font-size:11px;color:var(--text2)" id="theme-label-sidebar">Dark mode</span>
     </div>
     <button class="btn-student-view" onclick="window.location.href='dashboard.html'">👁 Student View</button>
     <button class="btn-logout" onclick="handleLogout()">↩ Log Out</button>
@@ -959,30 +989,8 @@ window.exportExcel = (type) => {
   XLSX.writeFile(wb, filename);
 };
 
-// ── THEME TOGGLE ─────────────────────────────────────────────────────────────
-window.toggleTheme = () => {
-  const html    = document.documentElement;
-  const isLight = html.getAttribute("data-theme") === "light";
-  const next    = isLight ? "dark" : "light";
-  html.setAttribute("data-theme", next === "dark" ? "" : "light");
-  document.getElementById("theme-toggle").textContent = next === "light" ? "☀️" : "🌙";
-  document.getElementById("theme-label").textContent  = next === "light" ? "Light mode" : "Dark mode";
-  localStorage.setItem("aq-theme", next);
-};
-(function(){
-  const saved = localStorage.getItem("aq-theme") || "dark";
-  if (saved === "light") {
-    document.documentElement.setAttribute("data-theme", "light");
-    document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.getElementById("theme-toggle");
-      const lbl = document.getElementById("theme-label");
-      if (btn) btn.textContent = "☀️";
-      if (lbl) lbl.textContent = "Light mode";
-    });
-  }
-})();
-
 window.handleLogout=logout;
+
 </script>
 </body>
 </html>

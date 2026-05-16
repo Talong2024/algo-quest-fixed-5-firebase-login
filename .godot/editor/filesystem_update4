@@ -1,3 +1,2 @@
-res://scenes/ui/CharacterSelect.tscn
-res://scripts/ui/CharacterSelect.gd
-res://scripts/world_map/WorldMap.gd
+res://scenes/chapters/tree/TreeGame.tscn
+res://scripts/chapters/tree/TreeGame.gd
