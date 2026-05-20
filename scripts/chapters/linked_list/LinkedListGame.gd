@@ -35,7 +35,7 @@ extends Node2D
 #  ASSETS
 # ─────────────────────────────────────────────────────────────────────────────
 # PATH_BG replaced — background now uses 7-layer ParallaxBackground (see _setup_bg)
-const PATH_FONT     := "res://assets/font/freepixel.ttf"
+const PATH_FONT     := "res://assets/fonts/freepixel.ttf"
 const PATH_SFX_LINK := "res://assets/audio/sfx/bubble.ogg"
 const PATH_SFX_OK   := "res://assets/audio/sfx/success.ogg"
 const PATH_SFX_FAIL := "res://assets/audio/sfx/fail.ogg"
@@ -285,10 +285,10 @@ func _ready() -> void:
 			else:
 				_set_task_by_concept()
 
-	# Show paginated intro for every tier
+	# Paginated intro for every tier (blocks input until player clicks Begin!)
 	await _show_tier_intro()
 
-	# v6: hint box always visible — shows unlink reminder on all tiers
+	# v6: hint box always visible — shows unlink reminder on all list tiers
 	if _p["concept"] == "ARRAY_FEEL":
 		_hint_box.visible = false
 		AudioManager.play_bgm(PATH_BGM_TRAIN)
@@ -417,7 +417,7 @@ func _setup_hud() -> void:
 		_timer_lbl.text = "⏱ %d" % int(_time_left)
 	_struct_lbl.text = "Structure: building..."
 
-	_complete_banner.add_theme_font_size_override("font_size", 52)
+	_complete_banner.add_theme_font_size_override("font_size", 32)
 	_complete_banner.add_theme_color_override("font_color", COL_HEAD)
 	_complete_banner.z_index = 100
 
@@ -457,174 +457,133 @@ func _set_task_by_concept() -> void:
 			_task_lbl.text = "⚠ A cycle exists! Break it to form a valid list.\nRight-click the car whose arrow loops back to remove the bad link."
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  PER-TIER INTRO  — paginated slides shown before every tier starts.
-#  Mirrors the GraphGame pattern: Back / Next / "Begin!" buttons, dark overlay,
-#  game input blocked until player dismisses the last slide.
+#  PER-TIER INTRO  — paginated slides drawn with draw_* primitives (no images)
+#  Each slide has a "draw" Callable — same pattern as the BST chapter.
 # ─────────────────────────────────────────────────────────────────────────────
-const TIER_SLIDES: Dictionary = {
+var TIER_SLIDES: Dictionary = {
 	"ARRAY_FEEL": [
 		{
-			"title": "Arrays vs Linked Lists",
-			"title_col": COL_HEAD,
+			"title":     "What is an Array?",
+			"title_col": COL_WRONG,
+			"draw":      _draw_slide_array_only,
 			"lines": [
-				["", "An ARRAY stores items in fixed slots — like assigned seats on a train.", COL_WHITE],
-				["", "To insert at position [1], every car from [1] onward must SHIFT one space.", COL_WRONG],
-				["", "", COL_WHITE],
-				["ARRAY",  "[0] [1] [2] [3] — order comes from physical position", COL_WRONG],
-				["LIST",   "0x3A → 0xF7 → 0x11 → NULL — order comes from pointers", COL_CHEAP],
-				["", "", COL_WHITE],
-				["", "This level lets you feel the cost of shifting firsthand.", COL_OK],
+				["", "An array stores values in a row of fixed, numbered slots in memory.", COL_WHITE],
+				["ORDER",  "Neighbours are set by POSITION — slot [0] is always next to slot [1].", COL_WRONG],
+				["ACCESS", "Jump to any slot by index instantly  →  O(1) random access.", COL_HEAD],
+				["COST",   "Inserting shifts every element after the target right by one  →  O(n).", COL_WRONG],
 			],
 		},
 		{
-			"title": "Your Task",
-			"title_col": COL_OK,
+			"title":     "What is a Linked List?",
+			"title_col": COL_CHEAP,
+			"draw":      _draw_slide_list_only,
 			"lines": [
-				["PHASE 1", "Drag-sort the train cars into the TARGET ORDER shown above.", COL_OK],
-				["", "Every swap displaces cars — that is the O(n) shift cost.", COL_WRONG],
-				["", "", COL_WHITE],
-				["PHASE 2", "Re-chain the same cars as a linked list using pointer arrows.", COL_CHEAP],
-				["", "Inserting in a linked list costs 0 shifts — just two pointer changes.", COL_CHEAP],
-				["", "", COL_WHITE],
-				["", "Compare the shift counters after both phases — that is the lesson!", COL_HEAD],
+				["", "A linked list stores values in nodes that can live anywhere in memory.", COL_WHITE],
+				["ORDER",  "Neighbours are set by POINTERS — each node stores the address of the next.", COL_CHEAP],
+				["ACCESS", "No random access — you must walk the pointers from HEAD one step at a time  →  O(n).", COL_WRONG],
+				["INSERT", "Insert only rewires 2 pointers — no shifting at all  →  O(1).", COL_CHEAP],
+			],
+		},
+		{
+			"title":     "Why the Difference Matters",
+			"title_col": COL_HEAD,
+			"draw":      _draw_slide_insert_cost,
+			"lines": [
+				["ARRAY", "Insert at slot [1]? Every element after it must shift. 5 elements → 5 moves.", COL_WRONG],
+				["LIST",  "Insert after node A? Point A at the new node, point new node at B. Done.", COL_CHEAP],
+				["",      "Same result — different cost. This game lets you FEEL that difference.", COL_HEAD],
+			],
+		},
+		{
+			"title":     "Your Challenge — Two Phases",
+			"title_col": COL_OK,
+			"draw":      _draw_ll_shift_cost,
+			"lines": [
+				["PHASE 1", "ARRAY — drag train cars into the target order. Watch the shift counter rise.", COL_WRONG],
+				["PHASE 2", "LINKED LIST — chain the same cars with pointer arrows. Zero shifts needed.", COL_CHEAP],
+				["GOAL",    "Compare the two shift counts. That difference IS the lesson.", COL_HEAD],
 			],
 		},
 	],
 	"CONNECT": [
 		{
-			"title": "Step 1 — What is a Linked List?",
+			"title":     "What is a Linked List?",
 			"title_col": COL_HEAD,
+			"draw":      _draw_slide_list_only,
 			"lines": [
-				["", "An array stores items side by side in memory — like assigned seats.", COL_WHITE],
-				["", "A linked list is different.  Each car can sit ANYWHERE in memory.", COL_OK],
-				["", "Order is created by POINTERS — each car remembers the address of the next.", COL_OK],
-				["", "", COL_WHITE],
-				["ARRAY", "[0] [1] [2] [3]  — slots are fixed, neighbours are physical", COL_WRONG],
-				["LIST",  "0x3A → 0x11 → 0xF2 → NULL  — neighbours are pointers", COL_CHEAP],
-				["", "", COL_WHITE],
-				["", "This lets you insert or delete in O(1) time — just change a pointer.", COL_CHEAP],
+				["ARRAY", "[0][1][2][3] — order comes from physical position in memory.", COL_WRONG],
+				["LIST",  "0x3A→0x11→0xF2→NULL — order comes from pointer arrows.", COL_CHEAP],
+				["", "A linked list lets you insert or delete in O(1) — just change a pointer.", COL_OK],
 			],
 		},
 		{
-			"title": "Step 2 — Nodes and Pointers",
+			"title":     "Nodes and Pointers",
 			"title_col": COL_HEAD,
+			"draw":      _draw_ll_node_anatomy,
 			"lines": [
-				["", "Each train car is a NODE.  Every node has two things:", COL_WHITE],
-				["", "", COL_WHITE],
-				["DATA",    "The cargo value stored inside the node  (the number on the car)", COL_OK],
-				["POINTER", "The address of the NEXT node  (shown as an arrow between cars)", COL_ARROW],
-				["", "", COL_WHITE],
-				["", "The last node's pointer is NULL — it points to nothing.  That ends the list.", COL_TAIL],
-				["", "The first node is called the HEAD.  It has no car pointing to it.", COL_HEAD],
-				["", "", COL_WHITE],
-				["", "In code:   node.next = &other_node      ← that is what the arrow represents.", COL_HINT],
+				["DATA",    "The cargo value stored inside the node (the number on the car).", COL_OK],
+				["POINTER", "The address of the NEXT node — shown as an arrow between cars.", COL_ARROW],
+				["HEAD",    "The first node — nothing points to it.", COL_HEAD],
+				["NULL",    "The last pointer — signals the end of the chain.", COL_TAIL],
 			],
 		},
 		{
-			"title": "Step 3 — How to Connect Two Cars",
+			"title":     "How to Connect — and Your Goal",
 			"title_col": COL_CHEAP,
+			"draw":      _draw_ll_connect_how,
 			"lines": [
-				["", "Each car has a cyan ▶ dot on its RIGHT side.  That dot IS the pointer.", COL_ARROW],
-				["", "", COL_WHITE],
-				["WAY 1", "DRAG the ▶ dot from one car and DROP it onto another car.", COL_OK],
-				["WAY 2", "CLICK a car (cyan ring appears), then CLICK the car to link to.", COL_OK],
-				["", "", COL_WHITE],
+				["WAY 1", "DRAG the cyan ▶ dot from one car and DROP it onto another.", COL_OK],
+				["WAY 2", "CLICK a car (cyan ring), then CLICK another to link.", COL_OK],
 				["UNDO",  "RIGHT-CLICK any car to remove its outgoing pointer.", COL_COST],
-				["", "", COL_WHITE],
-				["", "Hover near a car while dragging — it glows cyan when close enough to snap.", COL_HINT],
-			],
-		},
-		{
-			"title": "Step 4 — Your Goal",
-			"title_col": COL_OK,
-			"lines": [
-				["", "Connect ALL cars into ONE chain ending at NULL.", COL_WHITE],
-				["", "", COL_WHITE],
-				["RULE 1", "Every car must be reachable from the HEAD.", COL_OK],
-				["RULE 2", "No car may be pointed to by more than ONE other car.", COL_OK],
-				["RULE 3", "The last car's ▶ must reach the NULL marker on the right.", COL_OK],
-				["", "", COL_WHITE],
-				["", "The level completes automatically when all rules are satisfied!", COL_CHEAP],
+				["GOAL",  "Chain ALL cars into one sequence ending at NULL.", COL_OK],
 			],
 		},
 	],
 	"INSERT": [
 		{
-			"title": "Inserting into a Linked List",
+			"title":     "Inserting into a Linked List",
 			"title_col": COL_HEAD,
+			"draw":      _draw_ll_insert,
 			"lines": [
-				["", "In an array, inserting at position [1] forces every element after it to shift.", COL_WRONG],
-				["", "That is O(n) time — slow for large arrays.", COL_WRONG],
-				["", "", COL_WHITE],
-				["", "In a linked list, insertion is only 3 pointer changes: O(1).", COL_CHEAP],
-				["", "", COL_WHITE],
-				["STEP 1", "Remove A's existing pointer  (right-click A)", COL_OK],
-				["STEP 2", "Draw A's ▶ to the NEW node", COL_OK],
-				["STEP 3", "Draw NEW node's ▶ to B", COL_OK],
+				["ARRAY",  "Insert at [1] → shift every element after → O(n).", COL_WRONG],
+				["LIST",   "Insert between A and B → 2 pointer changes → O(1).", COL_CHEAP],
+				["STEP 1", "Right-click A to remove A→B, then draw A→NEW, NEW→B.", COL_OK],
 			],
 		},
 		{
-			"title": "Your Task",
+			"title":     "Your Task",
 			"title_col": COL_OK,
+			"draw":      _draw_ll_insert_task,
 			"lines": [
-				["", "A chain already exists.  A PURPLE car is waiting in the tray above.", COL_WHITE],
-				["", "", COL_WHITE],
-				["", "Insert the purple car BETWEEN two adjacent cars of your choice.", COL_OK],
-				["", "Both connections (incoming and outgoing) are required for a valid chain.", COL_OK],
-				["", "", COL_WHITE],
-				["UNDO", "Right-click any car to remove its outgoing pointer.", COL_COST],
+				["", "A chain already exists.  A PURPLE car waits in the tray above.", COL_WHITE],
+				["", "Insert it BETWEEN two adjacent cars of your choice.", COL_OK],
+				["UNDO",  "Right-click any car to remove its outgoing pointer.", COL_COST],
 			],
 		},
 	],
 	"REVERSE": [
 		{
-			"title": "Reversing a Linked List",
+			"title":     "Reversing a Linked List",
 			"title_col": COL_HEAD,
+			"draw":      _draw_ll_reverse,
 			"lines": [
-				["", "To reverse a list, every pointer must flip direction.", COL_WHITE],
-				["", "", COL_WHITE],
 				["BEFORE", "A → B → C → D → NULL", COL_WRONG],
-				["AFTER",  "D → C → B → A → NULL", COL_CHEAP],
-				["", "", COL_WHITE],
-				["", "The old TAIL becomes the new HEAD.", COL_HEAD],
-			],
-		},
-		{
-			"title": "How to Reverse",
-			"title_col": COL_OK,
-			"lines": [
-				["", "Faint ghost arrows show you the TARGET direction for each pointer.", COL_HINT],
-				["", "", COL_WHITE],
-				["STEP 1", "Right-click a car to remove its current outgoing link.", COL_OK],
-				["STEP 2", "Drag the ▶ dot BACKWARD to the car that used to point here.", COL_OK],
-				["STEP 3", "Repeat until every arrow matches its ghost.", COL_OK],
-				["", "", COL_WHITE],
+				["AFTER",  "D → C → B → A → NULL   (tail becomes the new head)", COL_CHEAP],
+				["STEP 1", "Right-click a car to remove its outgoing link.", COL_OK],
+				["STEP 2", "Drag ▶ BACKWARD. Match every arrow to its faint ghost.", COL_OK],
 				["⏱", "Time limit applies — work quickly!", COL_COST],
 			],
 		},
 	],
 	"CYCLE": [
 		{
-			"title": "Cycles in a Linked List",
+			"title":     "Cycles — a Linked List Bug",
 			"title_col": COL_WRONG,
+			"draw":      _draw_ll_cycle,
 			"lines": [
-				["", "A valid linked list ends at NULL.", COL_WHITE],
-				["", "A CYCLE happens when a node's pointer loops back to an earlier node.", COL_WRONG],
-				["", "The traversal never terminates — this is a real and dangerous bug!", COL_WRONG],
-				["", "", COL_WHITE],
-				["", "The animated dot shows a traversal pointer circling endlessly.", COL_HINT],
-				["", "Highlighted cars are inside the loop.", COL_HINT],
-			],
-		},
-		{
-			"title": "Your Task",
-			"title_col": COL_OK,
-			"lines": [
-				["", "Find the car whose arrow creates the loop.", COL_WHITE],
-				["", "", COL_WHITE],
-				["STEP 1", "Right-click the offending car to remove its bad link.", COL_OK],
-				["STEP 2", "Re-draw its ▶ to the correct next car (or NULL) to fix the chain.", COL_OK],
-				["", "", COL_WHITE],
+				["", "A valid list ends at NULL.  A CYCLE loops back — traversal never ends!", COL_WRONG],
+				["STEP 1", "Find the car whose arrow loops back — it is highlighted in red.", COL_OK],
+				["STEP 2", "Right-click it to break the link, then re-draw to the correct car.", COL_OK],
 				["⏱", "Time limit applies — act fast!", COL_COST],
 			],
 		},
@@ -636,114 +595,771 @@ func _show_tier_intro() -> void:
 	if concept not in TIER_SLIDES: return
 	var slides: Array = TIER_SLIDES[concept]
 	_alive = false
-
-	for i in slides.size():
-		var slide: Dictionary = slides[i]
-		var is_last: bool = (i == slides.size() - 1)
-		var btn_text: String = "Begin!" if is_last else "Next  →"
-		# Re-use existing slide builder — just needs title/title_col/lines/btn keys
-		var step: Dictionary = {
-			"title":     slide["title"],
-			"title_col": slide["title_col"],
-			"lines":     slide["lines"],
-			"btn":       btn_text,
-		}
-		await _show_tutorial_slide(step)
+	var idx: int = 0
+	while idx < slides.size():
+		var slide: Dictionary = slides[idx]
+		var is_last := (idx == slides.size() - 1)
+		var step    := slide.duplicate()
+		step["btn"]      = "Begin!" if is_last else "Next ▶"
+		step["has_back"] = idx > 0
+		step["page_str"] = "%d / %d" % [idx + 1, slides.size()]
+		var went_forward: bool = await _show_tutorial_slide(step)
+		idx = idx + 1 if went_forward else max(0, idx - 1)
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  CONNECT TIER — kept for compatibility; _show_tier_intro supersedes it
+#  INNER CLASS — per-slide diagram canvas (mirrors BST _DiagramDrawer)
+# ─────────────────────────────────────────────────────────────────────────────
+class _LLDiagramDrawer extends Control:
+	var draw_fn:    Callable
+	var pixel_font: Font
+	func _draw() -> void:
+		if draw_fn.is_valid(): draw_fn.call(self, pixel_font)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DIAGRAM DRAW PRIMITIVES
+# ─────────────────────────────────────────────────────────────────────────────
+func _ll_node(ci: CanvasItem, pos: Vector2, val: String, fill: Color, font: Font,
+			  w: float = 72.0, h: float = 44.0) -> void:
+	var rect := Rect2(pos - Vector2(w * 0.5, h * 0.5), Vector2(w, h))
+	ci.draw_rect(rect, fill, true)
+	ci.draw_rect(rect, fill.lightened(0.3), false, 2.0)
+	# Wheels
+	var wy := pos.y + h * 0.5 + 5.0
+	for dx: float in [-w * 0.28, w * 0.28]:
+		ci.draw_circle(Vector2(pos.x + dx, wy), 6.0, fill.darkened(0.35))
+		ci.draw_arc(Vector2(pos.x + dx, wy), 6.0, 0, TAU, 16, fill.darkened(0.6), 1.5)
+	# Centred text
+	if font and val != "":
+		var sz := 17
+		var ts := font.get_string_size(val, HORIZONTAL_ALIGNMENT_LEFT, -1, sz)
+		ci.draw_string(font,
+			pos - Vector2(ts.x * 0.5, ts.y * 0.5 - sz * 0.35),
+			val, HORIZONTAL_ALIGNMENT_LEFT, -1, sz,
+			Color(1.0, 1.0, 0.85))
+
+func _ll_arrow(ci: CanvasItem, frm: Vector2, to: Vector2, col: Color, w: float = 2.5) -> void:
+	ci.draw_line(frm, to, col, w)
+	var d  := (to - frm).normalized()
+	var p  := Vector2(-d.y, d.x) * 8.0
+	ci.draw_line(to, to - d * 16.0 + p, col, w)
+	ci.draw_line(to, to - d * 16.0 - p, col, w)
+
+func _ll_lbl(ci: CanvasItem, pos: Vector2, text: String, col: Color, font: Font, sz: int = 13) -> void:
+	if font: ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+
+func _ll_lblc(ci: CanvasItem, pos: Vector2, text: String, col: Color, font: Font, sz: int = 13) -> void:
+	if not font: return
+	var ts := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz)
+	ci.draw_string(font, pos - Vector2(ts.x * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+
+func _ll_box(ci: CanvasItem, rect: Rect2, bg: Color, border: Color) -> void:
+	ci.draw_rect(rect, bg, true); ci.draw_rect(rect, border, false, 1.5)
+
+func _ll_port(ci: CanvasItem, pos: Vector2) -> void:
+	ci.draw_circle(pos, 6.0, Color(0.25, 0.9, 1.0))
+	ci.draw_arc(pos, 6.0, 0, TAU, 16, Color(0.5, 1.0, 1.0), 1.5)
+
+func _ll_null(ci: CanvasItem, pos: Vector2, font: Font) -> void:
+	_ll_box(ci, Rect2(pos - Vector2(30, 16), Vector2(60, 32)),
+		Color(0.06, 0.12, 0.06), Color(0.3, 0.9, 0.5))
+	_ll_lblc(ci, pos + Vector2(0, 6), "NULL", Color(0.35, 1.0, 0.5), font, 13)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DIAGRAM DRAW FUNCTIONS  — safe zone x=60..1220, y=108..390
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Slide 1 — Array only: 5 labelled boxes with index, value, addresses, insert-cost arrow
+func _draw_slide_array_only(ci: CanvasItem, font: Font) -> void:
+	if not font: return
+	var avals: Array[int] = [17, 31, 10, 24, 45]
+	var aw := 100.0; var ah := 72.0; var gap := 8.0
+	var total_w := avals.size() * (aw + gap) - gap
+	var ax0 := 480.0 - total_w * 0.5
+	var ay  := 60.0
+
+	# RAM baseline label
+	_ll_lblc(ci, Vector2(480, ay - 36), "RAM  (contiguous block — slots side by side)", Color(0.6, 0.6, 0.85, 0.8), font, 13)
+
+	for i in range(avals.size()):
+		var bx := ax0 + i * (aw + gap)
+		var cx := bx + aw * 0.5
+		# Slot box
+		_ll_box(ci, Rect2(Vector2(bx, ay), Vector2(aw, ah)), Color(0.14, 0.04, 0.04), Color(0.85, 0.25, 0.25))
+		# Index label [n] top-centred
+		var idx_s := "[%d]" % i
+		var idx_ts := font.get_string_size(idx_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+		ci.draw_string(font, Vector2(cx - idx_ts.x * 0.5, ay + 18), idx_s, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(1.0, 0.65, 0.65))
+		# Value bottom-centred
+		var vs := str(avals[i])
+		var vts := font.get_string_size(vs, HORIZONTAL_ALIGNMENT_LEFT, -1, 22)
+		ci.draw_string(font, Vector2(cx - vts.x * 0.5, ay + 56), vs, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1.0, 0.95, 0.85))
+		# Address below box
+		var addr := "0x%02X" % (0x100 + i * 5)
+		var ats := font.get_string_size(addr, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+		ci.draw_string(font, Vector2(cx - ats.x * 0.5, ay + ah + 14), addr, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.65, 0.45, 0.45, 0.9))
+
+	# Insert-cost illustration
+	var insert_y := ay + ah + 52.0
+	_ll_lblc(ci, Vector2(480, insert_y), "Insert a new value at [1]  →  everything after must shift right:", Color(0.9, 0.6, 0.4), font, 13)
+	var shift_y := insert_y + 22.0
+	var arrows_x := ax0 + (aw + gap)   # start from slot [1]
+	for i in range(3):   # slots [1],[2],[3] shift right
+		var sx := arrows_x + i * (aw + gap)
+		_ll_arrow(ci, Vector2(sx + aw * 0.5, shift_y), Vector2(sx + aw + gap + aw * 0.5, shift_y), COL_WRONG, 2.5)
+	_ll_lblc(ci, Vector2(480, shift_y + 20), "O(n) cost — n elements moved", COL_WRONG, font, 13)
+
+# Slide 2 — Linked list only: nodes with addresses, pointer arrows, NULL terminator
+func _draw_slide_list_only(ci: CanvasItem, font: Font) -> void:
+	if not font: return
+	var lvals: Array[int] = [17, 31, 10, 24, 45]
+	var addrs: Array[String] = ["0x3A2", "0xF72", "0x11B", "0x8C0", "0x24E"]
+	var nw := 76.0; var nh := 52.0; var sp := 158.0
+	var total_w := lvals.size() * sp + 60.0
+	var lx0 := 480.0 - total_w * 0.5
+	var ly  := 90.0
+
+	# RAM scatter label
+	_ll_lblc(ci, Vector2(480, ly - 38), "RAM  (nodes can be anywhere — order comes from pointers)", Color(0.4, 0.85, 0.6, 0.8), font, 13)
+
+	for i in range(lvals.size()):
+		var p := Vector2(lx0 + i * sp, ly)
+		# Draw node
+		_ll_node(ci, p, str(lvals[i]), Color(0.12, 0.40, 0.25), font, nw, nh)
+		# Address above
+		var addr_ts := font.get_string_size(addrs[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+		ci.draw_string(font, Vector2(p.x - addr_ts.x * 0.5, ly - 22), addrs[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.45, 0.85, 1.0))
+		# Port dot
+		_ll_port(ci, p + Vector2(nw * 0.5 + 5, 0))
+		# Arrow to next
+		if i < lvals.size() - 1:
+			_ll_arrow(ci, p + Vector2(nw * 0.5 + 13, 0),
+				Vector2(lx0 + (i+1) * sp - nw * 0.5 - 5, ly),
+				Color(0.25, 0.9, 1.0), 3.5)
+
+	# NULL terminator
+	var nx := lx0 + lvals.size() * sp
+	_ll_null(ci, Vector2(nx, ly), font)
+	_ll_arrow(ci, Vector2(lx0 + (lvals.size()-1) * sp + nw * 0.5 + 13, ly),
+		Vector2(nx - 32, ly), Color(0.35, 1.0, 0.5), 2.5)
+
+	# Insert-cost illustration
+	var ins_y := ly + nh * 0.5 + 52.0
+	_ll_lblc(ci, Vector2(480, ins_y), "Insert a new node between any two  →  change exactly 2 pointers:", Color(0.5, 1.0, 0.6), font, 13)
+	# Show A → NEW → B
+	var bx0 := 200.0; var ins_ny := ins_y + 28.0
+	var pa := Vector2(bx0, ins_ny); var pn := Vector2(bx0 + 200, ins_ny); var pb := Vector2(bx0 + 400, ins_ny)
+	_ll_node(ci, pa, "A", Color(0.12, 0.40, 0.25), font, 70.0, 44.0)
+	_ll_node(ci, pn, "NEW", Color(0.40, 0.12, 0.55), font, 80.0, 44.0)
+	_ll_node(ci, pb, "B", Color(0.12, 0.40, 0.25), font, 70.0, 44.0)
+	_ll_port(ci, pa + Vector2(37, 0)); _ll_port(ci, pn + Vector2(42, 0))
+	_ll_arrow(ci, pa + Vector2(43, 0), pn - Vector2(42, 0), Color(0.25, 0.9, 1.0), 3.0)
+	_ll_arrow(ci, pn + Vector2(48, 0), pb - Vector2(37, 0), Color(0.25, 0.9, 1.0), 3.0)
+	_ll_lblc(ci, Vector2(bx0 + 200, ins_ny + 34), "2 pointer changes  =  O(1)", COL_CHEAP, font, 13)
+	# Right side — code snippet box
+	_ll_box(ci, Rect2(Vector2(680, ins_y + 8), Vector2(300, 56)), Color(0.04, 0.07, 0.04), Color(0.22, 0.65, 0.32))
+	_ll_lbl(ci, Vector2(694, ins_y + 24), "new_node.next = B", Color(0.55, 1.0, 0.65), font, 13)
+	_ll_lbl(ci, Vector2(694, ins_y + 44), "A.next = new_node", Color(0.55, 1.0, 0.65), font, 13)
+
+func _draw_ll_array_vs_list(ci: CanvasItem, font: Font) -> void:
+	if not font: return   # guard: font not yet loaded
+
+	# ── ARRAY section ─────────────────────────────────────────────────────────
+	var arr_title := "ARRAY  —  fixed memory slots, neighbours are physical positions"
+	var at_sz := 15
+	var at_ts := font.get_string_size(arr_title, HORIZONTAL_ALIGNMENT_LEFT, -1, at_sz)
+	ci.draw_string(font, Vector2(480.0 - at_ts.x * 0.5, 14), arr_title,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, at_sz, COL_WRONG)
+
+	var avals: Array[int] = [17, 31, 10, 24, 45]
+	var aw := 88.0; var ah := 64.0; var gap := 6.0
+	var total_aw := avals.size() * (aw + gap) - gap
+	var ax0 := 480.0 - total_aw * 0.5   # centred at x=480
+	var ay := 24.0
+	for i in range(avals.size()):
+		var bx := ax0 + i * (aw + gap)
+		# Box
+		_ll_box(ci, Rect2(Vector2(bx, ay), Vector2(aw, ah)),
+			Color(0.16, 0.04, 0.04), Color(0.85, 0.25, 0.25))
+		# Index label [n] centred inside top of box
+		var idx_str := "[%d]" % i
+		var idx_ts := font.get_string_size(idx_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
+		ci.draw_string(font, Vector2(bx + aw * 0.5 - idx_ts.x * 0.5, ay + 16),
+			idx_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.65, 0.65))
+		# Value centred in lower half
+		var val_str := str(avals[i])
+		var val_ts := font.get_string_size(val_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		ci.draw_string(font, Vector2(bx + aw * 0.5 - val_ts.x * 0.5, ay + 50),
+			val_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(1.0, 0.93, 0.9))
+
+	# Memory address row — centred below boxes
+	var addr_str := "0x100   0x105   0x10A   0x10F   0x114   (contiguous — each slot adjacent in RAM)"
+	var addr_ts := font.get_string_size(addr_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+	ci.draw_string(font, Vector2(480.0 - addr_ts.x * 0.5, ay + ah + 14),
+		addr_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.78, 0.38, 0.38, 0.9))
+
+	# Divider
+	ci.draw_line(Vector2(0, 116), Vector2(960, 116), Color(0.3, 0.3, 0.55, 0.5), 1.0)
+
+	# ── LINKED LIST section ───────────────────────────────────────────────────
+	var ll_title := "LINKED LIST  —  nodes scattered in memory, connected by pointer arrows"
+	var lt_sz := 15
+	var lt_ts := font.get_string_size(ll_title, HORIZONTAL_ALIGNMENT_LEFT, -1, lt_sz)
+	ci.draw_string(font, Vector2(480.0 - lt_ts.x * 0.5, 128),
+		ll_title, HORIZONTAL_ALIGNMENT_LEFT, -1, lt_sz, COL_CHEAP)
+
+	var lvals: Array[int] = [17, 31, 10, 24]
+	var laddrs := ["0x3A2", "0xF72", "0x11B", "0x8C0"]
+	var sp := 170.0; var nw := 72.0; var nh := 44.0
+	var total_lw := lvals.size() * sp + 60.0   # +60 for NULL box
+	var lx0 := 480.0 - total_lw * 0.5 + 20.0
+	var ly := 178.0
+	var lfills: Array[Color] = [COL_HEAD, Color(0.2, 0.55, 0.35), Color(0.2, 0.55, 0.35), COL_TAIL]
+	for i in range(lvals.size()):
+		var p := Vector2(lx0 + i * sp, ly)
+		_ll_node(ci, p, str(lvals[i]), lfills[i], font, nw, nh)
+		# Address above node — centred
+		var addr_lbl: String = laddrs[i]
+		var a_ts := font.get_string_size(addr_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+		ci.draw_string(font, Vector2(p.x - a_ts.x * 0.5, p.y - 26),
+			addr_lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.45, 0.8, 1.0))
+		# Port dot
+		_ll_port(ci, p + Vector2(nw * 0.5 + 4, 0))
+		# Arrow to next node or NULL
+		if i < lvals.size() - 1:
+			_ll_arrow(ci, p + Vector2(nw * 0.5 + 12, 0),
+				Vector2(lx0 + (i+1) * sp - nw * 0.5 - 4, ly),
+				Color(0.25, 0.9, 1.0), 3.5)
+	# NULL box
+	var null_x := lx0 + lvals.size() * sp
+	_ll_null(ci, Vector2(null_x, ly), font)
+	_ll_arrow(ci, Vector2(lx0 + (lvals.size()-1) * sp + nw * 0.5 + 12, ly),
+		Vector2(null_x - 30, ly), Color(0.35, 1.0, 0.5), 2.5)
+
+	# Footer summary — centred
+	var foot1 := "0x3A2  →  0xF72  →  0x11B  →  0x8C0  →  NULL   (scattered anywhere in RAM)"
+	var f1_ts := font.get_string_size(foot1, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+	ci.draw_string(font, Vector2(480.0 - f1_ts.x * 0.5, ly + nh * 0.5 + 22),
+		foot1, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.35, 0.85, 0.6, 0.9))
+
+func _draw_slide_insert_cost(ci: CanvasItem, font: Font) -> void:
+	if not font: return
+
+	# ── LEFT PANEL: Array insertion ──────────────────────────────────────────
+	_ll_box(ci, Rect2(Vector2(4, 4), Vector2(456, 242)),
+		Color(0.10, 0.03, 0.03), Color(0.75, 0.22, 0.22))
+	_ll_lblc(ci, Vector2(232, 20), "ARRAY — insert NEW at [1]", COL_WRONG, font, 14)
+
+	# BEFORE row — 4 boxes [0..3]
+	var bw := 78.0; var bh := 46.0; var bgap := 8.0
+	var bx0 := 36.0; var by_before := 50.0
+	var bvals: Array[String] = ["A", "B", "C", "D"]
+	_ll_lbl(ci, Vector2(bx0 - 24, by_before - 14), "BEFORE:", Color(0.85, 0.65, 0.65), font, 12)
+	for i in range(4):
+		var bx := bx0 + i * (bw + bgap)
+		_ll_box(ci, Rect2(Vector2(bx, by_before), Vector2(bw, bh)),
+			Color(0.18, 0.05, 0.05), Color(0.8, 0.28, 0.28))
+		_ll_lblc(ci, Vector2(bx + bw * 0.5, by_before - 10), "[%d]" % i, Color(0.8, 0.45, 0.45), font, 11)
+		_ll_lblc(ci, Vector2(bx + bw * 0.5, by_before + bh * 0.5 + 8), bvals[i], Color(1.0, 0.9, 0.85), font, 20)
+
+	# NEW value sitting above slot [1]
+	var new_x := bx0 + 1 * (bw + bgap)
+	_ll_box(ci, Rect2(Vector2(new_x + 4, by_before - 58), Vector2(bw - 8, bh - 8)),
+		Color(0.30, 0.15, 0.04), Color(1.0, 0.72, 0.1))
+	_ll_lblc(ci, Vector2(new_x + bw * 0.5, by_before - 30), "NEW", Color(1.0, 0.88, 0.3), font, 18)
+	# Down arrow into slot [1]
+	_ll_arrow(ci, Vector2(new_x + bw * 0.5, by_before - 16),
+		Vector2(new_x + bw * 0.5, by_before + 2), Color(1.0, 0.72, 0.1), 2.5)
+
+	# SHIFT arrows — B, C, D all move right
+	var by_arrow := by_before + bh + 10.0
+	for i in range(1, 4):
+		var ax := bx0 + i * (bw + bgap) + bw * 0.5
+		_ll_arrow(ci, Vector2(ax, by_arrow), Vector2(ax + bw + bgap, by_arrow), COL_WRONG, 2.5)
+	_ll_lblc(ci, Vector2(bx0 + 1.5 * (bw + bgap) + bw, by_arrow + 14),
+		"B, C, D all shift right", COL_WRONG, font, 12)
+
+	# AFTER row — 5 boxes
+	var by_after := by_arrow + 36.0
+	var avals2: Array[String] = ["A", "NEW", "B", "C", "D"]
+	var aw2 := 68.0; var ax2_0 := 18.0
+	_ll_lbl(ci, Vector2(ax2_0 - 14, by_after - 14), "AFTER:", Color(0.85, 0.65, 0.65), font, 12)
+	for i in range(5):
+		var bx := ax2_0 + i * (aw2 + 5.0)
+		var is_new := (i == 1)
+		_ll_box(ci, Rect2(Vector2(bx, by_after), Vector2(aw2, bh)),
+			Color(0.28, 0.13, 0.04) if is_new else Color(0.18, 0.05, 0.05),
+			Color(1.0, 0.72, 0.1) if is_new else Color(0.8, 0.28, 0.28))
+		_ll_lblc(ci, Vector2(bx + aw2 * 0.5, by_after - 10), "[%d]" % i, Color(0.8, 0.45, 0.45), font, 11)
+		_ll_lblc(ci, Vector2(bx + aw2 * 0.5, by_after + bh * 0.5 + 8),
+			avals2[i], Color(1.0, 0.88, 0.3) if is_new else Color(1.0, 0.9, 0.85), font, 18)
+	_ll_lblc(ci, Vector2(232, by_after + bh + 16), "3 elements shifted  →  O(n) cost", COL_WRONG, font, 13)
+
+	# Divider
+	ci.draw_line(Vector2(464, 4), Vector2(464, 246), Color(0.35, 0.35, 0.6, 0.6), 1.5)
+
+	# ── RIGHT PANEL: Linked list insertion ───────────────────────────────────
+	_ll_box(ci, Rect2(Vector2(468, 4), Vector2(456, 242)),
+		Color(0.03, 0.09, 0.03), Color(0.22, 0.72, 0.32))
+	_ll_lblc(ci, Vector2(696, 20), "LINKED LIST — insert NEW after A", COL_CHEAP, font, 14)
+
+	var lnw := 66.0; var lnh := 40.0; var lsp := 148.0
+	var lx0 := 500.0; var ly_before := 70.0
+
+	# BEFORE: A → B → NULL
+	_ll_lbl(ci, Vector2(lx0 - 24, ly_before - 14), "BEFORE:", Color(0.5, 0.85, 0.6), font, 12)
+	var lcols_b: Array[Color] = [COL_HEAD, COL_TAIL]
+	var lnames_b: Array[String] = ["A", "B"]
+	for i in range(2):
+		var p := Vector2(lx0 + i * lsp, ly_before)
+		_ll_node(ci, p, lnames_b[i], lcols_b[i], font, lnw, lnh)
+		_ll_port(ci, p + Vector2(lnw * 0.5 + 4, 0))
+		if i < 1:
+			_ll_arrow(ci, p + Vector2(lnw * 0.5 + 12, 0),
+				Vector2(lx0 + (i+1) * lsp - lnw * 0.5 - 4, ly_before),
+				Color(0.25, 0.9, 1.0), 3.0)
+	_ll_null(ci, Vector2(lx0 + 2 * lsp, ly_before), font)
+	_ll_arrow(ci, Vector2(lx0 + lsp + lnw * 0.5 + 12, ly_before),
+		Vector2(lx0 + 2 * lsp - 32, ly_before), Color(0.35, 1.0, 0.5), 2.5)
+
+	# NEW node dropping in
+	var new_lx := lx0 + lsp * 0.5
+	var new_ly := ly_before - 60.0
+	_ll_node(ci, Vector2(new_lx, new_ly), "NEW", Color(0.35, 0.12, 0.50), font, lnw + 8, lnh - 4)
+	_ll_port(ci, Vector2(new_lx + lnw * 0.5 + 8, new_ly))
+	_ll_arrow(ci, Vector2(new_lx, new_ly + lnh * 0.5),
+		Vector2(new_lx, ly_before - lnh * 0.5 - 4), Color(0.9, 0.5, 1.0, 0.6), 2.0)
+
+	# STEP labels
+	var step_y := ly_before + lnh * 0.5 + 22.0
+	_ll_lbl(ci, Vector2(lx0 - 24, step_y), "Step 1:", Color(1.0, 0.72, 0.1), font, 12)
+	_ll_lbl(ci, Vector2(lx0 + 46, step_y), "A.next  =  NEW", Color(0.9, 0.78, 1.0), font, 12)
+	_ll_lbl(ci, Vector2(lx0 - 24, step_y + 18), "Step 2:", Color(1.0, 0.72, 0.1), font, 12)
+	_ll_lbl(ci, Vector2(lx0 + 46, step_y + 18), "NEW.next  =  B", Color(0.9, 0.78, 1.0), font, 12)
+
+	# AFTER: A → NEW → B → NULL
+	var ly_after := step_y + 46.0
+	_ll_lbl(ci, Vector2(lx0 - 24, ly_after - 14), "AFTER:", Color(0.5, 0.85, 0.6), font, 12)
+	var lcols_a: Array[Color] = [COL_HEAD, Color(0.35, 0.12, 0.50), COL_TAIL]
+	var lnames_a: Array[String] = ["A", "NEW", "B"]
+	var lsp2 := 110.0
+	for i in range(3):
+		var p := Vector2(lx0 + i * lsp2, ly_after)
+		_ll_node(ci, p, lnames_a[i], lcols_a[i], font, lnw - 4, lnh - 6)
+		_ll_port(ci, p + Vector2(lnw * 0.5, 0))
+		if i < 2:
+			_ll_arrow(ci, p + Vector2(lnw * 0.5 + 8, 0),
+				Vector2(lx0 + (i+1) * lsp2 - lnw * 0.5 + 4, ly_after),
+				Color(0.25, 0.9, 1.0), 3.0)
+	_ll_null(ci, Vector2(lx0 + 3 * lsp2, ly_after), font)
+	_ll_arrow(ci, Vector2(lx0 + 2 * lsp2 + lnw * 0.5 + 8, ly_after),
+		Vector2(lx0 + 3 * lsp2 - 32, ly_after), Color(0.35, 1.0, 0.5), 2.5)
+	_ll_lblc(ci, Vector2(696, ly_after + lnh + 14),
+		"2 pointer changes  →  O(1) cost", COL_CHEAP, font, 13)
+
+func _draw_ll_shift_cost(ci: CanvasItem, font: Font) -> void:
+	# Left panel — ARRAY phase
+	_ll_box(ci, Rect2(Vector2(4,4), Vector2(458,222)), Color(0.09,0.04,0.04), Color(0.65,0.22,0.22))
+	_ll_lblc(ci, Vector2(233,20), "PHASE 1 — Sort as ARRAY", COL_WRONG, font, 14)
+	_ll_lbl(ci, Vector2(16,36), "Drag cars into target order.", Color(0.85,0.65,0.65), font, 12)
+	_ll_lbl(ci, Vector2(16,52), "Every car displaced = 1 SHIFT  \u2192  O(n) \u26a0", Color(0.85,0.65,0.65), font, 12)
+	var avals: Array[int] = [45, 17, 31, 10]
+	var sp_a := 96.0; var ax := 52.0; var ay := 110.0
+	var acols: Array[Color] = [Color(0.42,0.12,0.12), Color(0.42,0.12,0.12), Color(0.14,0.35,0.14), Color(0.42,0.12,0.12)]
+	for i in range(4):
+		_ll_node(ci, Vector2(ax+i*sp_a, ay), str(avals[i]), acols[i], font, 72.0, 44.0)
+		_ll_lblc(ci, Vector2(ax+i*sp_a, ay-28), "[%d]" % i, Color(0.8,0.4,0.4), font, 11)
+	_ll_arrow(ci, Vector2(ax+sp_a+8, ay-16), Vector2(ax+sp_a*2-8, ay-16), COL_WRONG, 2.0)
+	_ll_arrow(ci, Vector2(ax+sp_a*2+8, ay-22), Vector2(ax+sp_a*3-8, ay-22), COL_WRONG, 2.0)
+	_ll_lblc(ci, Vector2(233, ay+36), "shifts = O(n)", COL_WRONG, font, 13)
+	ci.draw_line(Vector2(466,4), Vector2(466,226), Color(0.35,0.35,0.6,0.7), 1.5)
+	# Right panel — LIST phase
+	_ll_box(ci, Rect2(Vector2(470,4), Vector2(458,222)), Color(0.04,0.09,0.04), Color(0.22,0.65,0.32))
+	_ll_lblc(ci, Vector2(699,20), "PHASE 2 — Chain as LINKED LIST", COL_OK, font, 14)
+	_ll_lbl(ci, Vector2(482,36), "Draw pointer arrows between cars.", Color(0.6,0.85,0.6), font, 12)
+	_ll_lbl(ci, Vector2(482,52), "No shifting — just 2 pointer changes.", Color(0.6,0.85,0.6), font, 12)
+	var lvals2: Array[int] = [10, 17, 31]
+	var lx0 := 502.0; var sp_l := 126.0; var ly := 110.0
+	var lfills2: Array[Color] = [COL_HEAD, Color(0.12,0.42,0.25), COL_TAIL]
+	for i in range(3):
+		_ll_node(ci, Vector2(lx0+i*sp_l, ly), str(lvals2[i]), lfills2[i], font, 72.0, 44.0)
+		_ll_port(ci, Vector2(lx0+i*sp_l+36, ly))
+	for i in range(2):
+		_ll_arrow(ci, Vector2(lx0+i*sp_l+44, ly), Vector2(lx0+(i+1)*sp_l-36, ly), Color(0.25,0.9,1.0), 3.5)
+	_ll_null(ci, Vector2(lx0+3*sp_l-16, ly), font)
+	_ll_arrow(ci, Vector2(lx0+2*sp_l+44, ly), Vector2(lx0+3*sp_l-46, ly), Color(0.35,1.0,0.5), 2.5)
+	_ll_lblc(ci, Vector2(699, ly+36), "0 shifts  =  O(1)", COL_OK, font, 13)
+
+func _draw_ll_node_anatomy(ci: CanvasItem, font: Font) -> void:
+	var nx := 265.0; var ny := 90.0
+	_ll_box(ci, Rect2(Vector2(nx-100,ny-28), Vector2(100,56)), Color(0.06,0.16,0.08), Color(0.3,0.9,0.5))
+	_ll_lblc(ci, Vector2(nx-50, ny-14), "DATA", Color(0.4,1.0,0.6), font, 12)
+	_ll_lblc(ci, Vector2(nx-50, ny+10), "42", Color(1.0,1.0,0.82), font, 22)
+	_ll_box(ci, Rect2(Vector2(nx+2,ny-28), Vector2(108,56)), Color(0.05,0.10,0.22), Color(0.25,0.85,1.0))
+	_ll_lblc(ci, Vector2(nx+56, ny-14), "NEXT PTR", Color(0.35,0.9,1.0), font, 12)
+	_ll_lblc(ci, Vector2(nx+56, ny+10), "0xF72", Color(0.55,1.0,1.0), font, 14)
+	_ll_port(ci, Vector2(nx+110, ny))
+	_ll_arrow(ci, Vector2(nx+118, ny), Vector2(nx+184, ny), Color(0.25,0.9,1.0), 3.5)
+	_ll_node(ci, Vector2(nx+228, ny), "17", Color(0.2,0.5,0.3), font, 60.0, 36.0)
+	_ll_lblc(ci, Vector2(nx+228, ny-26), "0xF72", Color(0.4,0.85,1.0), font, 10)
+	_ll_lbl(ci, Vector2(nx-100, ny-48), "HEAD  (this node lives at 0x3A2)", COL_HEAD, font, 13)
+	_ll_lbl(ci, Vector2(nx-100, ny+32), "DATA = cargo value stored  |  NEXT PTR = address of next node", Color(0.75,0.85,1.0), font, 12)
+	_ll_lbl(ci, Vector2(nx-100, ny+48), "POINTER = the link that connects one node to the next", Color(0.65,0.78,0.95), font, 12)
+	ci.draw_line(Vector2(0,134), Vector2(960,134), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,146), "Last node (TAIL) — NEXT PTR = NULL = end of list:", Color(0.85,0.85,0.65), font, 13)
+	_ll_node(ci, Vector2(130,188), "89", Color(0.2,0.5,0.32), font, 72.0, 38.0)
+	_ll_box(ci, Rect2(Vector2(168,172), Vector2(84,34)), Color(0.05,0.10,0.20), Color(0.25,0.85,1.0))
+	_ll_lblc(ci, Vector2(210,193), "NULL", Color(0.35,1.0,0.5), font, 14)
+	_ll_port(ci, Vector2(207,188))
+	_ll_lbl(ci, Vector2(8,190), "TAIL", COL_TAIL, font, 12)
+	_ll_box(ci, Rect2(Vector2(380,146), Vector2(570,56)), Color(0.05,0.05,0.12), Color(0.25,0.25,0.42))
+	_ll_lbl(ci, Vector2(394,162), "struct Node {  int data;  Node* next;  }", Color(0.65,0.85,1.0), font, 13)
+	_ll_lbl(ci, Vector2(394,182), "data = value stored        next = memory address of next node", Color(0.5,0.68,0.88), font, 12)
+
+func _draw_ll_connect_how(ci: CanvasItem, font: Font) -> void:
+	var y := 80.0; var sp3 := 210.0; var x0 := 60.0
+	var cfills2: Array[Color] = [COL_HEAD, Color(0.2,0.5,0.35), COL_TAIL]
+	var clbls2: Array[String] = ["HEAD","","TAIL"]
+	var cpos: Array[Vector2] = []
+	for i in range(3):
+		var p := Vector2(x0+i*sp3, y); cpos.append(p)
+		_ll_node(ci, p, str(10+i*10), cfills2[i], font, 72.0, 44.0)
+		if clbls2[i] != "": _ll_lblc(ci, p+Vector2(0,-32), clbls2[i], cfills2[i], font, 12)
+		_ll_port(ci, p+Vector2(36,0))
+	for i in range(2):
+		var frm2 := cpos[i]+Vector2(43,0); var to2 := cpos[i+1]-Vector2(36,0)
+		for s in range(8):
+			if s%2==0: ci.draw_line(frm2.lerp(to2,float(s)/8.0),frm2.lerp(to2,float(s+1)/8.0),Color(0.35,0.9,1.0,0.3),2.0)
+	_ll_null(ci, Vector2(x0+sp3*2+120, y), font)
+	_ll_arrow(ci, cpos[2]+Vector2(43,0), Vector2(x0+sp3*2+90,y), Color(0.35,1.0,0.5), 2.5)
+	_ll_arrow(ci, cpos[0]+Vector2(0,-50), cpos[1]+Vector2(-22,-50), Color(0.35,1.0,0.5), 2.5)
+	_ll_lblc(ci, cpos[0]+Vector2(sp3*0.5,-66), "WAY 1 — drag the \u25b6 dot", Color(0.4,1.0,0.5), font, 13)
+	ci.draw_arc(cpos[1], 40.0, 0, TAU, 32, Color(0.35,0.9,1.0,0.7), 2.0)
+	_ll_lblc(ci, cpos[1]+Vector2(0,56), "WAY 2 — click car, click target", Color(0.4,0.85,1.0), font, 13)
+	ci.draw_line(Vector2(0,132), Vector2(960,132), Color(0.3,0.3,0.5,0.3), 1.0)
+	_ll_lbl(ci, Vector2(8,146), "GOAL:", COL_HEAD, font, 14)
+	_ll_lbl(ci, Vector2(72,146), "Chain ALL cars so every car is reachable from HEAD", Color(0.92,0.92,0.82), font, 14)
+	_ll_lbl(ci, Vector2(72,166), "and the last car points to NULL.", Color(0.92,0.92,0.82), font, 14)
+	_ll_lbl(ci, Vector2(8,190), "UNDO:", Color(0.9,0.5,0.2), font, 14)
+	_ll_lbl(ci, Vector2(72,190), "Right-click any car to remove its outgoing pointer.", Color(0.92,0.78,0.6), font, 14)
+
+func _draw_ll_insert(ci: CanvasItem, font: Font) -> void:
+	_ll_lbl(ci, Vector2(8,4), "BEFORE — existing chain, C is new purple car:", Color(0.9,0.9,0.6), font, 13)
+	var pa := Vector2(110,65); var pb := Vector2(380,65); var pc := Vector2(245,12)
+	_ll_node(ci, pa, "A", Color(0.2,0.5,0.35), font, 66.0, 40.0)
+	_ll_node(ci, pb, "B", Color(0.2,0.5,0.35), font, 66.0, 40.0)
+	_ll_node(ci, pc, "C", Color(0.40,0.12,0.55), font, 66.0, 34.0)
+	_ll_lblc(ci, pc+Vector2(0,-22), "NEW", Color(0.85,0.4,1.0), font, 11)
+	_ll_port(ci, pa+Vector2(33,0))
+	for s in range(6):
+		if s%2==0: ci.draw_line(Vector2(pa.x+40,65).lerp(Vector2(pb.x-33,65),float(s)/6.0),Vector2(pa.x+40,65).lerp(Vector2(pb.x-33,65),float(s+1)/6.0),Color(0.9,0.25,0.25,0.8),2.5)
+	_ll_lblc(ci, Vector2(245,80), "\u2460 remove A\u2192B", COL_WRONG, font, 11)
+	_ll_arrow(ci, pa+Vector2(38,-10), pc+Vector2(-33,6), COL_OK, 2.5)
+	_ll_arrow(ci, pc+Vector2(33,6), pb+Vector2(-38,-10), COL_OK, 2.5)
+	_ll_lblc(ci, pa+Vector2(48,-24), "\u2461 A\u2192C", COL_OK, font, 11)
+	_ll_lblc(ci, pb+Vector2(-48,-24), "\u2462 C\u2192B", COL_OK, font, 11)
+	ci.draw_line(Vector2(0,100), Vector2(960,100), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,108), "AFTER — A \u2192 C \u2192 B  \u2713", COL_OK, font, 13)
+	var qa := Vector2(100,162); var qc := Vector2(310,162); var qb := Vector2(520,162)
+	_ll_node(ci, qa, "A", Color(0.2,0.5,0.35), font, 66.0, 40.0)
+	_ll_node(ci, qc, "C", Color(0.40,0.12,0.55), font, 66.0, 40.0)
+	_ll_node(ci, qb, "B", Color(0.2,0.5,0.35), font, 66.0, 40.0)
+	_ll_port(ci, qa+Vector2(33,0)); _ll_port(ci, qc+Vector2(33,0))
+	_ll_arrow(ci, qa+Vector2(40,0), qc-Vector2(33,0), COL_OK, 3.5)
+	_ll_arrow(ci, qc+Vector2(40,0), qb-Vector2(33,0), COL_OK, 3.5)
+	_ll_box(ci, Rect2(Vector2(640,140), Vector2(310,50)), Color(0.03,0.12,0.05), COL_OK)
+	_ll_lblc(ci, Vector2(795,156), "Only 2 pointer changes", COL_OK, font, 13)
+	_ll_lblc(ci, Vector2(795,176), "O(1) \u2713  zero shifts!", COL_OK, font, 13)
+
+func _draw_ll_insert_task(ci: CanvasItem, font: Font) -> void:
+	_ll_lbl(ci, Vector2(8,4), "A chain exists. A PURPLE car waits in the tray. Insert it between any two adjacent cars.", COL_WHITE, font, 13)
+	_ll_box(ci, Rect2(Vector2(375,22), Vector2(90,50)), Color(0.15,0.05,0.22), Color(0.6,0.3,0.9))
+	_ll_lblc(ci, Vector2(420,38), "TRAY", Color(0.7,0.4,1.0), font, 11)
+	_ll_node(ci, Vector2(420,68), "?", Color(0.40,0.12,0.55), font, 60.0, 34.0)
+	var cy4 := 152.0
+	var cp2: Array[Vector2] = [Vector2(90,cy4), Vector2(300,cy4), Vector2(510,cy4)]
+	var cfills4: Array[Color] = [COL_HEAD, Color(0.2,0.5,0.35), COL_TAIL]
+	var cvals4: Array[String] = ["17","31","45"]
+	for i in range(3):
+		_ll_node(ci, cp2[i], cvals4[i], cfills4[i], font, 66.0, 40.0)
+		_ll_port(ci, cp2[i]+Vector2(33,0))
+	for i in range(2):
+		_ll_arrow(ci, cp2[i]+Vector2(40,0), cp2[i+1]-Vector2(33,0), Color(0.25,0.9,1.0), 3.5)
+	_ll_null(ci, Vector2(690, cy4), font)
+	_ll_arrow(ci, cp2[2]+Vector2(40,0), Vector2(660,cy4), Color(0.35,1.0,0.5), 2.5)
+	_ll_arrow(ci, Vector2(420,86), Vector2(195,cy4-26), Color(0.75,0.4,1.0,0.65), 2.5)
+	_ll_lblc(ci, Vector2(280,cy4-44), "insert here?", Color(0.78,0.42,1.0), font, 12)
+	ci.draw_line(Vector2(0,188), Vector2(960,188), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,200), "HOW:", Color(0.85,0.85,0.65), font, 13)
+	_ll_lbl(ci, Vector2(62,200), "Right-click the existing link to remove it, then draw two new pointer arrows.", Color(0.88,0.88,0.78), font, 13)
+
+func _draw_ll_reverse(ci: CanvasItem, font: Font) -> void:
+	_ll_lbl(ci, Vector2(8,4), "BEFORE:", COL_WRONG, font, 14)
+	var sp5 := 155.0; var x5 := 50.0
+	var bn2: Array[String] = ["A","B","C","D"]
+	var bf2: Array[Color] = [COL_HEAD,Color(0.2,0.5,0.35),Color(0.2,0.5,0.35),COL_TAIL]
+	for i in range(4):
+		_ll_node(ci, Vector2(x5+i*sp5,46), bn2[i], bf2[i], font, 66.0, 38.0)
+		_ll_port(ci, Vector2(x5+i*sp5+33,46))
+	for i in range(3):
+		_ll_arrow(ci, Vector2(x5+i*sp5+40,46), Vector2(x5+(i+1)*sp5-33,46), COL_WRONG, 3.5)
+	_ll_null(ci, Vector2(x5+4*sp5-8,46), font)
+	_ll_arrow(ci, Vector2(x5+3*sp5+40,46), Vector2(x5+4*sp5-38,46), Color(0.35,1.0,0.5), 2.5)
+	_ll_lblc(ci, Vector2(480,88), "\u21d5  flip every arrow direction", COL_HEAD, font, 16)
+	_ll_lbl(ci, Vector2(8,100), "AFTER:", COL_OK, font, 14)
+	var rn2: Array[String] = ["D","C","B","A"]
+	for i in range(4):
+		_ll_node(ci, Vector2(x5+i*sp5,136), rn2[i], bf2[i], font, 66.0, 38.0)
+		_ll_port(ci, Vector2(x5+i*sp5+33,136))
+	for i in range(3):
+		_ll_arrow(ci, Vector2(x5+i*sp5+40,136), Vector2(x5+(i+1)*sp5-33,136), COL_OK, 3.5)
+	_ll_null(ci, Vector2(x5+4*sp5-8,136), font)
+	_ll_arrow(ci, Vector2(x5+3*sp5+40,136), Vector2(x5+4*sp5-38,136), Color(0.35,1.0,0.5), 2.5)
+	ci.draw_line(Vector2(0,168), Vector2(960,168), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,180), "HOW:", Color(0.85,0.85,0.65), font, 14)
+	_ll_lbl(ci, Vector2(64,180), "Right-click a car to remove its link. Drag \u25b6 BACKWARD to the previous car.", Color(0.92,0.92,0.82), font, 14)
+	_ll_lbl(ci, Vector2(64,200), "Faint ghost arrows show the target. Match every arrow to its ghost.", Color(0.7,0.8,1.0), font, 13)
+
+func _draw_ll_cycle(ci: CanvasItem, font: Font) -> void:
+	_ll_lbl(ci, Vector2(8,4), "INVALID \u2014 cycle detected (traversal loops forever, never reaches NULL):", COL_WRONG, font, 13)
+	var sp6 := 150.0; var x6 := 50.0; var y6 := 56.0
+	var cn2: Array[String] = ["A","B","C","D"]
+	var cf2: Array[Color] = [COL_HEAD,COL_WRONG,COL_WRONG,COL_WRONG]
+	var cp6: Array[Vector2] = []
+	for i in range(4):
+		var p := Vector2(x6+i*sp6, y6); cp6.append(p)
+		_ll_node(ci, p, cn2[i], cf2[i], font, 64.0, 38.0)
+		_ll_port(ci, p+Vector2(32,0))
+	for i in range(3):
+		_ll_arrow(ci, cp6[i]+Vector2(38,0), cp6[i+1]-Vector2(32,0), Color(0.25,0.9,1.0), 3.5)
+	ci.draw_line(cp6[3]+Vector2(0,20), cp6[3]+Vector2(0,52), COL_WRONG, 2.5)
+	ci.draw_line(cp6[3]+Vector2(0,52), cp6[1]+Vector2(0,52), COL_WRONG, 2.5)
+	_ll_arrow(ci, cp6[1]+Vector2(0,52), cp6[1]+Vector2(0,22), COL_WRONG, 2.5)
+	_ll_lblc(ci, Vector2(x6+2*sp6,y6+70), "\u21ba  D points back to B \u2014 never reaches NULL!", COL_WRONG, font, 12)
+	ci.draw_line(Vector2(0,116), Vector2(960,116), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,126), "FIXED \u2014 break the loop, re-link D \u2192 NULL:", COL_OK, font, 13)
+	var fy2 := 168.0
+	var ff2: Array[Color] = [COL_HEAD,Color(0.2,0.5,0.35),Color(0.2,0.5,0.35),COL_TAIL]
+	for i in range(4):
+		var p2 := Vector2(x6+i*sp6, fy2)
+		_ll_node(ci, p2, cn2[i], ff2[i], font, 64.0, 38.0)
+		_ll_port(ci, p2+Vector2(32,0))
+	for i in range(3):
+		_ll_arrow(ci, Vector2(x6+i*sp6+38,fy2), Vector2(x6+(i+1)*sp6-32,fy2), COL_OK, 3.5)
+	_ll_null(ci, Vector2(x6+4*sp6-8, fy2), font)
+	_ll_arrow(ci, Vector2(x6+3*sp6+38,fy2), Vector2(x6+4*sp6-38,fy2), Color(0.35,1.0,0.5), 2.5)
+	ci.draw_line(Vector2(0,206), Vector2(960,206), Color(0.3,0.3,0.5,0.28), 1.0)
+	_ll_lbl(ci, Vector2(8,218), "HOW:", Color(0.85,0.85,0.65), font, 13)
+	_ll_lbl(ci, Vector2(62,218), "Right-click the car whose arrow loops back. Re-draw its pointer to the correct next car.", COL_WHITE, font, 13)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CONNECT TIER — stub kept for compatibility
 # ─────────────────────────────────────────────────────────────────────────────
 func _show_contrast_intro() -> void:
-	pass  # now handled by _show_tier_intro above
+	pass  # handled by _show_tier_intro above
+
 
 
 # Builds and shows one tutorial slide, waits for player to dismiss it.
-func _show_tutorial_slide(step: Dictionary) -> void:
-	var panel := PanelContainer.new()
-	panel.z_index = 200
-	panel.position = Vector2(120, 120)
-	panel.custom_minimum_size = Vector2(1040, 0)
-	add_child(panel)
+func _show_tutorial_slide(step: Dictionary) -> bool:
+	var cl := CanvasLayer.new()
+	cl.layer = 120
+	add_child(cl)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 7)
-	panel.add_child(vbox)
+	# Full-screen dim
+	var overlay := ColorRect.new()
+	overlay.color = Color(0.0, 0.0, 0.0, 0.82)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cl.add_child(overlay)
 
-	# Title
+	# ── Card — centred, fixed 1200×680 ───────────────────────────────────────
+	var card := PanelContainer.new()
+	var cs := StyleBoxFlat.new()
+	cs.bg_color                   = Color(0.04, 0.07, 0.16, 0.98)
+	cs.border_width_left          = 3; cs.border_width_top    = 3
+	cs.border_width_right         = 3; cs.border_width_bottom = 3
+	cs.border_color               = Color(0.20, 0.85, 1.00, 0.90)
+	cs.corner_radius_top_left     = 10; cs.corner_radius_top_right    = 10
+	cs.corner_radius_bottom_right = 10; cs.corner_radius_bottom_left  = 10
+	cs.content_margin_left  = 28; cs.content_margin_right  = 28
+	cs.content_margin_top   = 16; cs.content_margin_bottom = 16
+	card.add_theme_stylebox_override("panel", cs)
+	# Fixed position: 40px from each edge of 1280×720
+	card.set_anchor_and_offset(SIDE_LEFT,   0, 40)
+	card.set_anchor_and_offset(SIDE_TOP,    0, 30)
+	card.set_anchor_and_offset(SIDE_RIGHT,  1, -40)
+	card.set_anchor_and_offset(SIDE_BOTTOM, 1, -30)
+	cl.add_child(card)
+
+	# Outer VBox fills the card
+	var outer := VBoxContainer.new()
+	outer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	outer.add_theme_constant_override("separation", 6)
+	card.add_child(outer)
+
+	# ── Title ─────────────────────────────────────────────────────────────────
+	var sep_style := StyleBoxFlat.new()
+	sep_style.bg_color = Color(0.20, 0.85, 1.00, 0.45)
+	sep_style.content_margin_top = 1; sep_style.content_margin_bottom = 1
+
 	var title_lbl := Label.new()
 	title_lbl.text = step["title"]
-	title_lbl.add_theme_font_override("font", _pixel_font)
-	title_lbl.add_theme_font_size_override("font_size", 18)
+	if is_instance_valid(_pixel_font): title_lbl.add_theme_font_override("font", _pixel_font)
+	title_lbl.add_theme_font_size_override("font_size", 28)
 	title_lbl.add_theme_color_override("font_color", step["title_col"])
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title_lbl)
+	outer.add_child(title_lbl)
 
-	var sep := HSeparator.new()
-	vbox.add_child(sep)
+	var sep1 := HSeparator.new()
+	sep1.add_theme_stylebox_override("separator", sep_style)
+	outer.add_child(sep1)
 
-	# Content rows
+	# ── Diagram ───────────────────────────────────────────────────────────────
+	var draw_fn: Variant = step.get("draw", null)
+	if draw_fn != null and (draw_fn as Callable).is_valid():
+		var diag := _LLDiagramDrawer.new()
+		diag.draw_fn    = draw_fn as Callable
+		diag.pixel_font = _pixel_font
+		diag.custom_minimum_size   = Vector2(0, 260)
+		diag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		diag.size_flags_vertical   = Control.SIZE_SHRINK_BEGIN
+		outer.add_child(diag)
+
+		var sep2 := HSeparator.new()
+		sep2.add_theme_stylebox_override("separator", sep_style)
+		outer.add_child(sep2)
+
+	# ── Content rows ──────────────────────────────────────────────────────────
+	var content_vbox := VBoxContainer.new()
+	content_vbox.add_theme_constant_override("separation", 5)
+	content_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(content_vbox)
+
 	for row: Array in (step["lines"] as Array):
 		var tag_str: String  = row[0]
 		var body_str: String = row[1]
 		var col: Color       = row[2]
-
 		if body_str.is_empty():
-			var gap := Control.new()
-			gap.custom_minimum_size = Vector2(0, 4)
-			vbox.add_child(gap)
-			continue
-
+			var gap := Control.new(); gap.custom_minimum_size = Vector2(0, 2)
+			content_vbox.add_child(gap); continue
 		var hbox := HBoxContainer.new()
-		hbox.add_theme_constant_override("separation", 16)
-		vbox.add_child(hbox)
-
+		hbox.add_theme_constant_override("separation", 12)
+		content_vbox.add_child(hbox)
 		if tag_str.is_empty():
-			# Indent-only line — no tag column
-			var spacer := Control.new()
-			spacer.custom_minimum_size = Vector2(88, 0)
-			hbox.add_child(spacer)
+			var sp2 := Control.new(); sp2.custom_minimum_size = Vector2(100, 0)
+			hbox.add_child(sp2)
 		else:
 			var tag := Label.new()
 			tag.text = "[%s]" % tag_str
-			tag.add_theme_font_override("font", _pixel_font)
-			tag.add_theme_font_size_override("font_size", 13)
+			if is_instance_valid(_pixel_font): tag.add_theme_font_override("font", _pixel_font)
+			tag.add_theme_font_size_override("font_size", 17)
 			tag.add_theme_color_override("font_color", col)
-			tag.custom_minimum_size  = Vector2(88, 0)
+			tag.custom_minimum_size  = Vector2(100, 0)
 			tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			tag.autowrap_mode        = TextServer.AUTOWRAP_OFF
 			hbox.add_child(tag)
-
 		var body := Label.new()
 		body.text = body_str
-		body.add_theme_font_override("font", _pixel_font)
-		body.add_theme_font_size_override("font_size", 14)
+		if is_instance_valid(_pixel_font): body.add_theme_font_override("font", _pixel_font)
+		body.add_theme_font_size_override("font_size", 18)
 		body.add_theme_color_override("font_color", col)
-		body.autowrap_mode       = TextServer.AUTOWRAP_WORD
-		body.custom_minimum_size = Vector2(900, 0)
+		body.autowrap_mode         = TextServer.AUTOWRAP_WORD
+		body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(body)
 
-	# Dismiss button
-	var btn := Button.new()
-	btn.text = step["btn"]
-	btn.add_theme_font_override("font", _pixel_font)
-	btn.add_theme_font_size_override("font_size", 16)
-	btn.custom_minimum_size = Vector2(180, 38)
-	btn.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(btn)
+	# ── Spacer pushes nav to bottom ───────────────────────────────────────────
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(spacer)
+
+	var sep3 := HSeparator.new()
+	sep3.add_theme_stylebox_override("separator", sep_style)
+	outer.add_child(sep3)
+
+	# ── Nav row pinned at bottom ──────────────────────────────────────────────
+	var nav := HBoxContainer.new()
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.add_theme_constant_override("separation", 32)
+	nav.custom_minimum_size = Vector2(0, 48)
+	outer.add_child(nav)
+
+	var btn_back := Button.new()
+	btn_back.text = "◀  Back"
+	if is_instance_valid(_pixel_font): btn_back.add_theme_font_override("font", _pixel_font)
+	btn_back.add_theme_font_size_override("font_size", 16)
+	btn_back.custom_minimum_size = Vector2(140, 42)
+	btn_back.disabled = not step.get("has_back", false)
+	_apply_btn_style(btn_back)
+	nav.add_child(btn_back)
+
+	var page_lbl := Label.new()
+	page_lbl.text = step.get("page_str", "")
+	if is_instance_valid(_pixel_font): page_lbl.add_theme_font_override("font", _pixel_font)
+	page_lbl.add_theme_font_size_override("font_size", 14)
+	page_lbl.add_theme_color_override("font_color", Color(0.6, 0.78, 1.0))
+	page_lbl.custom_minimum_size  = Vector2(80, 0)
+	page_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	page_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	nav.add_child(page_lbl)
+
+	var btn_next := Button.new()
+	btn_next.text = step["btn"]
+	if is_instance_valid(_pixel_font): btn_next.add_theme_font_override("font", _pixel_font)
+	btn_next.add_theme_font_size_override("font_size", 16)
+	btn_next.custom_minimum_size = Vector2(140, 42)
+	_apply_btn_style(btn_next)
+	nav.add_child(btn_next)
 
 	# Fade in
-	panel.modulate = Color(1, 1, 1, 0)
-	panel.create_tween().tween_property(panel, "modulate:a", 1.0, 0.3)
+	overlay.modulate = Color(1, 1, 1, 0)
+	card.modulate    = Color(1, 1, 1, 0)
+	var fi := card.create_tween().set_parallel(true)
+	fi.tween_property(overlay, "modulate:a", 1.0, 0.22)
+	fi.tween_property(card,    "modulate:a", 1.0, 0.22)
 
-	# await the signal directly — lambda capture of a local bool does not
-	# work in GDScript (primitives captured by value, not reference).
-	await btn.pressed
+	var _result := await _wait_nav_choice(btn_next, btn_back)
 
-	# Fade out
-	var tw := panel.create_tween()
-	tw.tween_property(panel, "modulate:a", 0.0, 0.25)
-	await tw.finished
-	panel.queue_free()
+	var fo := card.create_tween().set_parallel(true)
+	fo.tween_property(overlay, "modulate:a", 0.0, 0.18)
+	fo.tween_property(card,    "modulate:a", 0.0, 0.18)
+	await fo.finished
+	cl.queue_free()
+	return _result
+
+
+func _apply_btn_style(btn: Button) -> void:
+	var s := StyleBoxFlat.new()
+	s.bg_color               = Color(0.05, 0.14, 0.26, 1.0)
+	s.border_width_left      = 2; s.border_width_top    = 2
+	s.border_width_right     = 2; s.border_width_bottom = 2
+	s.border_color           = Color(0.20, 0.85, 1.00, 1.0)
+	s.corner_radius_top_left = 6; s.corner_radius_top_right    = 6
+	s.corner_radius_bottom_right = 6; s.corner_radius_bottom_left = 6
+	btn.add_theme_stylebox_override("normal",   s)
+	var h := s.duplicate() as StyleBoxFlat
+	h.border_color = Color(0.3, 1.0, 0.45, 1.0)
+	h.bg_color     = Color(0.07, 0.22, 0.38, 1.0)
+	btn.add_theme_stylebox_override("hover",    h)
+	btn.add_theme_stylebox_override("pressed",  s)
+	var d := s.duplicate() as StyleBoxFlat
+	d.border_color = Color(0.2, 0.2, 0.3, 0.4)
+	d.bg_color     = Color(0.04, 0.04, 0.08, 0.5)
+	btn.add_theme_stylebox_override("disabled", d)
+	btn.add_theme_color_override("font_color",          Color(0.85, 0.95, 1.0))
+	btn.add_theme_color_override("font_hover_color",    Color(0.3, 1.0, 0.45))
+	btn.add_theme_color_override("font_disabled_color", Color(0.3, 0.3, 0.4))
+
+# Waits for either Next or Back button, returns true = forward, false = back.
+var _nav_choice: int = 0   # 0=pending, 1=forward, -1=back
+
+func _wait_nav_choice(next_btn: Button, back_btn: Button) -> bool:
+	_nav_choice = 0
+	next_btn.pressed.connect(func(): _nav_choice =  1, CONNECT_ONE_SHOT)
+	back_btn.pressed.connect(func(): _nav_choice = -1, CONNECT_ONE_SHOT)
+	while _nav_choice == 0:
+		await get_tree().process_frame
+	return _nav_choice == 1
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ARRAY TIER
@@ -787,9 +1403,11 @@ func _spawn_array_game(count: int) -> void:
 	_af_target.sort()
 
 	var total_w: float = (TRAIN_SLOT_W + TRAIN_GAP) * count - TRAIN_GAP
+	# Center the slots on the 1280-wide canvas
+	var centered_start_x: float = (1280.0 - total_w) * 0.5
 	var track := ColorRect.new()
 	track.size     = Vector2(total_w + 20, 8)
-	track.position = Vector2(TRAIN_START_X - 10, TRAIN_Y + TRAIN_SLOT_H - 6)
+	track.position = Vector2(centered_start_x - 10, TRAIN_Y + TRAIN_SLOT_H - 6)
 	track.color    = Color(0.35, 0.24, 0.1)
 	track.z_index  = 0
 	_array_layer.add_child(track)
@@ -797,7 +1415,7 @@ func _spawn_array_game(count: int) -> void:
 	_draw_array_target_banner()
 
 	for i in range(count):
-		var sx: float = TRAIN_START_X + i * (TRAIN_SLOT_W + TRAIN_GAP)
+		var sx: float = centered_start_x + i * (TRAIN_SLOT_W + TRAIN_GAP)
 		var cx: float = sx + TRAIN_SLOT_W * 0.5
 		var cy: float = TRAIN_Y + TRAIN_SLOT_H * 0.5
 
@@ -811,18 +1429,26 @@ func _spawn_array_game(count: int) -> void:
 		_array_layer.add_child(slot_spr)
 		slot_spr.global_position = Vector2(cx, cy)
 
+		# Index label centered above the slot and larger for readability
 		var idx_lbl := Label.new()
 		idx_lbl.text = "[%d]" % i
 		idx_lbl.add_theme_font_override("font", _pixel_font)
-		idx_lbl.add_theme_font_size_override("font_size", 11)
-		idx_lbl.add_theme_color_override("font_color", Color(0.55, 0.55, 0.75))
-		idx_lbl.position = Vector2(sx + TRAIN_SLOT_W * 0.5 - 10, TRAIN_Y + TRAIN_SLOT_H + 4)
+		idx_lbl.add_theme_font_size_override("font_size", 18)
+		idx_lbl.add_theme_color_override("font_color", Color(0.75, 0.75, 1.0))
+		idx_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+		idx_lbl.add_theme_constant_override("shadow_offset_x", 1)
+		idx_lbl.add_theme_constant_override("shadow_offset_y", 1)
+		idx_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		idx_lbl.custom_minimum_size  = Vector2(TRAIN_SLOT_W, 0)
+		idx_lbl.position = Vector2(sx, TRAIN_Y - 28)
+		idx_lbl.z_index  = 5
 		_array_layer.add_child(idx_lbl)
 
 		_array_slots.append({
 			"rect":    Rect2(sx, TRAIN_Y - 4, TRAIN_SLOT_W, TRAIN_SLOT_H + 8),
 			"item_id": i,
-			"bg":      slot_spr
+			"bg":      slot_spr,
+			"start_x": centered_start_x
 		})
 
 		var item := _make_train_item(i, PATH_TRAIN_COAL, str(values[i]), COL_WHITE,
@@ -832,9 +1458,11 @@ func _spawn_array_game(count: int) -> void:
 
 	_shift_label = Label.new()
 	_shift_label.add_theme_font_override("font", _pixel_font)
-	_shift_label.add_theme_font_size_override("font_size", 14)
+	_shift_label.add_theme_font_size_override("font_size", 18)
 	_shift_label.add_theme_color_override("font_color", COL_COST)
-	_shift_label.position = Vector2(TRAIN_START_X, TRAIN_Y + TRAIN_SLOT_H + 28)
+	_shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shift_label.custom_minimum_size  = Vector2(1280, 0)
+	_shift_label.position = Vector2(0, TRAIN_Y + TRAIN_SLOT_H + 12)
 	_shift_label.z_index  = 5
 	_array_layer.add_child(_shift_label)
 	_update_shift_label()
@@ -847,13 +1475,18 @@ func _spawn_array_game(count: int) -> void:
 
 func _draw_array_target_banner() -> void:
 	var banner := PanelContainer.new()
-	banner.position            = Vector2(TRAIN_START_X, 178)
-	banner.custom_minimum_size = Vector2(500, 44)
+	banner.custom_minimum_size = Vector2(600, 52)
 	banner.z_index             = 10
+	# Anchor centered — position is resolved after layout; use offset from center
+	banner.set_anchor_and_offset(SIDE_LEFT,   0.5, -300)
+	banner.set_anchor_and_offset(SIDE_RIGHT,  0.5,  300)
+	banner.set_anchor_and_offset(SIDE_TOP,    0.0,  178)
+	banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0,  230)
 	_array_layer.add_child(banner)
 
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 6)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 8)
 	banner.add_child(hbox)
 
 	var title := Label.new()
@@ -912,7 +1545,8 @@ func _swap_array_cars(slot_a: int, slot_b: int) -> void:
 		if item.is_empty(): continue
 		var nd := item["sprite"] as Node2D
 		if not is_instance_valid(nd): continue
-		var tx: float = TRAIN_START_X + i * (TRAIN_SLOT_W + TRAIN_GAP) + TRAIN_SLOT_W * 0.5
+		var csx: float = _array_slots[i].get("start_x", TRAIN_START_X)
+		var tx: float = csx + i * (TRAIN_SLOT_W + TRAIN_GAP) + TRAIN_SLOT_W * 0.5
 		var ty: float = TRAIN_Y + TRAIN_SLOT_H * 0.5
 		nd.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)\
 			.tween_property(nd, "global_position", Vector2(tx, ty), 0.25)
@@ -972,7 +1606,8 @@ func _start_list_phase() -> void:
 
 	# Fixed rail Y — all cars on the same horizontal track line
 	const RAIL_Y_AF: float = 370.0
-	var x_slots: Array[float] = [110.0, 280.0, 450.0, 620.0, 790.0, 960.0]
+	# Spread cars evenly across the 1280px canvas width
+	var x_slots: Array[float] = [140.0, 310.0, 480.0, 650.0, 820.0, 990.0]
 	x_slots.shuffle()
 	var positions: Array[Vector2] = []
 	for xv: float in x_slots:
@@ -989,12 +1624,12 @@ func _start_list_phase() -> void:
 	var null_lbl := Label.new()
 	null_lbl.text = "NULL"
 	null_lbl.add_theme_font_override("font", _pixel_font)
-	null_lbl.add_theme_font_size_override("font_size", 16)
+	null_lbl.add_theme_font_size_override("font_size", 20)
 	null_lbl.add_theme_color_override("font_color", COL_TAIL)
-	null_lbl.position = Vector2(1080, 335)
+	null_lbl.position = Vector2(1110, 335)
 	null_lbl.z_index  = 5
 	_array_layer.add_child(null_lbl)
-	_array_layer.set_meta("null_pos", Vector2(1100, 360))
+	_array_layer.set_meta("null_pos", Vector2(1130, 360))
 
 	_draw_list_target_banner()
 
@@ -1018,38 +1653,56 @@ func _spawn_list_car(uid: int, val: int, pos: Vector2) -> void:
 	var val_lbl := Label.new()
 	val_lbl.text = str(val)
 	val_lbl.add_theme_font_override("font", _pixel_font)
-	val_lbl.add_theme_font_size_override("font_size", 36)
+	val_lbl.add_theme_font_size_override("font_size", 24)
 	val_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.0))
 	val_lbl.add_theme_color_override("font_shadow_color", Color.BLACK)
 	val_lbl.add_theme_constant_override("shadow_offset_x", 2)
 	val_lbl.add_theme_constant_override("shadow_offset_y", 2)
 	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	val_lbl.custom_minimum_size  = Vector2(80, 0)
-	val_lbl.position = Vector2(-40, -22)
+	val_lbl.custom_minimum_size  = Vector2(100, 0)
+	val_lbl.position = Vector2(-50, -14)
 	spr.add_child(val_lbl)
 
-	# v6: enlarged hook hit area (44×44) for touch safety
+	# Port container — matches main tier port style exactly
+	var port_container := Node2D.new()
+	port_container.z_index = 20
+	port_container.position = Vector2(85, 0)   # same PORT_OFFSET as main tier
+	spr.add_child(port_container)
+
+	# Invisible 44×44 touch-safe hit zone
 	var hook := ColorRect.new()
 	hook.size     = Vector2(44, 44)
-	hook.position = Vector2(63, -22)
-	hook.color    = Color(0, 0, 0, 0)   # invisible — hit area only
+	hook.position = Vector2(-22, -22)
+	hook.color    = Color(0, 0, 0, 0)
 	hook.z_index  = 13
-	spr.add_child(hook)
+	port_container.add_child(hook)
 
-	# Visible hook dot (still 18×18 visually)
+	# Outer glow ring
+	var port_ring := ColorRect.new()
+	port_ring.size     = Vector2(36, 36)
+	port_ring.position = Vector2(-18, -18)
+	port_ring.color    = Color(COL_ARROW.r, COL_ARROW.g, COL_ARROW.b, 0.28)
+	port_container.add_child(port_ring)
+
+	# Solid centre dot
 	var hook_vis := ColorRect.new()
-	hook_vis.size     = Vector2(18, 18)
-	hook_vis.position = Vector2(76, -9)
+	hook_vis.size     = Vector2(28, 28)
+	hook_vis.position = Vector2(-14, -14)
 	hook_vis.color    = COL_ARROW
 	hook_vis.z_index  = 11
-	spr.add_child(hook_vis)
+	port_container.add_child(hook_vis)
 
+	# Arrow label
 	var hook_lbl := Label.new()
 	hook_lbl.text = "▶"
-	hook_lbl.add_theme_font_size_override("font_size", 13)
+	hook_lbl.add_theme_font_override("font", _pixel_font)
+	hook_lbl.add_theme_font_size_override("font_size", 22)
 	hook_lbl.add_theme_color_override("font_color", COL_WHITE)
-	hook_lbl.position = Vector2(74, -11)
-	spr.add_child(hook_lbl)
+	hook_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	hook_lbl.add_theme_constant_override("shadow_offset_x", 2)
+	hook_lbl.add_theme_constant_override("shadow_offset_y", 2)
+	hook_lbl.position = Vector2(-13, -14)
+	port_container.add_child(hook_lbl)
 
 	_list_nodes_af.append({
 		"id":      uid,
@@ -1061,13 +1714,17 @@ func _spawn_list_car(uid: int, val: int, pos: Vector2) -> void:
 
 func _draw_list_target_banner() -> void:
 	var banner := PanelContainer.new()
-	banner.position            = Vector2(200, 155)
-	banner.custom_minimum_size = Vector2(700, 44)
+	banner.custom_minimum_size = Vector2(700, 52)
 	banner.z_index             = 10
+	banner.set_anchor_and_offset(SIDE_LEFT,   0.5, -350)
+	banner.set_anchor_and_offset(SIDE_RIGHT,  0.5,  350)
+	banner.set_anchor_and_offset(SIDE_TOP,    0.0,  155)
+	banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0,  207)
 	_array_layer.add_child(banner)
 
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 6)
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 8)
 	banner.add_child(hbox)
 
 	var title := Label.new()
@@ -1111,8 +1768,8 @@ func _list_draw_arrow_between(src: Dictionary, dst_pos: Vector2) -> Line2D:
 	var from := _list_hook_world_pos(src)
 	var line := Line2D.new()
 	line.default_color = COL_ARROW
-	line.width  = 3.0
-	line.z_index = 8
+	line.width  = 4.0
+	line.z_index = 25   # above cars (z=10) so arrows are always visible
 	line.add_point(from); line.add_point(dst_pos)
 	var dir := (dst_pos - from).normalized()
 	line.add_point(dst_pos - dir * 10 + dir.rotated(deg_to_rad(140)) * 8)
@@ -1173,7 +1830,7 @@ func _flash_af(nd: Node2D, c: Color) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 func _update_shift_label() -> void:
 	if is_instance_valid(_shift_label):
-		_shift_label.text = "Array shifts so far: %d  (each shift = the array moving a car)" % _shift_count
+		_shift_label.text = "Array shifts so far: %d   (each swap displaces cars = O(n) cost)" % _shift_count
 
 func _update_list_ops_label() -> void:
 	if is_instance_valid(_list_ops_label):
@@ -1198,14 +1855,14 @@ func _make_train_item(uid: int, sprite_path: String, label_text: String,
 	var lbl := Label.new()
 	lbl.text = label_text
 	lbl.add_theme_font_override("font", _pixel_font)
-	lbl.add_theme_font_size_override("font_size", 26)
+	lbl.add_theme_font_size_override("font_size", 24)
 	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.0))
 	lbl.add_theme_color_override("font_shadow_color", Color.BLACK)
 	lbl.add_theme_constant_override("shadow_offset_x", 2)
 	lbl.add_theme_constant_override("shadow_offset_y", 2)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.custom_minimum_size  = Vector2(80, 0)
-	lbl.position = Vector2(-40, -22)
+	lbl.custom_minimum_size  = Vector2(100, 0)
+	lbl.position = Vector2(-50, -14)
 	sprite.add_child(lbl)
 	return {"id": uid, "sprite": sprite, "slot_idx": -1,
 			"addr": label_text, "sprite_path": sprite_path, "value": 0}
@@ -1273,7 +1930,7 @@ func _array_on_lmb_up(pos: Vector2) -> void:
 			if not item.is_empty():
 				var nd := item["sprite"] as Node2D
 				if is_instance_valid(nd):
-					var tx: float = TRAIN_START_X + _af_selected * (TRAIN_SLOT_W + TRAIN_GAP) + TRAIN_SLOT_W * 0.5
+					var tx: float = _array_slots[_af_selected].get("start_x", TRAIN_START_X) + _af_selected * (TRAIN_SLOT_W + TRAIN_GAP) + TRAIN_SLOT_W * 0.5
 					nd.create_tween().tween_property(nd, "global_position:x", tx, 0.2)
 		_array_drag_item = -1
 		_af_selected     = -1
@@ -1611,14 +2268,14 @@ func _make_node(pos: Vector2, staged: bool) -> Dictionary:
 	var lbl := Label.new()
 	lbl.text = addr
 	lbl.add_theme_font_override("font", _pixel_font)
-	lbl.add_theme_font_size_override("font_size", 36)   # larger
+	lbl.add_theme_font_size_override("font_size", 26)   # readable but fits cart
 	lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.0))
 	lbl.add_theme_color_override("font_shadow_color", Color(0,0,0,0.9))
 	lbl.add_theme_constant_override("shadow_offset_x", 2)
 	lbl.add_theme_constant_override("shadow_offset_y", 2)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.custom_minimum_size  = Vector2(180, 0)   # full sprite width
-	lbl.position             = Vector2(-90, -18) # centred on 180px body
+	lbl.position             = Vector2(-90, -14) # centred on 180px body
 	sprite.add_child(lbl)
 
 	var data := {"id": _uid, "addr": addr, "sprite": sprite,
@@ -1807,19 +2464,20 @@ func _process(delta: float) -> void:
 		if _combo_decay <= 0.0: _combo = 0; _combo_lbl.text = ""
 	if _p["concept"] not in ["ARRAY_FEEL"]:
 		_update_null_marker()
-		_update_hover()
+		_update_hover()       # v6: hover highlight
 	if _live_arrow != null:
 		_update_snap_glow(get_viewport().get_mouse_position())
 	# Drag ghost follow
 	if is_instance_valid(_drag_ghost):
 		_drag_ghost.global_position = get_viewport().get_mouse_position() + _drag_offset
-	# Live arrow tracking — update endpoints in-place every frame while dragging
+	# Live arrow tracking — in-place endpoint update every frame while dragging
 	if _drag_id >= 0 and _p["concept"] != "ARRAY_FEEL":
-		_update_arrows_for_node(_drag_id)
+		_track_arrows_for_node(_drag_id)
 
-# Update the two arrows affected when a node moves: the one leaving it (tail)
-# and any arrow pointing to it (head). Updates Line2D points in-place — no rebuild.
-func _update_arrows_for_node(nid: int) -> void:
+# Updates the two arrows affected when node `nid` moves, in-place.
+# (a) Arrow leaving  `nid` — tail follows the car's port dot.
+# (b) Arrow pointing to `nid` — head follows the car's centre.
+func _track_arrows_for_node(nid: int) -> void:
 	var dragged: Dictionary = _data_by_id(nid)
 	if not dragged: return
 	var drag_nd := dragged["sprite"] as Node2D
@@ -1832,28 +2490,27 @@ func _update_arrows_for_node(nid: int) -> void:
 		var line := arrow as Line2D
 		if line.get_point_count() < 5: continue
 
-		# (a) Arrow LEAVING the dragged node — move its tail (point 0)
 		if data["id"] == nid:
+			# (a) tail moves — point 0
 			var new_tail := _arrow_layer.to_local(drag_pos + PORT_OFFSET)
 			var head     := line.get_point_position(1)
 			line.set_point_position(0, new_tail)
-			_set_arrowhead(line, new_tail, head)
-
-		# (b) Arrow pointing TO the dragged node — move its head (points 1-4)
+			_repoint_head(line, new_tail, head)
 		elif data["next_id"] == nid:
-			var src_nd := data["sprite"] as Node2D
-			if not is_instance_valid(src_nd): continue
-			var tail     := _arrow_layer.to_local(src_nd.global_position + PORT_OFFSET)
+			# (b) head moves — points 1-4
+			var src := data["sprite"] as Node2D
+			if not is_instance_valid(src): continue
+			var tail     := _arrow_layer.to_local(src.global_position + PORT_OFFSET)
 			var new_head := _arrow_layer.to_local(drag_pos)
-			_set_arrowhead(line, tail, new_head)
+			_repoint_head(line, tail, new_head)
 
-func _set_arrowhead(line: Line2D, local_tail: Vector2, local_head: Vector2) -> void:
+func _repoint_head(line: Line2D, local_tail: Vector2, local_head: Vector2) -> void:
 	var dir := (local_head - local_tail).normalized()
 	if dir == Vector2.ZERO: return
 	line.set_point_position(1, local_head)
-	line.set_point_position(2, local_head - dir * 14.0 + dir.rotated(deg_to_rad(140.0))  * 12.0)
+	line.set_point_position(2, local_head - dir * 20.0 + dir.rotated(deg_to_rad( 140.0)) * 16.0)
 	line.set_point_position(3, local_head)
-	line.set_point_position(4, local_head - dir * 14.0 + dir.rotated(deg_to_rad(-140.0)) * 12.0)
+	line.set_point_position(4, local_head - dir * 20.0 + dir.rotated(deg_to_rad(-140.0)) * 16.0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  v6: HOVER HIGHLIGHT
@@ -2023,7 +2680,7 @@ func _input(event: InputEvent) -> void:
 					# Keep port indicator in sync with sprite
 					if d.has("port") and is_instance_valid(d["port"] as Node2D):
 						(d["port"] as Node2D).global_position = nd.global_position + PORT_OFFSET
-					# Arrow endpoints updated live in _process — no rebuild here
+					# Arrows tracked live in _process — no rebuild needed here
 				# Move select ring with the node
 				if is_instance_valid(_select_ring) and _selected_id == _drag_id:
 					var d2: Dictionary = _data_by_id(_drag_id)
@@ -2517,10 +3174,15 @@ func _play_completion() -> void:
 		if not hd.is_empty(): _apply_correct(hd["sprite"] as Node2D, 60)
 
 	_task_lbl.text = "✓ Valid linked list built!"
-	# Drive all cars off the right edge — train departs!
-	var delay := 0.0
+	# Drive cars off the right edge one at a time, like a real train departing.
+	# Each car waits for the previous to clear, then accelerates out.
 	var head_ord := _find_head()
-	var cur_id := head_ord; var vis: Dictionary = {}
+	var cur_id := head_ord
+	var vis: Dictionary = {}
+	var departure_delay := 0.0
+	const CAR_DEPART_GAP  := 0.18   # seconds between each car starting to move
+	const CAR_TRAVEL_TIME := 0.55   # how long each car takes to exit
+
 	while cur_id >= 0 and cur_id not in vis:
 		vis[cur_id] = true
 		var dd: Dictionary = _data_by_id(cur_id)
@@ -2528,14 +3190,20 @@ func _play_completion() -> void:
 		var car := dd["sprite"] as Node2D
 		if is_instance_valid(car):
 			var tw_car := car.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-			tw_car.tween_interval(delay)
-			tw_car.tween_property(car, "global_position:x", 1500.0, 0.7)
-			# Also drive port container
+			tw_car.tween_interval(departure_delay)
+			tw_car.tween_property(car, "global_position:x", 1500.0, CAR_TRAVEL_TIME)
+			# Port container moves with the car
 			if dd.has("port") and is_instance_valid(dd["port"] as Node2D):
-				var tw_p := (dd["port"] as Node2D).create_tween()
-				tw_p.tween_interval(delay)
-				tw_p.tween_property(dd["port"] as Node2D, "global_position:x", 1500.0, 0.7)
-		delay += 0.08
+				var tw_p := (dd["port"] as Node2D).create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+				tw_p.tween_interval(departure_delay)
+				tw_p.tween_property(dd["port"] as Node2D, "global_position:x", 1500.0, CAR_TRAVEL_TIME)
+			# Arrow fades out just before the car leaves
+			if dd.has("arrow") and is_instance_valid(dd["arrow"] as Node2D):
+				var tw_a := (dd["arrow"] as Node2D).create_tween()
+				tw_a.tween_interval(departure_delay)
+				tw_a.tween_property(dd["arrow"] as Node2D, "modulate:a", 0.0, 0.12)
+		departure_delay += CAR_DEPART_GAP
+		cur_id = dd.get("next_id", -1)
 		cur_id = (dd["next_id"] as int)
 	await get_tree().create_timer(1.2).timeout
 	var _s2 := _build_stats(true)

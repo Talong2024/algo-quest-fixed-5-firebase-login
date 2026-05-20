@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://d1mdqa6y7xfha"]
+[gd_scene load_steps=3 format=3 uid="uid://d1mdqa6y7xfha"]
 
 [ext_resource type="Script" uid="uid://oevid745y3hp" path="res://scripts/chapters/tree/TreeGame.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://bigdemcgf1w6j" path="res://scenes/ui/PauseMenu.tscn" id="2"]
 
 [node name="TreeGame" type="Node2D"]
 script = ExtResource("1")
@@ -32,7 +33,7 @@ offset_right = 1100.0
 offset_bottom = 380.0
 theme_override_colors/font_color = Color(1, 0.85, 0.1, 1)
 theme_override_font_sizes/font_size = 42
-text = "THE GROVE IS COMPLETE!"
+text = "LEVEL COMPLETE!"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -41,47 +42,47 @@ layer = 20
 
 [node name="ScoreLabel" type="Label" parent="HUD"]
 offset_left = 14.0
-offset_top = 12.0
+offset_top = 4.0
 offset_right = 320.0
-offset_bottom = 42.0
+offset_bottom = 28.0
 theme_override_font_sizes/font_size = 20
 text = "Score: 0"
 
 [node name="ComboLabel" type="Label" parent="HUD"]
 offset_left = 14.0
-offset_top = 44.0
+offset_top = 30.0
 offset_right = 320.0
-offset_bottom = 70.0
+offset_bottom = 50.0
 theme_override_font_sizes/font_size = 16
 
 [node name="GoalLabel" type="Label" parent="HUD"]
 offset_left = 14.0
-offset_top = 72.0
+offset_top = 52.0
 offset_right = 680.0
-offset_bottom = 100.0
+offset_bottom = 76.0
 theme_override_font_sizes/font_size = 18
 
 [node name="AccuracyLabel" type="Label" parent="HUD"]
 offset_left = 14.0
-offset_top = 104.0
+offset_top = 78.0
 offset_right = 420.0
-offset_bottom = 128.0
+offset_bottom = 98.0
 theme_override_font_sizes/font_size = 16
 
 [node name="LivesRow" type="HBoxContainer" parent="HUD"]
 offset_left = 14.0
-offset_top = 132.0
+offset_top = 100.0
 offset_right = 240.0
-offset_bottom = 170.0
+offset_bottom = 130.0
 theme_override_constants/separation = 4
 
 [node name="HintBox" type="PanelContainer" parent="HUD"]
 visible = false
 z_index = 60
 offset_left = 790.0
-offset_top = 10.0
+offset_top = 450.0
 offset_right = 1270.0
-offset_bottom = 130.0
+offset_bottom = 555.0
 
 [node name="HintLabel" type="Label" parent="HUD/HintBox"]
 layout_mode = 2
@@ -108,3 +109,27 @@ offset_bottom = 530.0
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 2
+
+[node name="PauseButton" type="ColorRect" parent="HUD"]
+z_index = 200
+offset_left = 1224.0
+offset_top = 4.0
+offset_right = 1268.0
+offset_bottom = 32.0
+color = Color(0.52, 0.32, 0.12, 1)
+
+[node name="PauseIcon" type="Label" parent="HUD/PauseButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_font_sizes/font_size = 16
+text = "⏸"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PauseMenu" parent="." instance=ExtResource("2")]
+process_mode = 4

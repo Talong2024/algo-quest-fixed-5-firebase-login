@@ -1,2 +1,2 @@
 res://scenes/chapters/tree/TreeGame.tscn
-res://scripts/chapters/tree/TreeGame.gd
+res://scripts/ui/ChapterCompleteScreen.gd

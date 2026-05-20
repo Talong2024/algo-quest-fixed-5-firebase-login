@@ -50,7 +50,7 @@ const PATH_BG      := "res://assets/medieval/art/map/grass.jpg"
 
 # Font — Tiny RPG Font Kit I (opengameart.org/content/tiny-rpg-font-kit-i, CC0)
 # Drop the TTF into res://assets/medieval/font/
-const PATH_FONT    := "res://assets/medieval/font/medieval.ttf"
+const PATH_FONT    := "res://assets/fonts/freepixel.ttf"
 
 # SFX — unchanged (keep existing success/fail/level_up)
 const PATH_SFX_OK  := "res://assets/codemon/audio/sfx/success.ogg"
@@ -109,7 +109,7 @@ const CITY_COLORS: Array[Color] = [
 	Color(0.60, 0.35, 0.15),  # earthy brown
 	Color(0.70, 0.70, 0.50),  # aged linen
 ]
-const CANVAS := Rect2(180, 120, 820, 440)
+const CANVAS := Rect2(300, 100, 710, 490)  # left boundary past HUD column; more vertical room
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  TIER PARAMS  (index = tier 0..4, chapter = 21..25)
@@ -268,9 +268,9 @@ const TUTORIAL_TEXTURES: Dictionary = {
 @onready var _fail_lbl:        Label          = $HUD/FailSummary/FailLabel
 
 # Teaching widgets (right panel)
-@onready var _bfs_display:     VBoxContainer  = $HUD/RightPanel/BFSQueueDisplay
-@onready var _adj_panel:       VBoxContainer  = $HUD/RightPanel/AdjPanel
-@onready var _dist_panel:      VBoxContainer  = $HUD/RightPanel/DistPanel
+@onready var _bfs_display:     VBoxContainer  = $HUD/RightScroll/RightPanel/BFSQueueDisplay
+@onready var _adj_panel:       VBoxContainer  = $HUD/RightScroll/RightPanel/AdjPanel
+@onready var _dist_panel:      VBoxContainer  = $HUD/RightScroll/RightPanel/DistPanel
 
 # Completion
 @onready var _complete_banner: Label          = $CompleteBanner
@@ -536,7 +536,7 @@ func _spawn_cities(count: int) -> void:
 		var lbl := Label.new()
 		lbl.text = char(65 + i)
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 36)   # larger, easy to read
+		lbl.add_theme_font_size_override("font_size", 22)   # compact but readable
 		lbl.add_theme_color_override("font_color", COL_WHITE)
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 3)
@@ -820,7 +820,7 @@ func _process(delta: float) -> void:
 		if not is_instance_valid(sp): continue
 		# Convert world position to screen position for CanvasLayer
 		var screen_pos := get_viewport().get_canvas_transform() * sp.global_position
-		lbl_node.position = screen_pos + Vector2(-14, 52)
+		lbl_node.position = screen_pos + Vector2(-9, 46)  # below sprite, tighter
 
 func _update_snap_glow(mouse_pos: Vector2) -> void:
 	var best_d  := MAGNET_R

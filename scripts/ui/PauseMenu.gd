@@ -28,7 +28,7 @@
 extends CanvasLayer
 
 const PATH_SFX_BTN := "res://assets/codemon/audio/sfx/button.ogg"
-const PATH_FONT    := "res://assets/codemon/font/freepixel.ttf"
+const PATH_FONT    := "res://assets/fonts/freepixel.ttf"
 
 # How-to text per chapter (set by chapter script or inferred from scene name)
 const HOW_TO := {
@@ -39,23 +39,27 @@ const HOW_TO := {
 	"GraphGame":      "Graph Algorithms:\n• DRAG between cities to connect\n• Select mode (BFS/Dijkstra) in HUD\n• Click nodes in correct traversal order\n• Find shortest weighted path",
 }
 
-@onready var _overlay:    ColorRect       = $Overlay
-@onready var _resume_btn: Button          = $Overlay/Panel/VBox/ResumeBtn
-@onready var _restart_btn:Button          = $Overlay/Panel/VBox/RestartBtn
-@onready var _howto_btn:  Button          = $Overlay/Panel/VBox/HowToBtn
-@onready var _vol_slider: HSlider         = $Overlay/Panel/VBox/VolumeRow/VolSlider
-@onready var _map_btn:    Button          = $Overlay/Panel/VBox/MapBtn
-@onready var _howto_panel:PanelContainer  = $Overlay/Panel/VBox/HowToPanel
-@onready var _howto_lbl:  Label           = $Overlay/Panel/VBox/HowToPanel/HowToLabel
+@onready var _overlay:      ColorRect       = $Overlay
+@onready var _title_lbl:    Label           = $Overlay/Panel/VBox/TitleLabel
+@onready var _resume_btn:   Button          = $Overlay/Panel/VBox/ResumeBtn
+@onready var _restart_btn:  Button          = $Overlay/Panel/VBox/RestartBtn
+@onready var _howto_btn:    Button          = $Overlay/Panel/VBox/HowToBtn
+@onready var _vol_slider:   HSlider         = $Overlay/Panel/VBox/VolumeRow/VolSlider
+@onready var _map_btn:      Button          = $Overlay/Panel/VBox/MapBtn
 
-var _is_open: bool = false
-var _pixel_font: Font = null
+var _is_open:       bool = false
+var _settings_mode: bool = false   # true = opened from WorldMap, hide game-only buttons
+var _pixel_font:    Font = null
 
 # ─────────────────────────────────────────────────────────────────────────────
 func _ready() -> void:
-	layer   = 90
-	visible = false
-	_pixel_font = load(PATH_FONT) as Font
+	layer        = 90
+	# CRITICAL: process_mode ALWAYS means this CanvasLayer and all its children
+	# keep processing even when get_tree().paused = true.
+	# Without this, the overlay is visible but buttons don't respond.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	visible      = false
+	_pixel_font = load(PATH_FONT) as Font if ResourceLoader.exists(PATH_FONT) else null
 
 	_resume_btn.pressed.connect(_on_resume)
 	_restart_btn.pressed.connect(_on_restart)
@@ -64,51 +68,101 @@ func _ready() -> void:
 	_vol_slider.value = AudioServer.get_bus_volume_linear(0)
 	_vol_slider.value_changed.connect(_on_volume)
 
-	_howto_panel.visible = false
+	# Remove blue focus rings from all buttons
+	var empty_sb := StyleBoxEmpty.new()
+	for btn: Button in [_resume_btn, _restart_btn, _howto_btn, _map_btn]:
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.add_theme_stylebox_override("focus", empty_sb)
 
-	# Set how-to text based on parent scene
-	var scene_name := get_tree().current_scene.name
-	_howto_lbl.text = HOW_TO.get(scene_name, "Interact with the data structure to learn DSA!")
-	for lbl: Label in [_howto_lbl]:
-		lbl.add_theme_font_override("font", _pixel_font)
-		lbl.add_theme_font_size_override("font_size", 15)
+
+	var text_nodes: Array = [
+		_title_lbl, _resume_btn, _restart_btn, _howto_btn,
+		_map_btn,
+		$Overlay/Panel/VBox/VolumeRow/VolLabel,
+	]
+	for n in text_nodes:
+		if is_instance_valid(n) and _pixel_font:
+			n.add_theme_font_override("font", _pixel_font)
+
+	_title_lbl.add_theme_font_size_override("font_size", 28)
+	_title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+
+## Called by the WorldMap Settings button — shows only volume + close, no game controls.
+func open_settings() -> void:
+	_settings_mode = true
+	_resume_btn.text    = "✕  Close"
+	_restart_btn.visible = false
+	_howto_btn.visible   = false
+	_map_btn.visible     = false
+	_title_lbl.text      = "Settings"
+	_show()
+
+## Called by in-game pause button or Escape key.
+func toggle() -> void:
+	if _settings_mode:
+		_close()
+		return
+	if _is_open:
+		_close()
+	else:
+		_show()
+
+func _show() -> void:
+	_is_open = true
+	visible  = true
+	get_tree().paused = not _settings_mode   # don't pause tree from WorldMap
+	_overlay.modulate = Color(1, 1, 1, 0)
+	_overlay.create_tween().tween_property(_overlay, "modulate:a", 1.0, 0.2)
+
+func _close() -> void:
+	_is_open        = false
+	visible         = false
+	_settings_mode  = false
+	_resume_btn.text     = "▶  Resume"
+	_restart_btn.visible = true
+	_howto_btn.visible   = true
+	_map_btn.visible     = true
+	_title_lbl.text      = "PAUSED"
+	# Defer the unpause by one frame so the button's pressed signal
+	# fully propagates before the tree resumes — prevents frozen callbacks
+	call_deferred("_unpause_tree")
+
+func _unpause_tree() -> void:
+	var t := get_tree()
+	if t != null:
+		t.paused = false
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel") and not _settings_mode:
 		toggle()
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  TOGGLE
-# ─────────────────────────────────────────────────────────────────────────────
-func toggle() -> void:
-	_is_open = not _is_open
-	visible  = _is_open
-	get_tree().paused = _is_open
-
-	if _is_open:
-		# Entrance animation
-		_overlay.modulate = Color(1,1,1,0)
-		_overlay.create_tween().tween_property(_overlay,"modulate:a",1.0,0.2)
-
 func _on_resume() -> void:
-	AudioManager.play_sfx(PATH_SFX_BTN)
-	toggle()
+	_play_sfx(PATH_SFX_BTN)
+	_close()
 
 func _on_restart() -> void:
-	AudioManager.play_sfx(PATH_SFX_BTN)
-	get_tree().paused = false
-	_is_open = false; visible = false
+	_play_sfx(PATH_SFX_BTN)
+	_close()
 	GameRouter.retry_chapter(GameRouter.current_chapter)
 
+signal howto_requested
+
 func _on_howto() -> void:
-	AudioManager.play_sfx(PATH_SFX_BTN)
-	_howto_panel.visible = not _howto_panel.visible
+	_play_sfx(PATH_SFX_BTN)
+	_close()
+	# Tell the game scene to reopen the intro slides
+	emit_signal("howto_requested")
 
 func _on_map() -> void:
-	AudioManager.play_sfx(PATH_SFX_BTN)
-	get_tree().paused = false
-	_is_open = false; visible = false
+	_play_sfx(PATH_SFX_BTN)
+	_close()
 	GameRouter.go_to_world_map()
 
 func _on_volume(val: float) -> void:
 	AudioServer.set_bus_volume_linear(0, val)
+	if has_node("/root/AudioManager"):
+		AudioManager.set_sfx_volume(val)
+
+func _play_sfx(path: String) -> void:
+	if has_node("/root/AudioManager"):
+		AudioManager.play_sfx(path)

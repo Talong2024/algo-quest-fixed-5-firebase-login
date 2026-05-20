@@ -1,6 +1,13 @@
-[gd_scene load_steps=7 format=3 uid="uid://dayh7bmhs323m"]
+[gd_scene load_steps=8 format=3 uid="uid://dayh7bmhs323m"]
 
 [ext_resource type="Script" uid="uid://cgk5xt6717m1a" path="res://scripts/chapters/graph/GraphGame.gd" id="1_graphgame"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_bg"]
+bg_color = Color(0.04, 0.04, 0.12, 0.78)
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.4, 0.7, 0.35)
+corner_radius_bottom_right = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
 bg_color = Color(0.05, 0.05, 0.15, 0.82)
@@ -98,6 +105,13 @@ text = "PATH FOUND!"
 horizontal_alignment = 1
 
 [node name="HUD" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="LeftHUDBg" type="PanelContainer" parent="HUD"]
+offset_right = 545.0
+offset_bottom = 390.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_bg")
 
 [node name="ScoreLabel" type="Label" parent="HUD"]
 offset_left = 10.0
@@ -190,24 +204,28 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="RightPanel" type="VBoxContainer" parent="HUD"]
+[node name="RightScroll" type="ScrollContainer" parent="HUD"]
 offset_left = 1040.0
 offset_top = 60.0
 offset_right = 1275.0
 offset_bottom = 700.0
 
-[node name="BFSQueueDisplay" type="VBoxContainer" parent="HUD/RightPanel"]
+[node name="RightPanel" type="VBoxContainer" parent="HUD/RightScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BFSQueueDisplay" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
 visible = false
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="AdjPanel" type="VBoxContainer" parent="HUD/RightPanel"]
+[node name="AdjPanel" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="DistPanel" type="VBoxContainer" parent="HUD/RightPanel"]
+[node name="DistPanel" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
 visible = false
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
@@ -241,7 +259,7 @@ horizontal_alignment = 1
 
 [node name="SlideImage" type="TextureRect" parent="HUD/IntroOverlay/Margin/VBox"]
 visible = false
-custom_minimum_size = Vector2(0, 400)
+custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0

@@ -24,7 +24,7 @@ const ROOT_ICON       := "res://assets/art/tree/nodes/runeBlack_tileOutline_036.
 const NODE_SCALE      := Vector2(1.2, 1.2)
 
 # ── Layout ───────────────────────────────────────────────────────────────────
-const ROOT_POS   := Vector2(640.0, 130.0)
+const ROOT_POS   := Vector2(640.0, 90.0)
 const LEVEL_H    := 85.0
 const SPREAD_MUL := 180.0
 const NODE_HIT   := 28.0
@@ -32,7 +32,7 @@ const SNAP_DIST  := 64.0
 const MAGNET_R   := 100.0
 const GHOST_R    := 30.0
 const MAX_DEPTH  := 4
-const POOL_Y     := 572.0
+const POOL_Y     := 650.0
 
 # ── Colours ──────────────────────────────────────────────────────────────────
 const COL_EDGE       := Color(0.55, 0.85, 0.45, 0.85)
@@ -54,6 +54,16 @@ const COL_DEL        := Color(1.0,  0.3,  0.3)
 const COL_AVL_BAD    := Color(1.0,  0.4,  0.2)
 const COL_AVL_OK     := Color(0.3,  1.0,  0.5)
 const COL_NODE_BASE  := Color(0.65, 0.82, 0.55)
+
+# ── Wood UI palette ────────────────────────────────────────────────────────────
+const WOOD_DARK   := Color(0.22, 0.13, 0.06, 0.97)  # dark walnut fill
+const WOOD_MID    := Color(0.34, 0.20, 0.08, 0.97)  # mid oak
+const WOOD_LIGHT  := Color(0.52, 0.32, 0.12, 1.00)  # light pine plank
+const WOOD_GRAIN  := Color(0.60, 0.38, 0.14, 1.00)  # grain highlight
+const WOOD_BORDER := Color(0.72, 0.48, 0.18, 1.00)  # carved border
+const WOOD_GOLD   := Color(0.95, 0.78, 0.25, 1.00)  # gilded trim
+const WOOD_TEXT   := Color(0.98, 0.92, 0.72, 1.00)  # parchment text
+const WOOD_SUBTEXT:= Color(0.82, 0.70, 0.45, 1.00)  # subdued parchment
 
 # ── Tier config ───────────────────────────────────────────────────────────────
 const TIER_CONFIG: Array[Dictionary] = [
@@ -191,9 +201,10 @@ func _setup_bg() -> void:
 	var bg_node := get_node_or_null("Background") as Sprite2D
 	if bg_node: bg_node.visible = false
 
+	# Layers 0011 (solid sky) and 0010 (sky gradient) are SKIPPED intentionally.
+	# They fill the screen with an opaque sky color that hides the game tree.
+	# Only forest/tree layers are loaded so the background stays dark top-to-bottom.
 	var layers := [
-		{"file":"Layer_0011_0.png",      "scroll":0.0,  "z":-30},
-		{"file":"Layer_0010_1.png",      "scroll":0.0,  "z":-29},
 		{"file":"Layer_0009_2.png",      "scroll":3.0,  "z":-28},
 		{"file":"Layer_0008_3.png",      "scroll":5.0,  "z":-27},
 		{"file":"Layer_0007_Lights.png", "scroll":5.0,  "z":-26},
@@ -205,6 +216,14 @@ func _setup_bg() -> void:
 		{"file":"Layer_0001_8.png",      "scroll":20.0, "z":-20},
 		{"file":"Layer_0000_9.png",      "scroll":20.0, "z":-19},
 	]
+	# Dark background fill — prevents any sky-color bleed between forest layers
+	var dark_bg := ColorRect.new()
+	dark_bg.color    = Color(0.04, 0.05, 0.08, 1.0)  # very dark blue-black
+	dark_bg.size     = Vector2(1280, 720)
+	dark_bg.position = Vector2.ZERO
+	dark_bg.z_index  = -35
+	add_child(dark_bg)
+
 	var base := "res://assets/art/tree/bg/parallax/"
 	for layer in layers:
 		var path: String = base + (layer["file"] as String)
@@ -215,8 +234,12 @@ func _setup_bg() -> void:
 		sp.texture        = tex
 		sp.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		sp.z_index        = layer["z"] as int
-		sp.scale          = Vector2(1280.0 / tex.get_width(), 720.0 / tex.get_height())
-		sp.position       = Vector2(640.0, 360.0)
+		# Scale to fill entire 1280×720 viewport
+		var sx := 1280.0 / tex.get_width()
+		var sy := 720.0  / tex.get_height()
+		sp.scale    = Vector2(sx, sy)
+		# Sprite origin is the texture centre — position at screen centre
+		sp.position = Vector2(640.0, 360.0)
 		sp.set_meta("scroll_amount", layer["scroll"] as float)
 		add_child(sp)
 		_parallax_layers.append(sp)
@@ -336,7 +359,62 @@ func _slides_tier4() -> void:
 	]
 
 # =============================================================================
-#  INTRO OVERLAY ENGINE
+#  WOOD THEME HELPERS
+#  Returns StyleBoxFlat objects that simulate carved wood planks.
+#  Used by intro, banner, instr bar, hint card, and all buttons.
+# =============================================================================
+func _wood_panel(radius: int = 6) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color            = WOOD_MID
+	s.border_color        = WOOD_BORDER
+	s.border_width_left   = 3; s.border_width_right  = 3
+	s.border_width_top    = 3; s.border_width_bottom  = 3
+	s.corner_radius_top_left     = radius; s.corner_radius_top_right    = radius
+	s.corner_radius_bottom_left  = radius; s.corner_radius_bottom_right = radius
+	s.shadow_color  = Color(0, 0, 0, 0.55)
+	s.shadow_size   = 6
+	s.shadow_offset = Vector2(2, 3)
+	return s
+
+func _wood_btn_normal() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color            = WOOD_LIGHT
+	s.border_color        = WOOD_GOLD
+	s.border_width_left   = 2; s.border_width_right  = 2
+	s.border_width_top    = 2; s.border_width_bottom  = 4  # thicker bottom = carved ledge
+	s.corner_radius_top_left     = 5; s.corner_radius_top_right    = 5
+	s.corner_radius_bottom_left  = 5; s.corner_radius_bottom_right = 5
+	s.shadow_color  = Color(0, 0, 0, 0.45)
+	s.shadow_size   = 4
+	s.shadow_offset = Vector2(1, 2)
+	return s
+
+func _wood_btn_hover() -> StyleBoxFlat:
+	var s := _wood_btn_normal()
+	s.bg_color     = WOOD_GRAIN
+	s.border_color = Color(1.0, 0.92, 0.4, 1.0)
+	return s
+
+func _wood_btn_pressed() -> StyleBoxFlat:
+	var s := _wood_btn_normal()
+	s.bg_color            = WOOD_DARK
+	s.border_color        = WOOD_GOLD
+	s.border_width_bottom = 2   # flatten bottom when pressed
+	s.shadow_size         = 0
+	s.shadow_offset       = Vector2.ZERO
+	return s
+
+func _style_wood_btn(btn: Button) -> void:
+	btn.add_theme_stylebox_override("normal",   _wood_btn_normal())
+	btn.add_theme_stylebox_override("hover",    _wood_btn_hover())
+	btn.add_theme_stylebox_override("pressed",  _wood_btn_pressed())
+	btn.add_theme_stylebox_override("focus",    _wood_btn_hover())
+	btn.add_theme_color_override("font_color",         WOOD_TEXT)
+	btn.add_theme_color_override("font_hover_color",   Color(1.0, 0.95, 0.55))
+	btn.add_theme_color_override("font_pressed_color", WOOD_SUBTEXT)
+
+# =============================================================================
+#  INTRO OVERLAY
 # =============================================================================
 func _show_intro_overlay() -> void:
 	_master_phase = MasterPhase.INTRO
@@ -344,93 +422,107 @@ func _show_intro_overlay() -> void:
 	_intro_canvas.layer = 100
 	add_child(_intro_canvas)
 
-	# Background
+	# ── Full-screen dark dimmer ────────────────────────────────────────────────
 	var bg := ColorRect.new()
-	bg.color = Color(0.04, 0.05, 0.12, 0.96)
-	bg.size  = Vector2(1280, 720)
+	bg.color   = Color(0.0, 0.0, 0.0, 0.68)
+	bg.size    = Vector2(1280, 720)
+	bg.z_index = 0
 	_intro_canvas.add_child(bg)
 
-	# Tier badge
+	# ── Tier badge ────────────────────────────────────────────────────────────
 	var badge := Label.new()
 	badge.name = "Badge"
 	badge.add_theme_font_override("font", _pixel_font)
 	badge.add_theme_font_size_override("font_size", 13)
-	badge.add_theme_color_override("font_color", COL_HEAD)
+	badge.add_theme_color_override("font_color", WOOD_GOLD)
 	badge.text     = "Tier %d — %s" % [_tier, _cfg["name"] as String]
-	badge.position = Vector2(20, 18)
+	badge.position = Vector2(60, 26)
+	badge.z_index  = 5
 	_intro_canvas.add_child(badge)
 
-	# Slide counter
+	# ── Slide counter ─────────────────────────────────────────────────────────
 	var ctr := Label.new()
 	ctr.name = "Counter"
 	ctr.add_theme_font_override("font", _pixel_font)
 	ctr.add_theme_font_size_override("font_size", 13)
-	ctr.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
-	ctr.position             = Vector2(480, 18)
+	ctr.add_theme_color_override("font_color", WOOD_SUBTEXT)
+	ctr.position             = Vector2(480, 26)
 	ctr.size                 = Vector2(320, 24)
 	ctr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ctr.z_index              = 5
 	_intro_canvas.add_child(ctr)
 
-	# Title
+	# ── Title ─────────────────────────────────────────────────────────────────
 	var ttl := Label.new()
 	ttl.name = "Title"
 	ttl.add_theme_font_override("font", _pixel_font)
-	ttl.add_theme_font_size_override("font_size", 25)
-	ttl.add_theme_color_override("font_color", COL_HEAD)
-	ttl.position             = Vector2(60, 52)
-	ttl.size                 = Vector2(1160, 52)
+	ttl.add_theme_font_size_override("font_size", 22)
+	ttl.add_theme_color_override("font_color", WOOD_GOLD)
+	ttl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	ttl.add_theme_constant_override("shadow_offset_x", 2)
+	ttl.add_theme_constant_override("shadow_offset_y", 2)
+	ttl.position             = Vector2(60, 496)
+	ttl.size                 = Vector2(1160, 40)
 	ttl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ttl.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
+	ttl.z_index              = 5
 	_intro_canvas.add_child(ttl)
 
-	# Divider
+	# ── Gold divider ──────────────────────────────────────────────────────────
 	var div := ColorRect.new()
-	div.color    = Color(0.3, 0.3, 0.5, 0.5)
-	div.size     = Vector2(900, 1)
-	div.position = Vector2(190, 460)
+	div.color    = WOOD_GOLD
+	div.size     = Vector2(880, 2)
+	div.position = Vector2(200, 540)
+	div.z_index  = 5
 	_intro_canvas.add_child(div)
 
-	# Body text
+	# ── Body text ─────────────────────────────────────────────────────────────
 	var body := Label.new()
 	body.name = "Body"
 	body.add_theme_font_override("font", _pixel_font)
-	body.add_theme_font_size_override("font_size", 16)
-	body.add_theme_color_override("font_color", Color(0.85, 0.85, 0.72))
-	body.position             = Vector2(80, 472)
-	body.size                 = Vector2(1120, 130)
+	body.add_theme_font_size_override("font_size", 15)
+	body.add_theme_color_override("font_color", WOOD_TEXT)
+	body.position             = Vector2(80, 546)
+	body.size                 = Vector2(1120, 96)
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
+	body.z_index              = 5
 	_intro_canvas.add_child(body)
 
-	# Back button
+	# ── Back button ───────────────────────────────────────────────────────────
 	var back := Button.new()
 	back.name = "Back"
 	back.text = "◀  Back"
-	back.position = Vector2(80, 648)
+	back.position = Vector2(60, 656)
 	back.size     = Vector2(160, 44)
 	back.add_theme_font_override("font", _pixel_font)
 	back.add_theme_font_size_override("font_size", 14)
 	back.pressed.connect(_intro_prev)
+	_style_wood_btn(back)
+	back.z_index = 5
 	_intro_canvas.add_child(back)
 
-	# Next / Start button
+	# ── Next / Start button ───────────────────────────────────────────────────
 	var nxt := Button.new()
 	nxt.name = "Next"
 	nxt.text = "Next  ▶"
-	nxt.position = Vector2(1040, 648)
+	nxt.position = Vector2(1060, 656)
 	nxt.size     = Vector2(160, 44)
 	nxt.add_theme_font_override("font", _pixel_font)
 	nxt.add_theme_font_size_override("font_size", 14)
 	nxt.pressed.connect(_intro_next)
+	_style_wood_btn(nxt)
+	nxt.z_index = 5
 	_intro_canvas.add_child(nxt)
 
-	# Dot indicators
+	# ── Dot indicators ────────────────────────────────────────────────────────
 	for i in range(_intro_slides.size()):
 		var dot := ColorRect.new()
 		dot.name     = "Dot%d" % i
-		dot.size     = Vector2(9, 9)
-		dot.position = Vector2(608 + i * 22, 664)
-		dot.color    = Color(0.3, 0.3, 0.3)
+		dot.size     = Vector2(10, 10)
+		dot.position = Vector2(608 + i * 22, 668)
+		dot.color    = WOOD_SUBTEXT
+		dot.z_index  = 5
 		_intro_canvas.add_child(dot)
 
 	_intro_idx = 0
@@ -447,17 +539,18 @@ func _refresh_intro() -> void:
 		"Start Game  ▶" if _intro_idx == total - 1 else "Next  ▶"
 	for i in range(total):
 		(_intro_canvas.get_node("Dot%d" % i) as ColorRect).color = \
-			COL_HEAD if i == _intro_idx else Color(0.3, 0.3, 0.3)
+			WOOD_GOLD if i == _intro_idx else WOOD_SUBTEXT
 	# Use free() not queue_free() so the old drawer is gone THIS frame
 	# before the new one is added — prevents one-frame double-draw bleed.
 	var old := _intro_canvas.get_node_or_null("Diagram")
 	if old:
-		old.name = "DeadDiagram"   # rename so new node can claim "Diagram"
-		old.free()                 # immediate — no deferred ghost frame
+		old.name = "DeadDiagram"
+		old.free()
 	var diag := _DiagramDrawer.new()
 	diag.name       = "Diagram"
 	diag.draw_fn    = slide["draw"] as Callable
 	diag.pixel_font = _pixel_font
+	diag.z_index    = 2   # above dimmer (0), below text labels (5)
 	_intro_canvas.add_child(diag)
 
 func _intro_next() -> void:
@@ -482,8 +575,137 @@ func _close_intro() -> void:
 class _DiagramDrawer extends Node2D:
 	var draw_fn:    Callable
 	var pixel_font: Font
+
+	# Wood palette (duplicated here so the inner class is self-contained)
+	const _WOOD_DARK   := Color(0.22, 0.13, 0.06, 0.97)
+	const _WOOD_MID    := Color(0.34, 0.20, 0.08, 0.97)
+	const _WOOD_BORDER := Color(0.72, 0.48, 0.18, 1.00)
+	const _WOOD_GOLD   := Color(0.95, 0.78, 0.25, 1.00)
+	const _WOOD_GRAIN  := Color(0.60, 0.38, 0.14, 0.10)
+
 	func _draw() -> void:
+		# ── 1. Full-screen dark base (behind everything) ──────────────────────
+		draw_rect(Rect2(0, 0, 1280, 720), Color(0.04, 0.04, 0.10, 1.0), true)
+
+		# ── 2. Solid wood fill
+		draw_rect(Rect2(0, 0, 1280, 488), _WOOD_MID, true)
+
+		# ── 3. Wood board BORDER ─────────────────────────────────────────────
+		# Left edge plank
+		draw_rect(Rect2(0, 0, 32, 488), _WOOD_MID, true)
+		for gi in range(12):
+			draw_rect(Rect2(4, 20 + gi * 38, 24, 1), _WOOD_GRAIN, true)
+		# Right edge plank
+		draw_rect(Rect2(1248, 0, 32, 488), _WOOD_MID, true)
+		for gi in range(12):
+			draw_rect(Rect2(1252, 20 + gi * 38, 24, 1), _WOOD_GRAIN, true)
+		# Top plank
+		draw_rect(Rect2(0, 0, 1280, 14), _WOOD_MID, true)
+		for gi in range(3):
+			draw_rect(Rect2(32, 2 + gi * 4, 1216, 1), _WOOD_GRAIN, true)
+		# Gold top line
+		draw_rect(Rect2(0, 13, 1280, 2), _WOOD_GOLD, true)
+		# Border outline
+		draw_rect(Rect2(0, 0, 1280, 488), _WOOD_BORDER, false, 2.5)
+		# Corner nails
+		for cp in [Vector2(16, 14), Vector2(1264, 14), Vector2(16, 474), Vector2(1264, 474)]:
+			draw_circle(cp, 5.0, _WOOD_GOLD)
+			draw_circle(cp, 2.5, _WOOD_DARK)
+
+		# ── 4. Diagram content (drawn over forest, inside board) ──────────────
 		if draw_fn.is_valid(): draw_fn.call(self, pixel_font)
+
+		# ── 5. Footer text panel (dark wood, y=488..648) ──────────────────────
+		draw_rect(Rect2(0, 488, 1280, 160), _WOOD_DARK, true)
+		for gi in range(7):
+			draw_rect(Rect2(16, 498 + gi * 20, 1248, 1), _WOOD_GRAIN, true)
+		draw_rect(Rect2(0, 488, 1280, 2), _WOOD_GOLD, true)
+		draw_rect(Rect2(0, 488, 1280, 160), _WOOD_BORDER, false, 2.0)
+
+		# ── 6. Button tray (mid wood, y=648..710) ─────────────────────────────
+		draw_rect(Rect2(0, 648, 1280, 62), _WOOD_MID, true)
+		for gi in range(3):
+			draw_rect(Rect2(16, 656 + gi * 14, 1248, 1), _WOOD_GRAIN, true)
+		draw_rect(Rect2(0, 648, 1280, 2), _WOOD_GOLD, true)
+		draw_rect(Rect2(0, 648, 1280, 62), _WOOD_BORDER, false, 1.5)
+
+	# Forest-themed background drawn behind every slide diagram.
+	# Uses only draw_* calls — no external textures.
+	static func _draw_forest_bg(ci: CanvasItem) -> void:
+		# ── Sky gradient (dark top → midnight blue bottom) ──────────────────
+		ci.draw_rect(Rect2(0, 0, 1280, 460), Color(0.04, 0.04, 0.10), true)
+		# Subtle horizontal gradient bands to suggest depth
+		for i in range(8):
+			var a := 0.03 + i * 0.005
+			ci.draw_rect(Rect2(0, i * 58, 1280, 60), Color(0.06, 0.08, 0.15, a), true)
+
+		# ── Stars ────────────────────────────────────────────────────────────
+		var star_positions: Array[Vector2] = [
+			Vector2(60,30), Vector2(140,18), Vector2(220,42), Vector2(320,12),
+			Vector2(410,35), Vector2(510,8),  Vector2(580,28), Vector2(700,15),
+			Vector2(780,38), Vector2(870,10), Vector2(960,32), Vector2(1050,20),
+			Vector2(1130,44),Vector2(1200,14),Vector2(1240,38),Vector2(380,55),
+			Vector2(650,50), Vector2(900,55), Vector2(1010,48),Vector2(170,60),
+		]
+		for sp2 in star_positions:
+			ci.draw_circle(sp2, 1.5, Color(1.0, 1.0, 0.9, 0.55))
+
+		# ── Moon (top right) ──────────────────────────────────────────────────
+		ci.draw_circle(Vector2(1180, 52), 28.0, Color(0.95, 0.92, 0.78, 0.22))
+		ci.draw_circle(Vector2(1172, 48), 24.0, Color(0.04, 0.04, 0.10, 1.0))  # crescent mask
+		ci.draw_arc(Vector2(1180, 52), 28.0, -1.2, 1.2, 24, Color(0.95, 0.92, 0.78, 0.45), 1.5)
+
+		# ── Distant fog layer ─────────────────────────────────────────────────
+		ci.draw_rect(Rect2(0, 330, 1280, 40), Color(0.18, 0.28, 0.35, 0.18), true)
+		ci.draw_rect(Rect2(0, 350, 1280, 30), Color(0.18, 0.28, 0.35, 0.12), true)
+
+		# ── Far background tree silhouettes (3 large) ────────────────────────
+		var far_trees: Array[Vector2] = [Vector2(180, 400), Vector2(640, 380), Vector2(1100, 395)]
+		for tp in far_trees:
+			# Trunk
+			ci.draw_rect(Rect2(tp.x - 7, tp.y, 14, 60), Color(0.08, 0.06, 0.04), true)
+			# Canopy layers (triangle-ish using circles stacked)
+			for layer in range(4):
+				var r := 55.0 - layer * 10.0
+				var cy2 := tp.y - layer * 28.0
+				ci.draw_circle(Vector2(tp.x, cy2), r, Color(0.04, 0.10, 0.06, 0.75 + layer * 0.05))
+
+		# ── Mid-ground tree silhouettes (5 medium) ───────────────────────────
+		var mid_trees: Array[Vector2] = [
+			Vector2(60, 430), Vector2(290, 422), Vector2(520, 418),
+			Vector2(760, 425), Vector2(990, 420), Vector2(1220, 428),
+		]
+		for tp in mid_trees:
+			ci.draw_rect(Rect2(tp.x - 5, tp.y, 10, 40), Color(0.06, 0.05, 0.03), true)
+			for layer in range(3):
+				var r := 38.0 - layer * 9.0
+				var cy2 := tp.y - layer * 22.0
+				ci.draw_circle(Vector2(tp.x, cy2), r, Color(0.05, 0.13, 0.07, 0.80 + layer * 0.06))
+
+		# ── Ground strip ──────────────────────────────────────────────────────
+		ci.draw_rect(Rect2(0, 438, 1280, 22), Color(0.05, 0.10, 0.05), true)
+		# Ground highlight edge
+		ci.draw_line(Vector2(0, 438), Vector2(1280, 438), Color(0.15, 0.30, 0.12, 0.5), 1.5)
+
+		# ── Foreground grass tufts ────────────────────────────────────────────
+		var tuft_xs: Array[float] = [40,110,210,330,450,570,680,800,910,1020,1130,1230]
+		for tx in tuft_xs:
+			for blade in range(5):
+				var bx := tx + blade * 7.0 - 14.0
+				ci.draw_line(
+					Vector2(bx, 458),
+					Vector2(bx + randf_range(-3, 3), 442 + randf_range(0, 6)),
+					Color(0.12, 0.35, 0.10, 0.65), 1.5
+				)
+
+		# ── Fireflies (small glowing dots) ────────────────────────────────────
+		var ff: Array[Vector2] = [
+			Vector2(120, 380), Vector2(350, 370), Vector2(490, 390),
+			Vector2(720, 365), Vector2(860, 382), Vector2(1050, 375),
+		]
+		for fpos in ff:
+			ci.draw_circle(fpos, 3.0, Color(0.8, 1.0, 0.4, 0.18))
+			ci.draw_circle(fpos, 1.5, Color(0.9, 1.0, 0.6, 0.55))
 
 # _CircleSprite kept as fallback when tile asset is missing
 class _CircleSprite extends Node2D:
@@ -493,6 +715,27 @@ class _CircleSprite extends Node2D:
 		draw_circle(Vector2.ZERO, radius, color)
 		draw_arc(Vector2.ZERO, radius, 0, TAU, 32,
 			Color(color.r * 0.55, color.g * 0.55, color.b * 0.55), 2.5)
+
+# _CentredLabel: draws a number string exactly centred on (0,0) using draw_string.
+# This works correctly regardless of the parent sprite's scale.
+class _CentredLabel extends Node2D:
+	var display_value: String = ""
+	var pixel_font:    Font   = null
+	func _draw() -> void:
+		if pixel_font == null or display_value.is_empty(): return
+		var sz   := 15
+		var ts   := pixel_font.get_string_size(display_value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz)
+		var base := pixel_font.get_ascent(sz)
+		# draw shadow first
+		draw_string(pixel_font,
+			Vector2(-ts.x * 0.5 + 1, base * 0.5 + 1),
+			display_value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz,
+			Color(0.0, 0.0, 0.0, 0.85))
+		# draw main text
+		draw_string(pixel_font,
+			Vector2(-ts.x * 0.5, base * 0.5),
+			display_value, HORIZONTAL_ALIGNMENT_LEFT, -1, sz,
+			Color(0.95, 0.95, 0.7))
 
 # =============================================================================
 #  GAME FLOW
@@ -522,10 +765,10 @@ func _start_insert() -> void:
 	_rebuild_pool_sprites()
 	_refresh_ghosts()
 	_goal_lbl.text = "Runes left: %d" % _pool.size()
-	_update_instr("Build the Tree — drag each rune to its correct slot.", "Left < Parent < Right")
+	_update_instr("Build the Tree — drag each rune to its correct slot.", "")
 	# Hints only appear after first mistake — see _show_hint_overlay()
 	_hint_box.visible = false
-	_show_banner("Level 1 — Build the Tree", "Drag all runes into position.", COL_OK)
+	# banner removed
 
 func _on_insert_done() -> void:
 	_flash_inorder_seq()
@@ -536,27 +779,66 @@ func _on_insert_done() -> void:
 	_advance_phase()
 
 func _flash_inorder_seq() -> void:
-	var order: Array = []; _collect_inorder(_root, order)
+	# Collect inorder (= sorted least→greatest) sequence
+	var order: Array = []
+	_collect_inorder(_root, order)
+	# Glow each node sequentially: brighten then settle to a soft teal
 	for i in range(order.size()):
 		var nd := _bst[order[i]]["sprite"] as Node2D
 		if not is_instance_valid(nd): continue
 		var tw := nd.create_tween()
-		tw.tween_interval(i * 0.17)
-		tw.tween_property(nd, "modulate", COL_INORDER, 0.09)
-		tw.tween_property(nd, "modulate", COL_WHITE, 0.22)
-	var vals: Array = []; _collect_inorder_vals(_root, vals)
+		tw.tween_interval(i * 0.22)                           # stagger by 220ms
+		tw.tween_property(nd, "modulate", Color(1.2,1.2,1.2), 0.08)  # flash white
+		tw.tween_property(nd, "modulate", COL_INORDER, 0.18)  # settle to teal
+	# Show sorted ticker after all nodes have glowed
+	var vals: Array = []
+	_collect_inorder_vals(_root, vals)
 	var strs: PackedStringArray = []
 	for v in vals: strs.append(str(v as int))
-	_trav_banner.text = "Inorder (sorted): " + " → ".join(strs)
+	var total_delay := order.size() * 0.22 + 0.3
+	await get_tree().create_timer(total_delay).timeout
+	_trav_banner.text    = "Sorted: " + " → ".join(strs)
 	_trav_banner.visible = true
 	AudioManager.play_sfx(PATH_SFX_WIN)
+
+# =============================================================================
+#  SILENT TREE BUILD (used when search/traversal phase starts with empty tree)
+# =============================================================================
+func _silent_build_tree() -> void:
+	# Generate a balanced-ish set of values and insert them without animation
+	var vals: Array[int] = [50, 25, 75, 12, 37, 62, 87]
+	for v in vals:
+		_silent_insert(v)
+	_pool.clear()   # pool is irrelevant now
+	for c in _pool_tray.get_children(): c.queue_free()
+	_hide_all_ghosts()
+
+func _silent_insert(value: int) -> void:
+	if _bst.size() >= 15: return   # safety cap
+	var slot := _find_insert_slot(value)
+	var sp   := _make_number_sprite(value)
+	_tree_layer.add_child(sp)
+	sp.global_position = slot["pos"]
+	var ni := _bst.size()
+	_bst.append({"value":value,"sprite":sp,"left":-1,"right":-1,
+		"parent":slot["parent_idx"],"pos":slot["pos"],"depth":_slot_depth(slot),"height":1})
+	if slot["side"] == "root": _root = ni
+	elif slot["parent_idx"] >= 0:
+		if slot["side"] == "left":  _bst[slot["parent_idx"]]["left"]  = ni
+		if slot["side"] == "right": _bst[slot["parent_idx"]]["right"] = ni
+	_invalidate_heights_upward(ni)
+	if slot["parent_idx"] >= 0:
+		_animate_branch(_bst[slot["parent_idx"]]["pos"], slot["pos"])
 
 # =============================================================================
 #  PHASE: SEARCH
 # =============================================================================
 func _start_search() -> void:
 	_round_type = RoundType.SEARCH; _rounds_done = 0
-	_trav_banner.visible = false; _restore_node_colors()
+	_trav_banner.visible = false
+	# If the tree is empty (Tier 1 starts here), auto-build it silently
+	if _bst.is_empty(): _silent_build_tree()
+	_restore_node_colors()
 	_hint_lbl.text = "Compare target with each node. Left if smaller, right if larger."
 	_hint_box.visible = _cfg["hints"] as bool
 	_show_banner("Level 2 — Binary Search", "Tap nodes along the path to the target.", COL_SEARCH_HI)
@@ -865,6 +1147,13 @@ func _on_avl_choice(chosen: String, ov: CanvasLayer) -> void:
 #  INPUT
 # =============================================================================
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var _mbe := event as InputEventMouseButton
+		if _mbe.button_index == MOUSE_BUTTON_LEFT and _mbe.pressed:
+			if Rect2(1224, 4, 44, 28).has_point(_mbe.position):
+				var _pm := get_node_or_null("PauseMenu")
+				if _pm and _pm.has_method("toggle"): _pm.toggle()
+				return
 	if not _alive or _master_phase != MasterPhase.PLAYING: return
 	if event is InputEventMouseButton:
 		var e := event as InputEventMouseButton
@@ -964,40 +1253,30 @@ func _rebuild_pool_sprites() -> void:
 		sp.global_position = Vector2(160.0 + spacing * (i + 1), POOL_Y)
 
 func _make_number_sprite(value: int) -> Node2D:
-	# Try to load the rune tile texture. Fall back to drawn circle if missing.
-	var icon_path := NODE_ICON
-	if value == -1: icon_path = ROOT_ICON   # -1 = root marker (unused but safe)
+	# The sprite origin (0,0) is the visual centre of the tile/circle.
+	# We attach a _CentredLabel child that draws the value string centred on (0,0).
 	var sp: Node2D
+	var icon_path := NODE_ICON
 	if ResourceLoader.exists(icon_path):
-		var sprite := Sprite2D.new()
-		sprite.texture       = load(icon_path) as Texture2D
+		var sprite        := Sprite2D.new()
+		sprite.texture     = load(icon_path) as Texture2D
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		sprite.scale          = NODE_SCALE
-		sprite.z_index        = 10
+		sprite.scale       = NODE_SCALE
+		sprite.z_index     = 10
 		sp = sprite
 	else:
-		# Fallback: plain drawn circle
 		var node := Node2D.new()
 		node.z_index = 10
 		var circle := _CircleSprite.new()
 		circle.z_index = 11
 		node.add_child(circle)
 		sp = node
-	# Label — centred on sprite origin, with shadow for readability over tile art
-	var lbl := Label.new()
-	lbl.text = str(value)
-	lbl.add_theme_font_override("font", _pixel_font)
-	lbl.add_theme_font_size_override("font_size", 15)
-	lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.7))
-	lbl.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
-	lbl.add_theme_constant_override("shadow_offset_x", 1)
-	lbl.add_theme_constant_override("shadow_offset_y", 1)
-	lbl.size                 = Vector2(44, 22)
-	lbl.position             = Vector2(-22, -11)  # centred on sprite origin
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
-	lbl.z_index              = 12
-	sp.add_child(lbl)
+	# _CentredLabel draws the value string pixel-perfect centred using font metrics
+	var drawer := _CentredLabel.new()
+	drawer.display_value = str(value)
+	drawer.pixel_font    = _pixel_font
+	drawer.z_index       = 12
+	sp.add_child(drawer)
 	return sp
 
 # =============================================================================
@@ -1294,47 +1573,57 @@ var _hint_overlay_lbl: Label     = null
 var _hint_dismiss_btn: Button    = null
 
 func _setup_hint_overlay() -> void:
-	# Built on the HUD CanvasLayer so it sits above world but below intro
 	var hud := get_node_or_null("HUD") as CanvasLayer
 	if hud == null: return
 
 	_hint_overlay = ColorRect.new()
-	_hint_overlay.color   = Color(0.04, 0.04, 0.12, 0.0)
+	_hint_overlay.color   = Color(0.0, 0.0, 0.0, 0.0)
 	_hint_overlay.size    = Vector2(1280, 720)
 	_hint_overlay.z_index = 80
 	_hint_overlay.visible = false
 	hud.add_child(_hint_overlay)
 
-	var card := ColorRect.new()
-	card.color    = Color(0.06, 0.06, 0.18, 0.96)
-	card.size     = Vector2(780, 180)
-	card.position = Vector2(250, 250)
+	# Wood card
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _wood_panel(8))
+	card.size     = Vector2(800, 190)
+	card.position = Vector2(240, 240)
 	card.z_index  = 81
 	_hint_overlay.add_child(card)
 
+	# Gold top accent
 	var accent := ColorRect.new()
-	accent.color = Color(1.0, 0.45, 0.2, 0.8)
-	accent.size  = Vector2(780, 3)
+	accent.color    = WOOD_GOLD
+	accent.size     = Vector2(800, 3)
 	accent.position = Vector2(0, 0)
 	card.add_child(accent)
+
+	# Grain lines
+	for gi in range(5):
+		var g := ColorRect.new()
+		g.color    = Color(WOOD_GRAIN.r, WOOD_GRAIN.g, WOOD_GRAIN.b, 0.09)
+		g.size     = Vector2(780, 1)
+		g.position = Vector2(10, 18 + gi * 26)
+		card.add_child(g)
 
 	_hint_overlay_lbl = Label.new()
 	_hint_overlay_lbl.add_theme_font_override("font", _pixel_font)
 	_hint_overlay_lbl.add_theme_font_size_override("font_size", 16)
-	_hint_overlay_lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.7))
+	_hint_overlay_lbl.add_theme_color_override("font_color", WOOD_TEXT)
 	_hint_overlay_lbl.position             = Vector2(20, 14)
-	_hint_overlay_lbl.size                 = Vector2(740, 120)
+	_hint_overlay_lbl.size                 = Vector2(760, 130)
 	_hint_overlay_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_hint_overlay_lbl.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(_hint_overlay_lbl)
 
 	_hint_dismiss_btn = Button.new()
 	_hint_dismiss_btn.text     = "Got it  ✓"
-	_hint_dismiss_btn.position = Vector2(560, 138)
+	_hint_dismiss_btn.position = Vector2(580, 148)
 	_hint_dismiss_btn.size     = Vector2(200, 36)
 	_hint_dismiss_btn.add_theme_font_override("font", _pixel_font)
 	_hint_dismiss_btn.add_theme_font_size_override("font_size", 14)
 	_hint_dismiss_btn.pressed.connect(_dismiss_hint_overlay)
+	_style_wood_btn(_hint_dismiss_btn)
 	card.add_child(_hint_dismiss_btn)
 
 func _show_hint_overlay(text: String) -> void:
@@ -1359,7 +1648,26 @@ func _dismiss_hint_overlay() -> void:
 #  HUD
 # =============================================================================
 func _setup_hud() -> void:
-	_score_lbl.text="Score: 0"; _combo_lbl.text=""; _goal_lbl.text=""; _acc_lbl.text=""; _refresh_lives()
+	_score_lbl.text="Score: 0"; _combo_lbl.text=""; _goal_lbl.text=""; _acc_lbl.text=""
+	_refresh_lives()
+	_setup_pause_btn()
+
+func _setup_pause_btn() -> void:
+	# PauseButton is a ColorRect in the tscn — clicks handled in _input below
+	var pm := get_node_or_null("PauseMenu")
+	if pm and pm.has_signal("howto_requested"):
+		pm.howto_requested.connect(_reopen_intro)
+
+func _reopen_intro() -> void:
+	# Rebuild intro slides from scratch so the player can review them mid-game
+	_intro_idx = 0
+	_build_intro_slides()
+	_show_intro_overlay()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		var pm := get_node_or_null("PauseMenu")
+		if pm and pm.has_method("toggle"): pm.toggle()
 
 func _refresh_lives() -> void:
 	for c in _lives_row.get_children(): c.queue_free()
@@ -1368,21 +1676,58 @@ func _refresh_lives() -> void:
 		lbl.add_theme_font_size_override("font_size",22); _lives_row.add_child(lbl)
 
 func _setup_instr_bar() -> void:
-	_instr_rect = ColorRect.new(); _instr_rect.color=Color(0.06,0.07,0.16,0.90)
-	_instr_rect.size=Vector2(1280,48); _instr_rect.position=Vector2(0,510); _instr_rect.z_index=40
-	add_child(_instr_rect)
+	# Wood plank bar — sits at y=36, height 40
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _wood_panel(0))  # no radius — full-width plank
+	panel.size     = Vector2(1280, 40)
+	panel.position = Vector2(0, 36)
+	panel.z_index  = 40
+	add_child(panel)
+	_instr_rect = ColorRect.new()   # keep var valid but unused for colour
+	_instr_rect.visible = false
+	panel.add_child(_instr_rect)
+
+	# Grain lines across the bar
+	for gi in range(3):
+		var grain := ColorRect.new()
+		grain.color    = Color(WOOD_GRAIN.r, WOOD_GRAIN.g, WOOD_GRAIN.b, 0.10)
+		grain.size     = Vector2(1280, 1)
+		grain.position = Vector2(0, 6 + gi * 12)
+		grain.z_index  = 41
+		panel.add_child(grain)
+
+	# Gold top edge line
+	var top_edge := ColorRect.new()
+	top_edge.color    = WOOD_GOLD
+	top_edge.size     = Vector2(1280, 1)
+	top_edge.position = Vector2(0, 0)
+	top_edge.z_index  = 41
+	panel.add_child(top_edge)
+
 	_instr_task = Label.new()
-	_instr_task.add_theme_font_override("font",_pixel_font)
-	_instr_task.add_theme_font_size_override("font_size",15)
-	_instr_task.add_theme_color_override("font_color",COL_WHITE)
-	_instr_task.position=Vector2(16,6); _instr_task.size=Vector2(800,36)
-	_instr_task.horizontal_alignment=HORIZONTAL_ALIGNMENT_LEFT; _instr_rect.add_child(_instr_task)
+	_instr_task.add_theme_font_override("font", _pixel_font)
+	_instr_task.add_theme_font_size_override("font_size", 15)
+	_instr_task.add_theme_color_override("font_color", WOOD_TEXT)
+	_instr_task.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
+	_instr_task.add_theme_constant_override("shadow_offset_x", 1)
+	_instr_task.add_theme_constant_override("shadow_offset_y", 1)
+	_instr_task.position             = Vector2(16, 5)
+	_instr_task.size                 = Vector2(800, 30)
+	_instr_task.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_instr_task.z_index              = 42
+	panel.add_child(_instr_task)
+
 	_instr_rule = Label.new()
-	_instr_rule.add_theme_font_override("font",_pixel_font)
-	_instr_rule.add_theme_font_size_override("font_size",13)
-	_instr_rule.add_theme_color_override("font_color",Color(0.75,0.75,0.55))
-	_instr_rule.position=Vector2(840,8); _instr_rule.size=Vector2(420,32)
-	_instr_rule.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT; _instr_rect.add_child(_instr_rule)
+	_instr_rule.add_theme_font_override("font", _pixel_font)
+	_instr_rule.add_theme_font_size_override("font_size", 12)
+	_instr_rule.add_theme_color_override("font_color", WOOD_SUBTEXT)
+	_instr_rule.autowrap_mode        = TextServer.AUTOWRAP_OFF
+	_instr_rule.clip_text            = true
+	_instr_rule.position             = Vector2(820, 5)
+	_instr_rule.size                 = Vector2(446, 30)
+	_instr_rule.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_instr_rule.z_index              = 42
+	panel.add_child(_instr_rule)
 
 func _update_instr(task: String, rule: String) -> void:
 	_instr_task.text=task; _instr_rule.text=rule
@@ -1393,54 +1738,87 @@ var _banner_pill_lbl: Label     = null
 var _banner_col:      Color     = COL_HEAD
 
 func _setup_banner() -> void:
-	# ── Full-screen overlay (fades in, then slides up to pill) ──────────────
+	# ── Full-screen dimmer overlay ────────────────────────────────────────────
 	_banner_rect = ColorRect.new()
-	_banner_rect.color   = Color(0.04, 0.04, 0.10, 0.0)
+	_banner_rect.color   = Color(0.0, 0.0, 0.0, 0.0)
 	_banner_rect.size    = Vector2(1280, 720)
 	_banner_rect.z_index = 95
 	_banner_rect.visible = false
 	add_child(_banner_rect)
 
-	# Large centred card on the overlay
-	var card := ColorRect.new()
-	card.color    = Color(0.06, 0.06, 0.15, 0.94)
-	card.size     = Vector2(860, 160)
-	card.position = Vector2(210, 270)
+	# ── Wood card on the overlay ──────────────────────────────────────────────
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _wood_panel(10))
+	card.size     = Vector2(860, 120)
+	card.position = Vector2(210, 490)
 	card.z_index  = 96
 	_banner_rect.add_child(card)
 
+	# Gold top strip on card
+	var gold_strip := ColorRect.new()
+	gold_strip.color    = WOOD_GOLD
+	gold_strip.size     = Vector2(860, 3)
+	gold_strip.position = Vector2(0, 0)
+	card.add_child(gold_strip)
+
+	# Grain lines
+	for gi in range(4):
+		var g := ColorRect.new()
+		g.color    = Color(WOOD_GRAIN.r, WOOD_GRAIN.g, WOOD_GRAIN.b, 0.09)
+		g.size     = Vector2(840, 1)
+		g.position = Vector2(10, 20 + gi * 28)
+		card.add_child(g)
+
 	_banner_lbl = Label.new()
 	_banner_lbl.add_theme_font_override("font", _pixel_font)
-	_banner_lbl.add_theme_font_size_override("font_size", 28)
-	_banner_lbl.add_theme_color_override("font_color", COL_HEAD)
-	_banner_lbl.position             = Vector2(20, 14)
-	_banner_lbl.size                 = Vector2(820, 60)
+	_banner_lbl.add_theme_font_size_override("font_size", 20)
+	_banner_lbl.add_theme_color_override("font_color", WOOD_GOLD)
+	_banner_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
+	_banner_lbl.add_theme_constant_override("shadow_offset_x", 2)
+	_banner_lbl.add_theme_constant_override("shadow_offset_y", 2)
+	_banner_lbl.position             = Vector2(20, 10)
+	_banner_lbl.size                 = Vector2(820, 40)
 	_banner_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card.add_child(_banner_lbl)
 
 	_banner_sub = Label.new()
 	_banner_sub.add_theme_font_override("font", _pixel_font)
 	_banner_sub.add_theme_font_size_override("font_size", 15)
-	_banner_sub.add_theme_color_override("font_color", Color(0.85, 0.85, 0.65))
-	_banner_sub.position             = Vector2(20, 88)
+	_banner_sub.add_theme_color_override("font_color", WOOD_TEXT)
+	_banner_sub.position             = Vector2(20, 56)
 	_banner_sub.size                 = Vector2(820, 56)
 	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner_sub.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
 	card.add_child(_banner_sub)
 
-	# ── Pill — small persistent bar that docks to the top after shrink ──────
+	# ── Pill — wood plank that docks to the top ───────────────────────────────
 	_banner_pill = ColorRect.new()
-	_banner_pill.color    = Color(0.06, 0.06, 0.15, 0.0)
+	_banner_pill.color    = WOOD_MID
 	_banner_pill.size     = Vector2(1280, 36)
 	_banner_pill.position = Vector2(0, 0)
 	_banner_pill.z_index  = 94
 	_banner_pill.visible  = false
 	add_child(_banner_pill)
 
+	# Pill gold border bottom
+	var pill_edge := ColorRect.new()
+	pill_edge.color    = WOOD_GOLD
+	pill_edge.size     = Vector2(1280, 2)
+	pill_edge.position = Vector2(0, 34)
+	_banner_pill.add_child(pill_edge)
+
+	# Pill grain
+	for gi in range(2):
+		var g := ColorRect.new()
+		g.color    = Color(WOOD_GRAIN.r, WOOD_GRAIN.g, WOOD_GRAIN.b, 0.08)
+		g.size     = Vector2(1280, 1)
+		g.position = Vector2(0, 8 + gi * 14)
+		_banner_pill.add_child(g)
+
 	_banner_pill_lbl = Label.new()
 	_banner_pill_lbl.add_theme_font_override("font", _pixel_font)
 	_banner_pill_lbl.add_theme_font_size_override("font_size", 15)
-	_banner_pill_lbl.add_theme_color_override("font_color", Color(0.9, 0.9, 0.6))
+	_banner_pill_lbl.add_theme_color_override("font_color", WOOD_GOLD)
 	_banner_pill_lbl.size                 = Vector2(1280, 36)
 	_banner_pill_lbl.position             = Vector2(0, 0)
 	_banner_pill_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1468,15 +1846,7 @@ func _show_banner(title: String, sub: String, col: Color) -> void:
 	tw.tween_property(_banner_rect, "color:a", 0.0, 0.3)
 	tw.tween_callback(func():
 		_banner_rect.visible = false
-		# Phase 4: slide pill in from top
-		_banner_pill_lbl.text = title
-		_banner_pill_lbl.add_theme_color_override("font_color", col)
-		_banner_pill.visible  = true
-		_banner_pill.position = Vector2(0, -36)
-		_banner_pill.color    = Color(0.06, 0.06, 0.15, 0.0)
-		var ptw := _banner_pill.create_tween()
-		ptw.tween_property(_banner_pill, "color:a", 0.92, 0.18)
-		ptw.parallel().tween_property(_banner_pill, "position", Vector2(0, 0), 0.22)
+		_banner_pill.visible  = false
 	)
 
 # =============================================================================
@@ -1484,7 +1854,7 @@ func _show_banner(title: String, sub: String, col: Color) -> void:
 # =============================================================================
 func _play_completion() -> void:
 	_alive=false; _master_phase=MasterPhase.COMPLETE; AudioManager.play_sfx(PATH_SFX_WIN)
-	_complete_banner.visible=true; _complete_banner.text="THE GROVE IS COMPLETE!"
+	_complete_banner.visible=true; _complete_banner.text="LEVEL COMPLETE!"
 	_complete_banner.scale=Vector2(0.1,0.1)
 	_complete_banner.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)\
 		.tween_property(_complete_banner,"scale",Vector2(1,1),0.4)
@@ -1506,8 +1876,10 @@ func _end_game(success: bool) -> void:
 	if has_node("/root/GameRouter"): GameRouter.chapter_complete(chapter_id,_score,_grade_to_stars(grade))
 
 func _accuracy() -> float:
-	var t:=(_stat["correct"] as int)+(_stat["wrong"] as int)
-	return 100.0 if t==0 else float(_stat["correct"])/float(t)*100.0
+	# inserts + traversal correct taps all count toward accuracy
+	var correct: int = (_stat["correct"] as int) + (_stat["inserts"] as int) + (_stat["traversals"] as int)
+	var total:   int = correct + (_stat["wrong"] as int)
+	return 100.0 if total == 0 else float(correct) / float(total) * 100.0
 
 func _calc_grade(success: bool) -> String:
 	var a := _accuracy()
@@ -1532,9 +1904,17 @@ func _grade_to_stars(grade: String) -> int:
 
 # ── Draw helpers ──────────────────────────────────────────────────────────────
 func _dn(ci:CanvasItem, pos:Vector2, val:int, col:Color, font:Font, r:float=26.0) -> void:
-	ci.draw_circle(pos,r,col); ci.draw_arc(pos,r,0,TAU,32,col.darkened(0.35),2.5)
-	var s:=str(val); var ts:=font.get_string_size(s,HORIZONTAL_ALIGNMENT_LEFT,-1,18)
-	ci.draw_string(font,pos-ts/2+Vector2(0,7),s,HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color(0.04,0.04,0.04))
+	ci.draw_circle(pos, r, col)
+	ci.draw_arc(pos, r, 0, TAU, 32, col.darkened(0.35), 2.5)
+	var sz  := 16
+	var s   := str(val)
+	var tw  := font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+	var asc := font.get_ascent(sz)
+	# Shadow then text — centred exactly on pos
+	ci.draw_string(font, Vector2(pos.x - tw*0.5 + 1, pos.y + asc*0.5 + 1),
+		s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, Color(0,0,0,0.7))
+	ci.draw_string(font, Vector2(pos.x - tw*0.5, pos.y + asc*0.5),
+		s, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, Color(0.04, 0.04, 0.04))
 
 func _de(ci:CanvasItem,a:Vector2,b:Vector2,col:Color=Color(0.55,0.85,0.45,0.85),w:float=3.0)->void:
 	ci.draw_line(a,b,col,w)
@@ -1585,7 +1965,7 @@ func _draw_sample_tree(ci:CanvasItem,font:Font,hi:Array=[],dim:Array=[])->void:
 
 # Compact tree positions used by all slides
 func _ctn() -> Dictionary:
-	var cx := 640.0; var ry := 148.0; var lh := 70.0; var sp := 130.0
+	var cx := 640.0; var ry := 162.0; var lh := 72.0; var sp := 130.0
 	return {
 		50: Vector2(cx,        ry),
 		30: Vector2(cx - sp,   ry + lh),
@@ -1614,31 +1994,40 @@ func _draw_compact_tree(ci: CanvasItem, font: Font, hi: Array = [], dim: Array =
 func _draw_s0_what_is_bst(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	# Root label — above and to the right of root node
-	_dl(ci, ns[50] + Vector2(28, -8), "← Root", COL_HEAD, font, 13)
-	# Leaf labels — below each leaf, using +30 offset
+
+	# "← Root" — to the RIGHT of the root node, vertically centred on it
+	_dl(ci, ns[50] + Vector2(32, -7), "← Root", COL_HEAD, font, 13)
+
+	# "Leaf" labels — far enough below the node circle (radius 24 → bottom at +24)
+	# Use +44 so there's a 20px gap below the circle edge
 	for v: int in [20, 40, 60, 80]:
-		_dlc(ci, ns[v] + Vector2(0, 30), "Leaf", Color(0.65, 0.65, 0.5), font, 11)
-	# Edge label — between root and right child, offset left so it doesn't touch nodes
-	var emid: Vector2 = ns[50].lerp(ns[70], 0.5) + Vector2(-70, -6)
+		_dlc(ci, ns[v] + Vector2(0, 44), "Leaf", Color(0.65, 0.65, 0.5), font, 11)
+
+	# "Edge" label — placed beside the midpoint of the root→right edge,
+	# offset to the RIGHT so it doesn't overlap either node or the line
+	var emid: Vector2 = ns[50].lerp(ns[70], 0.55) + Vector2(14, -4)
 	_dl(ci, emid, "Edge", Color(0.55, 0.85, 0.45), font, 12)
-	# Node label — top left, clear of everything
-	_dl(ci, Vector2(68, 115), "Node (rune stone)", Color(0.9, 0.9, 0.6), font, 13)
+
+	# "Node (rune stone)" — top-left corner, well away from any drawn element
+	_dl(ci, Vector2(68, 108), "Node (rune stone)", Color(0.9, 0.9, 0.6), font, 13)
 
 func _draw_s0_anatomy(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	# Level indicators — right side, well clear of rightmost node (80 at ~770,288)
-	var level_x := 860.0
+	# Level indicators — right side, clear of rightmost node (ns[80] ~x=770)
+	var level_x := 880.0
 	var level_ys: Array[float] = [148.0, 218.0, 288.0]
-	var level_labels := ["Level 0 (Root)", "Level 1", "Level 2 (Leaves)"]
+	var level_labels: Array[String] = ["Level 0  (Root)", "Level 1", "Level 2  (Leaves)"]
+	var node_right_xs: Array[float] = [ns[50].x + 28.0, ns[70].x + 28.0, ns[80].x + 28.0]
 	for i in range(3):
-		ci.draw_line(Vector2(level_x - 12, level_ys[i]),
-			Vector2(ns[[50,70,80][i]].x + 28, level_ys[i]),
-			Color(0.4, 0.5, 0.4, 0.6), 1.0)
-		_dl(ci, Vector2(level_x, level_ys[i] - 7), level_labels[i], Color(0.65, 0.75, 0.55), font, 12)
-	# Height annotation — right side below levels
-	_dl(ci, Vector2(level_x, 330), "Height = 2", COL_HEAD, font, 13)
+		# Short horizontal tick from node edge to level label
+		ci.draw_line(Vector2(node_right_xs[i], level_ys[i]),
+			Vector2(level_x - 8, level_ys[i]),
+			Color(0.4, 0.5, 0.4, 0.5), 1.0)
+		_dl(ci, Vector2(level_x, level_ys[i] - 7), level_labels[i],
+			Color(0.65, 0.75, 0.55), font, 12)
+	# Height annotation — below the last level, enough gap from ns[20/40/60/80]
+	_dl(ci, Vector2(level_x, 335), "Height = 2", COL_HEAD, font, 13)
 	# Left subtree highlight box — only around 30, 20, 40 (no text clashing)
 	var box_x: float = ns[20].x - 28.0
 	var box_y: float = ns[30].y - 28.0
@@ -1648,8 +2037,8 @@ func _draw_s0_anatomy(ci: CanvasItem, font: Font) -> void:
 		Color(0.3, 0.8, 1.0, 0.07), true)
 	ci.draw_rect(Rect2(Vector2(box_x, box_y), Vector2(box_w, box_h)),
 		Color(0.3, 0.8, 1.0, 0.45), false, 1.5)
-	# Box label — below the box, not overlapping any node
-	_dlc(ci, Vector2((box_x + box_x + box_w) / 2.0, ns[20].y + 36),
+	# Box label — below the box with enough gap from the leaf nodes (radius 24 → bottom at ns[20].y+24)
+	_dlc(ci, Vector2((box_x + box_x + box_w) / 2.0, ns[20].y + 50),
 		"Left subtree of 50", Color(0.4, 0.8, 1.0), font, 12)
 
 func _draw_s0_rule(ci: CanvasItem, font: Font) -> void:
@@ -1658,17 +2047,15 @@ func _draw_s0_rule(ci: CanvasItem, font: Font) -> void:
 	var rx := 640.0; var ry := 165.0; var spread := 190.0; var ch := 110.0
 	var lp := Vector2(rx - spread, ry + ch)
 	var rp := Vector2(rx + spread, ry + ch)
-	_de(ci, Vector2(rx, ry), lp)
-	_de(ci, Vector2(rx, ry), rp)
+	# Colour-coded edges (no extra arrows on top — edge IS the arrow)
+	_de(ci, Vector2(rx, ry), lp, Color(0.3, 0.8, 1.0), 3.0)
+	_de(ci, Vector2(rx, ry), rp, Color(1.0, 0.7, 0.3), 3.0)
 	_dn(ci, Vector2(rx, ry), 50, COL_HEAD, font, 26.0)
 	_dn(ci, lp, 30, Color(0.3, 0.7, 1.0), font, 24.0)
 	_dn(ci, rp, 70, Color(1.0, 0.6, 0.2), font, 24.0)
-	# Arrows from root to children
-	_darrow(ci, Vector2(rx - 18, ry + 20), lp + Vector2(16, -18), Color(0.3, 0.8, 1.0))
-	_darrow(ci, Vector2(rx + 18, ry + 20), rp + Vector2(-16, -18), Color(1.0, 0.7, 0.3))
 	# Comparison labels — centred below each child, clear of rule box
-	_dlc(ci, lp + Vector2(0, 36), "30 < 50  →  LEFT",  Color(0.3, 0.85, 1.0), font, 14)
-	_dlc(ci, rp + Vector2(0, 36), "70 > 50  →  RIGHT", Color(1.0, 0.72, 0.3), font, 14)
+	_dlc(ci, lp + Vector2(0, 38), "30 < 50  →  LEFT",  Color(0.3, 0.85, 1.0), font, 14)
+	_dlc(ci, rp + Vector2(0, 38), "70 > 50  →  RIGHT", Color(1.0, 0.72, 0.3), font, 14)
 	# Rule box — fixed at y=350, well below the children's labels
 	_dbox(ci, Rect2(Vector2(280, 350), Vector2(720, 66)), Color(0.07, 0.08, 0.18), Color(0.4, 0.4, 0.65))
 	_dlc(ci, Vector2(640, 371), "Rule:   LEFT  <  Node  <  RIGHT", COL_HEAD, font, 18)
@@ -1706,59 +2093,69 @@ func _draw_s0_build(ci: CanvasItem, font: Font) -> void:
 	# Dragged tile (the rune being moved)
 	_dn(ci, tile_p, 30, Color(0.92, 0.82, 0.32), font, 24.0)
 
-	# Arrow from tile to ghost
-	_darrow(ci, tile_p + Vector2(0, -26), ghost_p + Vector2(0, 28), Color(0.35, 1.0, 0.5))
-	_dlc(ci, tile_p + Vector2(60, 8), "Drag to green slot", Color(0.45, 0.95, 0.5), font, 12)
+	# Dashed arrow from tile to ghost slot — one clean arrow, no edge doubling
+	_darrow(ci, tile_p + Vector2(0, -28), ghost_p + Vector2(0, 30), Color(0.35, 1.0, 0.5), 2.0)
+	_dlc(ci, tile_p + Vector2(0, 42), "Drag to green slot", Color(0.45, 0.95, 0.5), font, 12)
 
 # ════════════════════════════════════════════════════════════════════════════
 #  TIER 1  — Binary Search
 # ════════════════════════════════════════════════════════════════════════════
 func _draw_s1_intro(ci: CanvasItem, font: Font) -> void:
-	# Full tree; search path 50→30→40 highlighted, others dimmed
-	_draw_compact_tree(ci, font, [50, 30, 40], [20, 60, 70, 80])
+	# Draw tree manually so path edges are coloured differently from grey edges
 	var ns := _ctn()
-	# Highlight path edges
+	# Grey dim edges first (non-path)
+	_de(ci, ns[50], ns[70], Color(0.3,0.3,0.3,0.4), 2.0)
+	_de(ci, ns[70], ns[60], Color(0.3,0.3,0.3,0.4), 2.0)
+	_de(ci, ns[70], ns[80], Color(0.3,0.3,0.3,0.4), 2.0)
+	_de(ci, ns[30], ns[20], Color(0.3,0.3,0.3,0.4), 2.0)
+	# Highlighted path edges
 	_de(ci, ns[50], ns[30], COL_SEARCH_HI, 3.5)
 	_de(ci, ns[30], ns[40], COL_SEARCH_HI, 3.5)
+	# Dim nodes
+	for v: int in [20, 60, 70, 80]:
+		_dn(ci, ns[v], v, Color(0.3,0.3,0.3,0.45), font, 22.0)
+	# Path nodes on top
+	for v: int in [50, 30, 40]:
+		_dn(ci, ns[v], v, COL_SEARCH_HI, font, 22.0)
 	# Step labels — right of each path node, staggered so they don't touch
-	_dl(ci, ns[50] + Vector2(28, -6), "40 < 50  →  LEFT",  COL_SEARCH_HI, font, 12)
-	_dl(ci, ns[30] + Vector2(28, -6), "40 > 30  →  RIGHT", COL_SEARCH_HI, font, 12)
-	_dlc(ci, ns[40] + Vector2(0, 34), "✓  FOUND 40!", COL_OK, font, 13)
+	# Labels centred below each path node — clear of circle (radius 22, bottom at +22)
+	_dlc(ci, ns[50] + Vector2(0, 44), "40 < 50  →  LEFT",  COL_SEARCH_HI, font, 12)
+	_dlc(ci, ns[30] + Vector2(0, 44), "40 > 30  →  RIGHT", COL_SEARCH_HI, font, 12)
+	_dlc(ci, ns[40] + Vector2(0, 44), "✓  FOUND 40!", COL_OK, font, 13)
 	# Header
-	_dlc(ci, Vector2(640, 122), "Searching for:  40", COL_HEAD, font, 17)
+	_dlc(ci, Vector2(640, 108), "Searching for:  40", COL_HEAD, font, 17)
 
 func _draw_s1_complexity(ci: CanvasItem, font: Font) -> void:
-	# Left panel: balanced tree  Right panel: degenerate chain
-	# Each panel is 420px wide with a 40px gap in the centre
-	var lx := 240.0;  var ly := 148.0
-	var rx2 := 870.0; var ry2 := 130.0
+	# Vertical divider splits diagram in half
+	ci.draw_line(Vector2(600, 108), Vector2(600, 445), Color(0.35,0.35,0.55,0.45), 1.0)
 
-	# Balanced tree (left)
+	# ── Left panel: balanced 7-node tree ──────────────────────────────────
+	var lx := 290.0; var ly := 145.0
 	var bp: Array[Vector2] = [
-		Vector2(lx,      ly),
-		Vector2(lx-80,  ly+65), Vector2(lx+80,  ly+65),
-		Vector2(lx-120, ly+130),Vector2(lx-40,  ly+130),
-		Vector2(lx+40,  ly+130),Vector2(lx+120, ly+130),
+		Vector2(lx,       ly),
+		Vector2(lx-80,   ly+68), Vector2(lx+80,   ly+68),
+		Vector2(lx-120,  ly+136),Vector2(lx-40,   ly+136),
+		Vector2(lx+40,   ly+136),Vector2(lx+120,  ly+136),
 	]
 	for e: Array in [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]]:
 		_de(ci, bp[e[0]], bp[e[1]])
 	for p: Vector2 in bp:
 		_dn(ci, p, 0, COL_NODE_BASE, font, 18.0)
-	_dlc(ci, Vector2(lx, ly - 28), "Balanced", COL_OK, font, 14)
-	_dlc(ci, Vector2(lx, ly + 170), "O(log n) — 3 steps max", COL_OK, font, 13)
+	# Labels well clear of nodes (bottom of lowest nodes = ly+136+18 = ly+154)
+	_dlc(ci, Vector2(lx, ly - 30), "Balanced", COL_OK, font, 14)
+	_dlc(ci, Vector2(lx, ly + 178), "O(log n)  =  3 steps", COL_OK, font, 13)
 
-	# Divider
-	ci.draw_line(Vector2(580, 120), Vector2(580, 420), Color(0.35, 0.35, 0.55, 0.5), 1.0)
-
-	# Degenerate chain (right)
-	var prev := Vector2(rx2, ry2)
+	# ── Right panel: degenerate sorted chain ──────────────────────────────
+	var dx := 870.0; var dy := 128.0
+	var prev := Vector2(dx, dy)
 	for i in range(7):
-		var cur := Vector2(rx2, ry2 + i * 44)
-		if i > 0: _de(ci, prev, cur, Color(1.0, 0.45, 0.2), 2.0)
-		_dn(ci, cur, 10 + i * 10, Color(1.0, 0.45, 0.2, 0.88), font, 16.0)
+		var cur := Vector2(dx, dy + i * 42)
+		if i > 0: _de(ci, prev, cur, Color(1.0,0.45,0.2), 2.0)
+		_dn(ci, cur, 10 + i*10, Color(1.0,0.45,0.2,0.88), font, 15.0)
 		prev = cur
-	_dlc(ci, Vector2(rx2, ry2 - 28), "Degenerate", Color(1.0, 0.5, 0.2), font, 14)
-	_dlc(ci, Vector2(rx2, ry2 + 318), "O(n) — 7 steps max", Color(1.0, 0.5, 0.2), font, 13)
+	# Labels: top label above first node, bottom label below last node (+15 = +42*6+15=267)
+	_dlc(ci, Vector2(dx, dy - 30), "Degenerate", Color(1.0,0.5,0.2), font, 14)
+	_dlc(ci, Vector2(dx, dy + 282), "O(n)  =  7 steps", Color(1.0,0.5,0.2), font, 13)
 
 func _draw_s1_trace(ci: CanvasItem, font: Font) -> void:
 	# Search for 60: path 50→70→60 highlighted; left subtree dimmed
@@ -1768,15 +2165,15 @@ func _draw_s1_trace(ci: CanvasItem, font: Font) -> void:
 	_de(ci, ns[70], ns[60], COL_SEARCH_HI, 3.5)
 	for v: int in [50, 70, 60]:
 		_dn(ci, ns[v], v, COL_SEARCH_HI, font, 22.0)
-	_dl(ci, ns[50] + Vector2(28, -6), "60 > 50  →  RIGHT", COL_SEARCH_HI, font, 12)
-	_dl(ci, ns[70] + Vector2(28, -6), "60 < 70  →  LEFT",  COL_SEARCH_HI, font, 12)
-	_dlc(ci, ns[60] + Vector2(0, 34), "60 = 60  →  FOUND!", COL_OK, font, 13)
-	_dlc(ci, Vector2(640, 122), "Searching for:  60", COL_HEAD, font, 17)
+	_dlc(ci, ns[50] + Vector2(0, 44), "60 > 50  →  RIGHT", COL_SEARCH_HI, font, 12)
+	_dlc(ci, ns[70] + Vector2(0, 44), "60 < 70  →  LEFT",  COL_SEARCH_HI, font, 12)
+	_dlc(ci, ns[60] + Vector2(0, 44), "60 = 60  →  FOUND!", COL_OK, font, 13)
+	_dlc(ci, Vector2(640, 108), "Searching for:  60", COL_HEAD, font, 17)
 
 func _draw_s1_gameplay(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Tap each node along the search path", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Tap each node along the search path", COL_HEAD, font, 16)
 	# Pulse ring on root to indicate start
 	ci.draw_arc(ns[50], 32.0, 0, TAU, 32, COL_SEARCH_HI, 2.5)
 	_dlc(ci, ns[50] + Vector2(0, 38), "Start here", COL_SEARCH_HI, font, 12)
@@ -1787,7 +2184,7 @@ func _draw_s1_gameplay(ci: CanvasItem, font: Font) -> void:
 func _draw_s2_intro(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Traversal = visit every node exactly once", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Traversal = visit every node exactly once", COL_HEAD, font, 16)
 	# Number each node in inorder sequence — ABOVE node so no clash with value text
 	var inorder: Array[int] = [20, 30, 40, 50, 60, 70, 80]
 	for i in range(inorder.size()):
@@ -1803,10 +2200,10 @@ func _draw_s2_rule(ci: CanvasItem, font: Font) -> void:
 	var bh1: float = (ns[20].y + 26.0) - by1
 	ci.draw_rect(Rect2(Vector2(bx1, by1), Vector2(bw1, bh1)), Color(0.3,1.0,0.5,0.07), true)
 	ci.draw_rect(Rect2(Vector2(bx1, by1), Vector2(bw1, bh1)), Color(0.3,1.0,0.5,0.5), false, 1.5)
-	_dlc(ci, Vector2(bx1 + bw1/2.0, ns[20].y + 34), "① Left first", COL_INORDER, font, 12)
+	_dlc(ci, Vector2(bx1 + bw1/2.0, ns[20].y + 48), "① Left first", COL_INORDER, font, 12)
 	# ② Root ring
 	ci.draw_arc(ns[50], 30.0, 0, TAU, 32, COL_INORDER, 2.5)
-	_dlc(ci, ns[50] + Vector2(0, -36), "② Root", COL_INORDER, font, 12)
+	_dlc(ci, ns[50] + Vector2(0, -44), "② Root", COL_INORDER, font, 12)
 	# ③ Right subtree box — around 70, 60, 80
 	var bx3: float = ns[60].x - 26.0
 	var bw3: float = (ns[80].x + 26.0) - bx3
@@ -1814,14 +2211,14 @@ func _draw_s2_rule(ci: CanvasItem, font: Font) -> void:
 	var bh3: float = (ns[60].y + 26.0) - by3
 	ci.draw_rect(Rect2(Vector2(bx3, by3), Vector2(bw3, bh3)), Color(0.3,1.0,0.5,0.07), true)
 	ci.draw_rect(Rect2(Vector2(bx3, by3), Vector2(bw3, bh3)), Color(0.3,1.0,0.5,0.5), false, 1.5)
-	_dlc(ci, Vector2(bx3 + bw3/2.0, ns[80].y + 34), "③ Right last", COL_INORDER, font, 12)
+	_dlc(ci, Vector2(bx3 + bw3/2.0, ns[80].y + 48), "③ Right last", COL_INORDER, font, 12)
 	# Formula
 	_dlc(ci, Vector2(640, 365), "Left  →  Root  →  Right   (recursive)", COL_INORDER, font, 15)
 
 func _draw_s2_sorted(ci: CanvasItem, font: Font) -> void:
 	# Small tree (top half) + sorted linear sequence (bottom half)
 	_draw_compact_tree(ci, font)
-	_dlc(ci, Vector2(640, 122), "Inorder output is always sorted!", COL_HEAD, font, 17)
+	_dlc(ci, Vector2(640, 108), "Inorder output is always sorted!", COL_HEAD, font, 17)
 	# Sorted node row — at y=350 with enough room above the divider
 	var sv: Array[int] = [20, 30, 40, 50, 60, 70, 80]
 	var oy := 355.0; var spacing := 92.0
@@ -1835,7 +2232,7 @@ func _draw_s2_sorted(ci: CanvasItem, font: Font) -> void:
 func _draw_s2_gameplay(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Tap every node in inorder sequence", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Tap every node in inorder sequence", COL_HEAD, font, 16)
 	var inorder: Array[int] = [20, 30, 40, 50, 60, 70, 80]
 	for i in range(inorder.size()):
 		ci.draw_arc(ns[inorder[i]], 26.0, 0, TAU, 32, COL_INORDER, 2.0)
@@ -1847,7 +2244,7 @@ func _draw_s2_gameplay(ci: CanvasItem, font: Font) -> void:
 func _draw_s3_preorder(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Preorder: Root → Left → Right", COL_HEAD, font, 17)
+	_dlc(ci, Vector2(640, 108), "Preorder: Root → Left → Right", COL_HEAD, font, 17)
 	var pre: Array[int] = [50, 30, 20, 40, 70, 60, 80]
 	for i in range(pre.size()):
 		ci.draw_arc(ns[pre[i]], 26.0, 0, TAU, 32, COL_PREORDER, 2.0)
@@ -1857,7 +2254,7 @@ func _draw_s3_preorder(ci: CanvasItem, font: Font) -> void:
 func _draw_s3_postorder(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Postorder: Left → Right → Root", COL_HEAD, font, 17)
+	_dlc(ci, Vector2(640, 108), "Postorder: Left → Right → Root", COL_HEAD, font, 17)
 	var post: Array[int] = [20, 40, 30, 60, 80, 70, 50]
 	for i in range(post.size()):
 		ci.draw_arc(ns[post[i]], 26.0, 0, TAU, 32, COL_POSTORDER, 2.0)
@@ -1908,7 +2305,7 @@ func _draw_s3_delete(ci: CanvasItem, font: Font) -> void:
 func _draw_s3_successor(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font, [], [20, 40])
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Inorder Successor = smallest in right subtree", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Inorder Successor = smallest in right subtree", COL_HEAD, font, 16)
 	# Highlight path: 50 → 70 → 60
 	_de(ci, ns[50], ns[70], Color(0.3,1.0,0.5), 3.5)
 	_de(ci, ns[70], ns[60], Color(0.3,1.0,0.5), 3.5)
@@ -1954,7 +2351,7 @@ func _draw_s4_degenerate(ci: CanvasItem, font: Font) -> void:
 func _draw_s4_bf(ci: CanvasItem, font: Font) -> void:
 	_draw_compact_tree(ci, font)
 	var ns := _ctn()
-	_dlc(ci, Vector2(640, 122), "Balance Factor = height(left) − height(right)", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Balance Factor = height(left) − height(right)", COL_HEAD, font, 16)
 	# BF labels — ABOVE each node so they don't clash with node value text
 	var bfs: Dictionary = {50:0, 30:0, 70:0, 20:0, 40:0, 60:0, 80:0}
 	for val: int in bfs:
@@ -2017,7 +2414,7 @@ func _draw_s4_gameplay(ci: CanvasItem, font: Font) -> void:
 	_dlc(ci, r   + Vector2(0, -32), "BF = −2  !", COL_AVL_BAD, font, 13)
 	_dlc(ci, rc  + Vector2(0, -32), "BF = −1",   Color(1.0,0.75,0.3), font, 12)
 	_dlc(ci, rrc + Vector2(0, -32), "BF = 0",    COL_AVL_OK, font, 12)
-	_dlc(ci, Vector2(640, 122), "Imbalanced after insert — choose a rotation:", COL_HEAD, font, 16)
+	_dlc(ci, Vector2(640, 108), "Imbalanced after insert — choose a rotation:", COL_HEAD, font, 16)
 	# 4 choice buttons
 	var btn_labels: Array[String] = [
 		"LL  (Right Rotate)", "RR  (Left Rotate)",

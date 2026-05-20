@@ -13,7 +13,7 @@
 
 extends Node
 
-var current_chapter: int = 16   # default to Tree Beginner
+var current_chapter: int = 1   # Queue Beginner
 
 const CHAPTER_SCENES: Dictionary = {
 	1:  "res://scenes/chapters/queue/QueueGame.tscn",
@@ -69,9 +69,6 @@ func go_to_main_menu() -> void:
 func go_to_world_map() -> void:
 	get_tree().change_scene_to_file("res://scenes/world_map/WorldMap.tscn")
 
-func go_char_select() -> void:
-	if ResourceLoader.exists("res://scenes/ui/CharacterSelect.tscn"):
-		get_tree().change_scene_to_file("res://scenes/ui/CharacterSelect.tscn")
 
 func go_progress_screen() -> void:
 	if ResourceLoader.exists("res://scenes/ui/ProgressScreen.tscn"):
@@ -129,6 +126,30 @@ func chapter_complete(chapter_id: int, score: int, stars: int) -> void:
 	if screen.has_method("show_result"):
 		screen.call("show_result", chapter_id, ch_data)
 
+# ── chapter_complete_with_stats ───────────────────────────────────────────────
+# Called by QueueGame (and other game scenes) with full stats dict so that
+# accuracy / correct count / grade all appear correctly on ChapterCompleteScreen.
+# stats dict keys: score, stars, grade, accuracy, correct, success
+func chapter_complete_with_stats(chapter_id: int, stats: Dictionary) -> void:
+	if has_node("/root/PlayerProfile"):
+		PlayerProfile.save_chapter_result(
+			chapter_id,
+			stats.get("score",    0),
+			stats.get("stars",    0),
+			stats.get("accuracy", 0.0)
+		)
+
+	var screen_scene := "res://scenes/ui/ChapterCompleteScreen.tscn"
+	if not ResourceLoader.exists(screen_scene):
+		go_to_world_map()
+		return
+
+	var screen: Node = load(screen_scene).instantiate()
+	get_tree().root.add_child(screen)
+
+	if screen.has_method("show_result"):
+		screen.call("show_result", chapter_id, stats)
+
 # ── Family helpers ─────────────────────────────────────────────────────────────
 func get_family(chapter_id: int) -> String:
 	for family in FAMILY_RANGES:
@@ -150,13 +171,12 @@ func family_end(chapter_id: int) -> int:
 func tier_in_family(chapter_id: int) -> int:
 	return chapter_id - family_start(chapter_id)
 
-# Next chapter within the SAME family only.
-# Returns -1 when family is finished → ChapterCompleteScreen shows Map only.
-# Cross-family navigation only through the world map.
+# Next chapter — allows cross-family routing (Ch5→Ch6, Ch10→Ch11, etc.)
+# Returns -1 only at the very last chapter (25).
 func next_chapter(chapter_id: int) -> int:
-	var r: Array = get_family_range(chapter_id)
-	if chapter_id < r[1]:
-		return chapter_id + 1
+	var next := chapter_id + 1
+	if next in CHAPTER_SCENES:
+		return next
 	return -1
 
 func queue_tier_to_chapter(tier: int) -> int:
