@@ -36,14 +36,12 @@ func evaluate(chapter_id: int) -> void:
 				"Difficulty lowered — keep practicing!")
 			_show_adjustment_toast("Difficulty: %s" % DifficultyManager.tier_name(),
 				Color(0.4, 0.8, 1.0))
-	elif _should_raise_difficulty(chapter_id):
-		var new_tier: int = min(4, old_tier + 1)
-		if new_tier != old_tier:
-			DifficultyManager.set_tier(new_tier)
-			difficulty_adjusted.emit(old_tier, new_tier,
-				"Difficulty raised — great performance!")
-			_show_adjustment_toast("Difficulty raised: %s!" % DifficultyManager.tier_name(),
-				Color(1.0, 0.85, 0.1))
+	# NOTE: We intentionally do NOT raise difficulty here.
+	# go_to_chapter() already sets DifficultyManager to the chapter's exact intended
+	# tier via CHAPTER_TIER. Raising it further would skip a tier — for example,
+	# loading chapter 14 (Hard, tier 3) would get bumped to tier 4 (Expert),
+	# which is exactly the Normal→Expert skip bug. Lowering is kept as a player-
+	# assist feature for struggling players.
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  DIFFICULTY LOGIC — reads from PlayerProfile.progress

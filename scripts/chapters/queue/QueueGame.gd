@@ -32,11 +32,12 @@ extends Node2D
 
 # ── Assets ────────────────────────────────────────────────────────────────────
 const PATH_FONT     := "res://assets/fonts/freepixel.ttf"
-const PATH_SFX_OK   := "res://assets/codemon/audio/sfx/success.ogg"
-const PATH_SFX_FAIL := "res://assets/codemon/audio/sfx/fail.ogg"
-const PATH_BGM      := "res://assets/medieval/audio/music/silverbook_loop.ogg"
+const PATH_SFX_OK      := "res://assets/codemon/audio/sfx/success.ogg"
+const PATH_SFX_FAIL    := "res://assets/audio/sfx/fail.ogg"
+const PATH_SFX_PICKUP  := "res://assets/audio/sfx/tile_pickup.ogg"
+const PATH_BGM      := "res://assets/medieval/audio/music/6. Silverbrook.ogg"
 
-const PATH_PORTAL   := "res://assets/art/fx/Purple_Portal_Sprite_Sheet.png"
+const PATH_PORTAL   := "res://assets/art/fx/cave_entrance_sheet.png"
 
 const PATH_BG_SKY      := "res://assets/art/bg/layer_5_sky.png"
 const PATH_BG_MOUNT    := "res://assets/art/bg/layer_4_mountains.png"
@@ -70,18 +71,17 @@ const SW           := 1280.0
 const SH           := 720.0
 
 const MAX_QUEUE    := 6
-const LANE_X0      := 220.0   # pushed right so portal has room on the left
-const LANE_Y_CEN   := 380.0   # slightly lower — more vertical breathing room
+const LANE_X0      := 220.0
+const LANE_Y_CEN   := 380.0
 const SLOT_W       := 128.0
 const SLOT_H       := 110.0
 const TOKEN_R      := 38.0
 
-const HOLD_X       := 1140.0  # holding column centre
-const HOLD_Y0      := 200.0   # start lower so badge doesn't clip top HUD
+const HOLD_X       := 1140.0
+const HOLD_Y0      := 200.0
 const HOLD_GAP     := 100.0
 const MAX_HOLD     := 5
 
-# Portal / submit zone sits left of the lane with plenty of space
 const SUB_X        := 96.0
 const SUB_Y        := 380.0
 const SUB_R        := 60.0
@@ -121,18 +121,52 @@ const TOKEN_COLS : Array = [
 	Color(0.50, 0.80, 0.80),
 ]
 
+# ── Themed label mode — one theme per tier, active on the LAST round ──────────
+const LABEL_THEMES : Array[Dictionary] = [
+	# Tier 0 Ch1 – ENQUEUE: Rainbow ROYGBIV
+	{ "name": "Rainbow Order",
+	  "hint": "Red → Orange → Yellow → Green",
+	  "labels": ["Red","Orange","Yellow","Green","Blue","Indigo","Violet"],
+	  "colors": [Color(0.92,0.12,0.12), Color(0.95,0.50,0.05),
+				 Color(0.93,0.88,0.06), Color(0.12,0.78,0.28),
+				 Color(0.18,0.42,0.92), Color(0.28,0.10,0.62), Color(0.68,0.22,0.88)] },
+	# Tier 1 Ch2 – DEQUEUE: Meal course order
+	{ "name": "Meal Course Order",
+	  "hint": "Soup → Salad → Main → Dessert → Coffee",
+	  "labels": ["Soup","Salad","Main","Dessert","Coffee"],
+	  "colors": [Color(0.85,0.55,0.25), Color(0.30,0.75,0.30),
+				 Color(0.82,0.28,0.22), Color(0.88,0.72,0.22), Color(0.50,0.30,0.18)] },
+	# Tier 2 Ch3 – PEEK: Planets by distance from Sun
+	{ "name": "Distance from Sun",
+	  "hint": "Mercury → Venus → Earth → Mars → Jupiter",
+	  "labels": ["Mercury","Venus","Earth","Mars","Jupiter"],
+	  "colors": [Color(0.68,0.62,0.55), Color(0.90,0.75,0.38),
+				 Color(0.25,0.55,0.92), Color(0.85,0.35,0.18), Color(0.78,0.62,0.48)] },
+	# Tier 3 Ch4 – BOUNDS: Priority levels
+	{ "name": "Priority Level",
+	  "hint": "Low → Med → High → Crit → Dang → Ultra",
+	  "labels": ["Low","Med","High","Crit","Dang","Ultra"],
+	  "colors": [Color(0.22,0.80,0.35), Color(0.88,0.88,0.18),
+				 Color(0.92,0.55,0.12), Color(0.90,0.22,0.22),
+				 Color(0.72,0.10,0.72), Color(0.12,0.92,0.95)] },
+	# Tier 4 Ch5 – SCHEDULER: Time of day
+	{ "name": "Time of Day",
+	  "hint": "Dawn → Morn → Noon → Aftn → Dusk → Night",
+	  "labels": ["Dawn","Morn","Noon","Aftn","Dusk","Night"],
+	  "colors": [Color(0.88,0.55,0.22), Color(0.96,0.88,0.52),
+				 Color(0.99,0.96,0.82), Color(0.92,0.70,0.32),
+				 Color(0.58,0.28,0.62), Color(0.12,0.12,0.42)] },
+]
+
 # ── Tier params ───────────────────────────────────────────────────────────────
-# NOTE:
-#   "free_place" = true  →  enqueue drag inserts into the clicked slot (Tier 0)
-#   "prefill"    = true  →  queue starts already filled in random order (Tier 1)
 const TIER_PARAMS : Array[Dictionary] = [
 	{ "mode":"enqueue",   "hidden":false, "bombs":false, "move_budget":0,
 	  "citizens":4, "rounds":3, "concept":"ENQUEUE",
-	  "free_place":true,  "prefill":false },   # Ch1 — place anywhere
+	  "free_place":true,  "prefill":false },
 
 	{ "mode":"dequeue",   "hidden":false, "bombs":false, "move_budget":0,
 	  "citizens":5, "rounds":4, "concept":"DEQUEUE",
-	  "free_place":false, "prefill":true },    # Ch2 — pre-filled, must dequeue to fix
+	  "free_place":false, "prefill":true },
 
 	{ "mode":"peek",      "hidden":true,  "bombs":false, "move_budget":0,
 	  "citizens":5, "rounds":4, "concept":"PEEK",
@@ -175,13 +209,9 @@ var _par_offsets : Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 const PAR_SPEEDS : Array[float] = [4.0, 8.0, 12.0, 18.0, 28.0, 42.0]
 var _par_tex     : Array        = []
 
-# _cq        = the live queue (index 0 = FRONT)
-# _holding   = tokens in the holding area
-# _cq_slots  = Array[int or -1], size MAX_QUEUE — for free-place mode (Tier 0)
-#              stores the uid of the token in each slot, or -1 if empty
 var _cq          : Array = []
 var _holding     : Array = []
-var _cq_slots    : Array = []   # only used when _p["free_place"] == true
+var _cq_slots    : Array = []
 
 var _uid         : int   = 0
 var _dyn_hold_gap: float = 120.0
@@ -192,21 +222,26 @@ var _round       : int   = 0
 var _correct     : int   = 0
 var _wrong       : int   = 0
 
+var _label_mode  : bool = false
+var _label_theme : int  = 0
+
+var _sfx_fail_player   : AudioStreamPlayer = null
+var _sfx_pickup_player : AudioStreamPlayer = null
+var _flash_rect        : ColorRect         = null
+
 var _dragging    : bool       = false
 var _drag_tok    : Dictionary = {}
-var _drag_src    : String     = ""   # "holding_N", "queue_front", "queue_slot_N"
+var _drag_src    : String     = ""
 var _drag_origin : Vector2    = Vector2.ZERO
 var _drag_pos    : Vector2    = Vector2.ZERO
 
-# ── Portal AnimatedSprite2D (created in _build_world_chrome) ─────────────────
 var _portal_sprite   : AnimatedSprite2D = null
 
-# Walk-to-portal sequence (triggered on correct submit)
-var _exit_walking    : bool      = false   # tokens are walking toward portal
-var _exit_tokens     : Array     = []      # copies of sorted tokens walking out
-var _exit_progress   : float     = 0.0    # 0.0 → 1.0 walk progress per token
-var _exit_done_count : int       = 0      # how many have entered the portal
-var _exit_callback   : Callable  = Callable()  # called when all tokens gone
+var _exit_walking    : bool      = false
+var _exit_tokens     : Array     = []
+var _exit_progress   : float     = 0.0
+var _exit_done_count : int       = 0
+var _exit_callback   : Callable  = Callable()
 
 var _intro_canvas : CanvasLayer = null
 var _intro_slides : Array       = []
@@ -233,8 +268,6 @@ func _ready() -> void:
 
 	_preload_textures()
 
-	# Portal sprite is created as AnimatedSprite2D in _build_world_chrome
-
 	_chapter_id = 1
 	if has_node("/root/GameRouter"):
 		_chapter_id = clamp(GameRouter.current_chapter, 1, 5)
@@ -247,6 +280,7 @@ func _ready() -> void:
 	_build_slides()
 	_setup_hud()
 	_build_world_chrome()
+	_setup_audio()
 
 	if has_node("/root/AudioManager") and AudioManager.has_method("play_bgm"):
 		AudioManager.play_bgm(PATH_BGM)
@@ -335,6 +369,17 @@ func _setup_hud() -> void:
 	_concept_lbl.text  = "Sort ASCENDING:  smallest at FRONT [0]  →  largest at BACK  |  Place all tokens then SUBMIT"
 	_refresh_lives()
 
+	var hud_cl : CanvasLayer = get_node_or_null("HUD")
+	if hud_cl == null: return
+	var btn := Button.new()
+	btn.name     = "SubmitButton"
+	btn.text     = "SUBMIT  [Enter]"
+	btn.position = Vector2(SUB_X - 90.0, SUB_Y + 115.0)
+	btn.size     = Vector2(180.0, 40.0)
+	_style_button(btn, true)
+	btn.pressed.connect(_do_submit)
+	hud_cl.add_child(btn)
+
 func _hint_text() -> String:
 	match _p["mode"]:
 		"enqueue":
@@ -370,9 +415,6 @@ func _build_world_chrome() -> void:
 	chrome.pixel_font = _pixel_font
 	cl.add_child(chrome)
 
-	# ── Portal AnimatedSprite2D ──────────────────────────────────────────────
-	# Use a dedicated CanvasLayer higher than chrome (layer 5) so the portal
-	# always renders on top of the submit-zone glow ring.
 	var portal_cl := CanvasLayer.new()
 	portal_cl.layer = 8
 	add_child(portal_cl)
@@ -385,15 +427,14 @@ func _build_world_chrome() -> void:
 	var sprite_frames := SpriteFrames.new()
 	sprite_frames.add_animation("idle")
 	sprite_frames.set_animation_loop("idle", true)
-	sprite_frames.set_animation_speed("idle", 10.0)
+	sprite_frames.set_animation_speed("idle", 8.0)
 
-	# Try to load the portal sheet from several locations
 	var portal_tex : Texture2D = null
 	var portal_paths : Array[String] = [
-		"res://assets/art/fx/Purple_Portal_Sprite_Sheet.png",
-		"res://assets/art/Purple_Portal_Sprite_Sheet.png",
-		"res://assets/Purple_Portal_Sprite_Sheet.png",
-		"res://Purple_Portal_Sprite_Sheet.png",
+		"res://assets/art/fx/cave_entrance_sheet.png",
+		"res://assets/art/cave_entrance_sheet.png",
+		"res://assets/cave_entrance_sheet.png",
+		"res://cave_entrance_sheet.png",
 		PATH_PORTAL,
 	]
 	for pp in portal_paths:
@@ -402,28 +443,21 @@ func _build_world_chrome() -> void:
 			break
 
 	if portal_tex != null:
-		# Sheet is 512×192: 8 cols × 3 rows, each frame 64×64
-		# Row 0 (y=0) = main idle/open animation loop
 		for frame_col in range(8):
 			var atlas := AtlasTexture.new()
 			atlas.atlas       = portal_tex
-			atlas.region      = Rect2(frame_col * 64, 0, 64, 64)
+			atlas.region      = Rect2(frame_col * 128, 0, 128, 128)
 			atlas.filter_clip = true
 			sprite_frames.add_frame("idle", atlas)
-		# Scale so 64px frame displays at ~192px (3× pixel art)
-		portal.scale = Vector2(3.0, 3.0)
+		portal.scale = Vector2(2.5, 2.5)
+		portal.flip_h = true
 	else:
-		# Fallback: single transparent placeholder; glow ring still shows
-		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-		img.fill(Color(0.5, 0.1, 0.8, 0.0))
+		var img := Image.create(128, 128, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0.5, 0.25, 0.1, 0.0))
 		sprite_frames.add_frame("idle", ImageTexture.create_from_image(img))
 
 	portal.sprite_frames = sprite_frames
 	portal.animation     = "idle"
-	# Additive blend: black pixels vanish, only the bright purple glow renders
-	var portal_mat := CanvasItemMaterial.new()
-	portal_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	portal.material = portal_mat
 	portal.play()
 	_portal_sprite = portal
 	portal_cl.add_child(portal)
@@ -442,7 +476,6 @@ class _ChromeDrawer extends Node2D:
 		_draw_submit_zone()
 		_draw_tokens()
 		_draw_drag_ghost_chrome()
-		# Walk-to-portal exit sequence drawn on top
 		if gd._exit_walking:
 			gd._draw_exit_walk(self)
 
@@ -463,7 +496,6 @@ class _ChromeDrawer extends Node2D:
 
 		var fnt := _get_font()
 
-		# In free-place mode highlight empty slots so the player knows they can drop there
 		if gd._p.get("free_place", false) and gd._cq_slots.size() == gd.MAX_QUEUE:
 			for i in range(gd.MAX_QUEUE):
 				if gd._cq_slots[i] == -1:
@@ -479,7 +511,6 @@ class _ChromeDrawer extends Node2D:
 			draw_string(fnt, Vector2(cx - ts.x * 0.5, ty + th + 16),
 				lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, col)
 
-		# FRONT / BACK labels
 		draw_string(fnt, Vector2(tx + 6, ty + th - 6),
 			"◄ FRONT", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, gd.COL_GREEN)
 		draw_string(fnt, Vector2(tx + tw - 68, ty + th - 6),
@@ -490,7 +521,6 @@ class _ChromeDrawer extends Node2D:
 		draw_string(fnt, Vector2(tx + tw * 0.5 - ts2.x * 0.5, ty - 16),
 			ttl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, gd.COL_BLUE)
 
-		# In normal mode highlight slot [0] as the only draggable position
 		if not gd._p.get("free_place", false) and not gd._cq.is_empty():
 			var fx : float = gd.LANE_X0
 			var slot_col := Color(0.22, 0.80, 0.42, 0.12)
@@ -499,7 +529,6 @@ class _ChromeDrawer extends Node2D:
 				Color(0.22, 0.80, 0.42, 0.45), false, 2.0)
 
 	func _draw_holding_area() -> void:
-		# Holding panel sized to always contain sprites (72px wide + padding)
 		var hw : float = 120.0
 		var hx : float = gd.HOLD_X - hw * 0.5
 		var hy : float = gd.HOLD_Y0 - 50.0
@@ -514,23 +543,10 @@ class _ChromeDrawer extends Node2D:
 			ttl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, gd.COL_AMBER)
 
 	func _draw_submit_zone() -> void:
-		var fnt := _get_font()
-		var pos := Vector2(gd.SUB_X, gd.SUB_Y)
-		# Pulsing glow ring drawn under the AnimatedSprite2D portal node
-		var pulse : float = sin(Time.get_ticks_msec() * 0.004) * 0.5 + 0.5
-		draw_circle(pos, 106.0, Color(0.40, 0.05, 0.70, 0.10 + pulse * 0.08))
-		draw_arc(pos,   102.0, 0, TAU, 64,
-			Color(0.75, 0.35, 1.0, 0.40 + pulse * 0.30), 4.0)
-		# SUBMIT label below portal
-		var lbl := "SUBMIT"
-		var ts  := fnt.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
-		draw_string(fnt, Vector2(pos.x - ts.x * 0.5, pos.y + 108.0),
-			lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, gd.COL_GREEN)
+		pass
 
-	# ── Token drawing ─────────────────────────────────────────────────────────
 	func _draw_tokens() -> void:
 		if gd._p.get("free_place", false) and gd._cq_slots.size() == gd.MAX_QUEUE:
-			# Free-place mode: draw from _cq_slots (sparse array)
 			for i in range(gd.MAX_QUEUE):
 				var uid_in_slot : int = gd._cq_slots[i]
 				if uid_in_slot == -1: continue
@@ -540,7 +556,6 @@ class _ChromeDrawer extends Node2D:
 				var qp : Vector2 = gd._queue_pos(i)
 				_draw_token(tok, qp.x, qp.y, i == 0)
 		else:
-			# Normal queue mode
 			for i in range(gd._cq.size()):
 				var tok : Dictionary = gd._cq[i]
 				if gd._dragging and gd._drag_tok.get("uid", -1) == tok["uid"]: continue
@@ -554,25 +569,18 @@ class _ChromeDrawer extends Node2D:
 			_draw_token(tok, hp.x, hp.y, false)
 
 	func _draw_token(tok: Dictionary, cx: float, cy: float, is_front: bool) -> void:
-		# cx  = horizontal centre of slot
-		# cy  = TOP of the container box (LANE_Y_CEN - SLOT_H/2 for queue,
-		#        row_centre - block_half for holding)
 		var val    : int   = tok["value"]
 		var hidden : bool  = tok.get("hidden", false)
 		var ss     : int   = gd.SPRITE_SCALE
-		var sw     : float = gd.SPRITE_W * ss   # 72 px
-		var sh     : float = gd.SPRITE_H * ss   # 72 px
+		var sw     : float = gd.SPRITE_W * ss
+		var sh     : float = gd.SPRITE_H * ss
 
-		# Visually centre the sprite within the slot height
 		var badge_h  : float = 20.0
 		var gap      : float = 4.0
-		var total_h  : float = badge_h + gap + sh   # 96 px block
-		# Centre the whole block vertically within SLOT_H
+		var total_h  : float = badge_h + gap + sh
 		var pad      : float = (gd.SLOT_H - total_h) * 0.5
-		# sprite_cy = vertical centre of the sprite
 		var sprite_cy : float = cy + pad + badge_h + gap + sh * 0.5
 
-		# ── sprite ───────────────────────────────────────────────────────────────
 		if not hidden:
 			var in_cq    : bool   = gd._cq.has(tok)
 			var in_slots : bool   = gd._cq_slots.size() > 0 and gd._cq_slots.has(tok.get("uid", -2))
@@ -581,12 +589,10 @@ class _ChromeDrawer extends Node2D:
 			var char_key  : String = gd._char_key(val)
 			var tex       : Texture2D = gd._get_tex(char_key, anim_type, gd._anim_frame)
 			if tex != null:
-				# Always draw with a positive Rect2 centred on (cx, sprite_cy)
 				var half_w : float = sw * 0.5
 				var half_h : float = sh * 0.5
 				var draw_rect2 := Rect2(Vector2(cx - half_w, sprite_cy - half_h), Vector2(sw, sh))
 				if in_queue:
-					# Flip horizontally via transform so sprite faces left (walking toward front)
 					draw_set_transform(Vector2(cx * 2.0, 0.0), 0.0, Vector2(-1.0, 1.0))
 					draw_texture_rect(tex, draw_rect2, false)
 					draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 1.0))
@@ -601,28 +607,38 @@ class _ChromeDrawer extends Node2D:
 			draw_arc(Vector2(cx, sprite_cy), gd.TOKEN_R, 0, TAU, 48,
 				gd.COL_GRAY.darkened(0.35), 2.0)
 
-		# ── value badge — above sprite, clear of the character head ─────────────
-		var badge_w : float = 36.0
-		# Badge top is cy + pad (top of the block), badge is badge_h tall
+		var tok_label_mode : bool = tok.get("label_mode", false)
+		var badge_w : float = 80.0 if tok_label_mode else 36.0
 		var by2 : float = cy + pad
 		var bx  : float = cx - badge_w * 0.5
 		draw_rect(Rect2(Vector2(bx - 1, by2 - 1), Vector2(badge_w + 2, badge_h + 2)),
 			Color(0, 0, 0, 0.92), true)
 		draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)), gd.COL_DARK, true)
 		var badge_col : Color = gd.COL_GOLD if not hidden else gd.COL_GRAY
+		if tok_label_mode and not hidden:
+			var ti     : int   = clamp(tok.get("label_theme", 0), 0, gd.LABEL_THEMES.size()-1)
+			var tcols  : Array = gd.LABEL_THEMES[ti]["colors"]
+			badge_col = Color(tcols[clamp(val - 1, 0, tcols.size()-1)])
 		draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)), badge_col, false, 2.0)
-		var txt := "?" if hidden else str(val)
+		var txt : String = "?"
+		if not hidden:
+			if tok_label_mode:
+				var ti2  : int   = clamp(tok.get("label_theme", 0), 0, gd.LABEL_THEMES.size()-1)
+				var lbls : Array = gd.LABEL_THEMES[ti2]["labels"]
+				txt = str(lbls[clamp(val - 1, 0, lbls.size()-1)])
+			else:
+				txt = str(val)
 		var fnt := _get_font()
-		var ts  := fnt.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14)
+		var fnt_sz : int = 10 if tok_label_mode else 14
+		var ts  := fnt.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fnt_sz)
 		draw_string(fnt, Vector2(cx - ts.x * 0.5, by2 + badge_h - 3.0),
-			txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, badge_col)
+			txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fnt_sz, badge_col)
 
 	func _draw_drag_ghost_chrome() -> void:
 		if not gd._dragging or gd._drag_tok.is_empty(): return
 		var tok    : Dictionary = gd._drag_tok
 		var val    : int    = tok["value"]
 		var hidden : bool   = tok.get("hidden", false)
-		# pos = cursor position = sprite centre
 		var pos    : Vector2 = gd._drag_pos
 		var ss     : int    = gd.SPRITE_SCALE
 		var hw     : float  = gd.SPRITE_W * ss * 0.5
@@ -632,7 +648,6 @@ class _ChromeDrawer extends Node2D:
 			var char_key : String = gd._char_key(val)
 			var tex : Texture2D = gd._get_tex(char_key, "idle", gd._anim_frame)
 			if tex != null:
-				# Perfectly centred on cursor using positive Rect2
 				var draw_rect2 := Rect2(Vector2(pos.x - hw, pos.y - hh),
 					Vector2(gd.SPRITE_W * ss, gd.SPRITE_H * ss))
 				draw_texture_rect(tex, draw_rect2, false, Color(1, 1, 1, 0.85))
@@ -645,20 +660,33 @@ class _ChromeDrawer extends Node2D:
 			draw_arc(pos, gd.TOKEN_R, 0, TAU, 48, gd.COL_GRAY, 2.5)
 			hh = gd.TOKEN_R
 
-		# Badge above the ghost — clear of the sprite top
-		var badge_w : float = 36.0; var badge_h : float = 20.0
+		var ghost_label_mode : bool = tok.get("label_mode", false)
+		var badge_w : float = 80.0 if ghost_label_mode else 36.0
+		var badge_h : float = 20.0
 		var bx  : float = pos.x - badge_w * 0.5
 		var by2 : float = pos.y - hh - badge_h - 6.0
 		draw_rect(Rect2(Vector2(bx - 1, by2 - 1), Vector2(badge_w + 2, badge_h + 2)),
 			Color(0, 0, 0, 0.9), true)
 		draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)), gd.COL_DARK, true)
 		var badge_col : Color = gd.COL_GOLD if not hidden else gd.COL_GRAY
+		if ghost_label_mode and not hidden:
+			var gti   : int   = clamp(tok.get("label_theme", 0), 0, gd.LABEL_THEMES.size()-1)
+			var gcols : Array = gd.LABEL_THEMES[gti]["colors"]
+			badge_col = Color(gcols[clamp(val-1, 0, gcols.size()-1)])
 		draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)), badge_col, false, 2.0)
-		var txt := "?" if hidden else str(val)
+		var txt : String = "?"
+		if not hidden:
+			if ghost_label_mode:
+				var gti2  : int   = clamp(tok.get("label_theme", 0), 0, gd.LABEL_THEMES.size()-1)
+				var glbls : Array = gd.LABEL_THEMES[gti2]["labels"]
+				txt = str(glbls[clamp(val-1, 0, glbls.size()-1)])
+			else:
+				txt = str(val)
 		var fnt := _get_font()
-		var ts  := fnt.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 15)
+		var fnt_sz : int = 10 if ghost_label_mode else 15
+		var ts  := fnt.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fnt_sz)
 		draw_string(fnt, Vector2(pos.x - ts.x * 0.5, by2 + badge_h - 3.0),
-			txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, badge_col)
+			txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fnt_sz, badge_col)
 
 # =============================================================================
 #  INTRO OVERLAY
@@ -817,7 +845,6 @@ func _show_intro() -> void:
 	ctr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_intro_canvas.add_child(ctr)
 
-	# Title — centred in a dedicated 54px strip at the very top of the scroll panel
 	var ttl := Label.new(); ttl.name = "Title"
 	if _pixel_font: ttl.add_theme_font_override("font", _pixel_font)
 	ttl.add_theme_font_size_override("font_size", 22)
@@ -829,15 +856,12 @@ func _show_intro() -> void:
 	ttl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_intro_canvas.add_child(ttl)
 
-	# Thin gold line under title — fixed at scroll_y + 58
 	var und := ColorRect.new(); und.name = "Underline"
 	und.color    = COL_SCROLL_BD
 	und.size     = Vector2(scroll_w - 80, 1)
 	und.position = Vector2(scroll_x + 40, scroll_y + 58)
 	_intro_canvas.add_child(und)
 
-	# Diagram area occupies scroll_y+60 → body_top-6   (drawn via _DiagramDrawer)
-	# Body text lives in a fixed 170px strip at the bottom of the scroll panel
 	var body_top : float = scroll_y + scroll_h - 178.0
 	var div := ColorRect.new(); div.name = "Divider"
 	div.color    = Color(0.40, 0.30, 0.10, 0.60)
@@ -845,7 +869,6 @@ func _show_intro() -> void:
 	div.position = Vector2(scroll_x + 30, body_top - 6)
 	_intro_canvas.add_child(div)
 
-	# Body text — fixed zone, font 13, autowrap, left-aligned with padding
 	var body := Label.new(); body.name = "Body"
 	if _pixel_font: body.add_theme_font_override("font", _pixel_font)
 	body.add_theme_font_size_override("font_size", 13)
@@ -882,7 +905,12 @@ func _refresh_intro() -> void:
 	var total : int        = _intro_slides.size()
 	(_intro_canvas.get_node("Counter") as Label).text = "%d / %d" % [_intro_idx+1, total]
 	(_intro_canvas.get_node("Title")   as Label).text = s["title"]
-	(_intro_canvas.get_node("Body")    as Label).text = s["body"]
+	var has_draw : bool = s.has("draw")
+	var body_lbl := _intro_canvas.get_node("Body")    as Label
+	var div_node := _intro_canvas.get_node("Divider") as ColorRect
+	body_lbl.text    = s.get("body", "")
+	body_lbl.visible = not has_draw
+	div_node.visible = not has_draw
 	var back_btn := _intro_canvas.get_node("Back") as Button
 	back_btn.visible = _intro_idx > 0
 	var nxt_btn := _intro_canvas.get_node("Next") as Button
@@ -896,9 +924,7 @@ func _refresh_intro() -> void:
 	if old: old.name = "_dead"; old.free()
 	var diag        := _DiagramDrawer.new(); diag.name = "Diagram"
 	diag.pixel_font = _pixel_font
-	# Offset so diagram draws inside the scroll panel, below the title (y≥60 → safe)
-	# Diagram draw-functions use coordinates relative to this offset origin
-	diag.position   = Vector2(0.0, 0.0)   # draw fns already use absolute slide coords
+	diag.position   = Vector2(0.0, 80.0 if has_draw else 0.0)
 	if s.has("draw"): diag.draw_fn = s["draw"]
 	_intro_canvas.add_child(diag)
 
@@ -929,11 +955,9 @@ func _tok_col(v: int) -> Color: return TOKEN_COLS[clamp(v-1, 0, 8)]
 
 func _draw_token_at(ci: CanvasItem, cx: float, cy: float, val: int,
 		hidden: bool = false, highlight: bool = false, r: float = 34.0) -> void:
-	# cy = visual centre of the sprite. Badge drawn above with a clear gap.
 	if not hidden:
 		var tex : Texture2D = _get_tex(_char_key(val), "idle", _anim_frame)
 		if tex != null:
-			# Draw sprite centred on (cx, cy)
 			ci.draw_texture_rect(tex, Rect2(Vector2(cx - r, cy - r), Vector2(r * 2.0, r * 2.0)), false)
 		else:
 			var col := _tok_col(val)
@@ -943,10 +967,9 @@ func _draw_token_at(ci: CanvasItem, cx: float, cy: float, val: int,
 		ci.draw_circle(Vector2(cx, cy), r, COL_GRAY)
 		ci.draw_arc(Vector2(cx, cy), r, 0, TAU, 48, COL_GRAY.darkened(0.35), 2.0)
 	if highlight: ci.draw_arc(Vector2(cx, cy), r + 4, 0, TAU, 48, COL_GREEN, 3.0)
-	# Badge sits above the sprite top with a 4px gap
 	var badge_w := 28.0; var badge_h := 16.0
 	var bx  := cx - badge_w * 0.5
-	var by2 := cy - r - 4.0 - badge_h   # above sprite top
+	var by2 := cy - r - 4.0 - badge_h
 	ci.draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)), COL_DARK, true)
 	ci.draw_rect(Rect2(Vector2(bx, by2), Vector2(badge_w, badge_h)),
 		COL_GOLD if not hidden else COL_GRAY, false, 1.5)
@@ -958,13 +981,12 @@ func _draw_token_at(ci: CanvasItem, cx: float, cy: float, val: int,
 
 func _draw_queue_row(ci: CanvasItem, vals: Array, x0: float, cy: float,
 		sw: float = 110.0, hidden: bool = false) -> void:
-	# Centre the row horizontally if x0 == 0, otherwise use provided x0
 	var n := vals.size()
 	var total_w : float = n * sw + 8.0
 	var actual_x0 : float = x0
 	if x0 <= 0.0:
 		actual_x0 = (SW - total_w) * 0.5 + 4.0
-	var r : float = sw * 0.30   # slightly smaller so sprite fits inside slot
+	var r : float = sw * 0.30
 	var row_top  : float = cy - sw * 0.42
 	var row_bot  : float = cy + sw * 0.42
 	ci.draw_rect(Rect2(Vector2(actual_x0 - 4, row_top), Vector2(total_w, row_bot - row_top)),
@@ -978,14 +1000,11 @@ func _draw_queue_row(ci: CanvasItem, vals: Array, x0: float, cy: float,
 	var fnt := _get_draw_font()
 	for i in range(n):
 		var cx := actual_x0 + i * sw + sw * 0.5
-		# Draw token — badge drawn ABOVE sprite by _draw_token_at, so sprite at cy
 		_draw_token_at(ci, cx, cy, vals[i], hidden, i == 0, r)
-		# Index label below the row border with a safe gap
 		var lbl := "[%d]" % i
 		var ts  := fnt.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
 		ci.draw_string(fnt, Vector2(cx - ts.x * 0.5, row_bot + 16),
 			lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, COL_GREEN if i == 0 else COL_GRAY)
-	# FRONT / BACK labels at row vertical centre
 	ci.draw_string(fnt, Vector2(actual_x0 - 78, cy + 6),
 		"FRONT◄", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COL_GREEN)
 	ci.draw_string(fnt, Vector2(actual_x0 + total_w + 4, cy + 6),
@@ -1010,18 +1029,16 @@ func _dbox(ci: CanvasItem, x0: float, y0: float, x1: float, y1: float,
 	ci.draw_rect(Rect2(Vector2(x0,y0), Vector2(x1-x0,y1-y0)), outline, false, 1.5)
 
 func _slide_queue_intro(ci: CanvasItem, _font: Font) -> void:
-	# Diagram area: y ≈ 112 → 430  (title label occupies y=64–112, never draw there)
 	_dlc(ci, 640, 118, "WRONG  (unsorted)", COL_RED, 13)
-	_draw_queue_row(ci, [3,1,4,2], 190, 196, 100)   # cy=196, row spans ~196±45
+	_draw_queue_row(ci, [3,1,4,2], 190, 196, 100)
 	_dlc(ci, 640, 258, "sort with  enqueue / dequeue", COL_GOLD, 13)
 	_dlc(ci, 640, 276, "▼", COL_GOLD, 14)
 	_dlc(ci, 640, 296, "CORRECT  (ascending)", COL_GREEN, 13)
-	_draw_queue_row(ci, [1,2,3,4], 190, 378, 100)   # cy=378, row spans ~378±45
+	_draw_queue_row(ci, [1,2,3,4], 190, 378, 100)
 
 func _slide_enqueue(ci: CanvasItem, _font: Font) -> void:
 	_dlc(ci, 640, 112, "Free Placement — put tokens anywhere!", COL_GOLD, 18)
 	_dlc(ci, 640, 140, "Drag each token into any empty queue slot", COL_PARCH, 13)
-	# Show 4 empty slots with arrows pointing into them from holding
 	var sw2 := 130.0; var x0 := 148.0; var cy := 280.0
 	_dbox(ci, x0-4, cy-55, x0+4*sw2+4, cy+55, Color(0.08,0.07,0.02), COL_SCROLL_BD)
 	for i in range(4):
@@ -1186,25 +1203,17 @@ func _slide_efficient(ci: CanvasItem, _font: Font) -> void:
 		_dl(ci, 636, 185.0+i*38, mg[i][0], mg[i][2] as Color, 14)
 		_dl(ci, 636, 201.0+i*38, mg[i][1], COL_PARCH, 11)
 
-# ── NEW slides added for each chapter ─────────────────────────────────────────
-
 func _slide_submit_portal(ci: CanvasItem, _font: Font) -> void:
-	# ENQUEUE slide 4: explains how the portal / submit mechanic works
 	_dlc(ci, 640, 112, "The Submit Portal — check your sort!", COL_GOLD, 18)
-	# Sorted queue diagram
 	_draw_queue_row(ci, [1,2,3,4], 230, 230, 110)
-	# Portal circle on the left
 	var px := 96.0; var py := 230.0
 	ci.draw_circle(Vector2(px, py), 50, Color(0.30, 0.05, 0.55, 0.75))
 	ci.draw_arc(Vector2(px, py), 50, 0, TAU, 64, Color(0.75, 0.35, 1.0, 0.85), 3.5)
 	ci.draw_arc(Vector2(px, py), 56, 0, TAU, 64, Color(0.55, 0.10, 0.80, 0.30), 8.0)
 	_dlc(ci, px, py + 68, "SUBMIT", COL_GREEN, 14)
-	# Arrow from queue [0] toward portal
 	_darrow(ci, 230, py, px + 56, COL_GREEN)
 	_dlc(ci, 163, py - 28, "Drag [0] →", COL_GREEN, 12)
-	# Divider
 	ci.draw_line(Vector2(60, 308), Vector2(1200, 308), Color(0.40, 0.30, 0.10, 0.50), 1.5)
-	# Result boxes
 	_dlc(ci, 640, 326, "What happens next?", COL_PARCH, 13)
 	_dbox(ci, 60, 345, 590, 415, Color(0.03, 0.08, 0.02, 0.85), COL_GREEN)
 	_dlc(ci, 325, 362, "✅  Sorted correctly", COL_GREEN, 15)
@@ -1214,7 +1223,6 @@ func _slide_submit_portal(ci: CanvasItem, _font: Font) -> void:
 	_dl(ci, 636, 386, "Penalty deducted — rearrange and retry!", COL_PARCH, 13)
 
 func _slide_controls_dequeue(ci: CanvasItem, _font: Font) -> void:
-	# DEQUEUE slide 4: quick-reference card for all controls
 	_dlc(ci, 640, 112, "Controls Quick Reference", COL_GOLD, 20)
 	var rows := [
 		["dequeue()", "Drag slot [0]  →  Holding area",    "removes FRONT token",    COL_RED],
@@ -1230,7 +1238,6 @@ func _slide_controls_dequeue(ci: CanvasItem, _font: Font) -> void:
 		_dl(ci, 76,  ry + 34, rows[i][2], COL_GRAY,  12)
 
 func _slide_task_peek(ci: CanvasItem, _font: Font) -> void:
-	# PEEK slide 3: "Your Task" — structured step list
 	_dlc(ci, 640, 112, "Your Task — Peek, Plan, then Sort!", COL_GOLD, 22)
 	var steps := [
 		["① Click every token",         "= peek()   reveals hidden value  (FREE — no limit!)", COL_GOLD],
@@ -1243,11 +1250,9 @@ func _slide_task_peek(ci: CanvasItem, _font: Font) -> void:
 		_dbox(ci, 60, ry, 1200, ry + 62, Color(0.06, 0.05, 0.02), COL_SCROLL_BD)
 		_dl(ci, 76, ry + 10, steps[i][0], steps[i][2] as Color, 15)
 		_dl(ci, 76, ry + 34, steps[i][1], COL_PARCH, 13)
-	# Hidden token row hint
 	_dlc(ci, 640, 445, "Remember: values start hidden — peek FIRST!", COL_AMBER, 13)
 
 func _slide_task_bounds(ci: CanvasItem, _font: Font) -> void:
-	# BOUNDS slide 3: "Your Task" summary
 	_dlc(ci, 640, 112, "Your Task — Guard the Boundaries!", COL_GOLD, 22)
 	var steps := [
 		["① Spot the 💣 bomb",            "= drag it to the REJECT ZONE (bottom-left!) immediately",  COL_RED],
@@ -1260,12 +1265,10 @@ func _slide_task_bounds(ci: CanvasItem, _font: Font) -> void:
 		_dbox(ci, 60, ry, 1200, ry + 62, Color(0.06, 0.05, 0.02), COL_SCROLL_BD)
 		_dl(ci, 76, ry + 10, steps[i][0], steps[i][2] as Color, 15)
 		_dl(ci, 76, ry + 34, steps[i][1], COL_PARCH, 13)
-	# Reject zone reminder
 	_dbox(ci, 60, 432, 560, 430, Color(0.14, 0.03, 0.03, 0.85), COL_RED)
 	_dlc(ci, 310, 430, "REJECT ZONE  (bottom-left)", COL_RED, 13)
 
 func _slide_task_scheduler(ci: CanvasItem, _font: Font) -> void:
-	# SCHEDULER slide 3: "Your Task" final summary
 	_dlc(ci, 640, 112, "Your Task — Minimum Moves Wins!", COL_GOLD, 22)
 	var steps := [
 		["① Peek ALL tokens",           "= click each one — FREE, no move cost — do this first!", COL_GOLD],
@@ -1278,7 +1281,6 @@ func _slide_task_scheduler(ci: CanvasItem, _font: Font) -> void:
 		_dbox(ci, 60, ry, 1200, ry + 62, Color(0.06, 0.05, 0.02), COL_SCROLL_BD)
 		_dl(ci, 76, ry + 10, steps[i][0], steps[i][2] as Color, 15)
 		_dl(ci, 76, ry + 34, steps[i][1], COL_PARCH, 13)
-	# Budget warning
 	_dbox(ci, 60, 432, 1200, 462, Color(0.12, 0.06, 0.02, 0.85), COL_AMBER)
 	_dlc(ci, 630, 445, "⚠  One wrong enqueue = +2 extra moves to correct it!", COL_AMBER, 13)
 
@@ -1295,62 +1297,130 @@ func _start_round() -> void:
 	for ch in _world.get_children():
 		if ch.name != "Chrome": ch.queue_free()
 
-	var count : int   = _p["citizens"]
-	var vals  : Array = range(1, count + 1)
-	vals.shuffle()
+	var count : int = _p["citizens"]
 
-	if _p.get("prefill", false):
+	_label_theme = clamp(_tier, 0, LABEL_THEMES.size() - 1)
+	var is_last_round : bool = (_round >= _p["rounds"])
+
+	var vals : Array
+
+	if _p.get("free_place", false):
+		# ── ENQUEUE / free-place mode (Tier 0 / Ch 1) ────────────────────────
+		_label_mode = is_last_round
+		if _round == 1:
+			# Tutorial round: sequential 1-2-3-4, no shuffle
+			vals = Array(range(1, count + 1))
+		else:
+			if _label_mode:
+				# Last round: label theme requires values 1..count so they map
+				# cleanly onto LABEL_THEMES entries. Shuffle for random placement.
+				vals = Array(range(1, count + 1))
+				vals.shuffle()
+			else:
+				# Round 2: pick `count` random distinct values from 1–9
+				var pool : Array = Array(range(1, 10))
+				pool.shuffle()
+				vals = pool.slice(0, count)
+
+	elif _p.get("prefill", false):
 		# ── DEQUEUE mode: pre-fill the queue in shuffled (wrong) order ────────
-		# Keep shuffling until the order is guaranteed unsorted
+		_label_mode = is_last_round
+		vals = Array(range(1, count + 1))
+		vals.shuffle()
 		while _is_array_sorted(vals):
 			vals.shuffle()
 
-		_cq_slots = []   # not used in normal queue mode
+		_cq_slots = []
 		for i in range(count):
 			_uid += 1
 			_cq.append({
-				"uid":    _uid,
-				"value":  vals[i] as int,
-				"hidden": _p["hidden"],
-				"bomb":   false,
-			})
-		# holding stays empty — nothing to enqueue from; player dequeues first
-
-	elif _p.get("free_place", false):
-		# ── ENQUEUE mode: sparse slot array, tokens come from holding ─────────
-		_cq_slots = []
-		_cq_slots.resize(MAX_QUEUE)
-		_cq_slots.fill(-1)
-
-		var avail_h : float = SH - HOLD_Y0 - 80.0
-		var dyn_gap : float = min(HOLD_GAP, avail_h / max(count-1, 1)) if count > 1 else HOLD_GAP
-		_dyn_hold_gap = dyn_gap
-
-		for i in range(count):
-			_uid += 1
-			_holding.append({
-				"uid":    _uid,
-				"value":  vals[i] as int,
-				"hidden": _p["hidden"],
-				"bomb":   false,
+				"uid":         _uid,
+				"value":       vals[i] as int,
+				"hidden":      _p["hidden"],
+				"bomb":        false,
+				"label_mode":  _label_mode,
+				"label_theme": _label_theme,
 			})
 
 	else:
 		# ── Normal mode (peek / bounds / scheduler): tokens in holding ────────
-		var avail_h : float = SH - HOLD_Y0 - 80.0
-		var dyn_gap : float = min(HOLD_GAP, avail_h / max(count-1, 1)) if count > 1 else HOLD_GAP
+		_label_mode = is_last_round
+		vals = Array(range(1, count + 1))
+		vals.shuffle()
+
+	# ── Build holding tokens for free-place and normal modes ─────────────────
+	if _p.get("free_place", false):
+		_cq_slots = []
+		_cq_slots.resize(MAX_QUEUE)
+		_cq_slots.fill(-1)
+
+		var avail_h : float = SH - HOLD_Y0 - 130.0
+		var dyn_gap : float = min(HOLD_GAP, avail_h / max(count - 1, 1)) if count > 1 else HOLD_GAP
+		_dyn_hold_gap = dyn_gap
+
+		for i in range(count):
+			_uid += 1
+			_holding.append({
+				"uid":         _uid,
+				"value":       vals[i] as int,
+				"hidden":      _p["hidden"],
+				"bomb":        false,
+				"label_mode":  _label_mode,
+				"label_theme": _label_theme,   # ← FIX: was missing here
+			})
+
+	elif not _p.get("prefill", false):
+		var avail_h : float = SH - HOLD_Y0 - 130.0
+		var dyn_gap : float = min(HOLD_GAP, avail_h / max(count - 1, 1)) if count > 1 else HOLD_GAP
 		_dyn_hold_gap = dyn_gap
 		_cq_slots = []
 
 		for i in range(count):
 			_uid += 1
-			var is_bomb : bool = _p["bombs"] and i == count-1 and randf() < 0.5
+			var is_bomb : bool = _p["bombs"] and i == count - 1 and randf() < 0.5
 			_holding.append({
-				"uid":    _uid,
-				"value":  vals[i] as int,
-				"hidden": _p["hidden"],
-				"bomb":   is_bomb,
+				"uid":         _uid,
+				"value":       vals[i] as int,
+				"hidden":      _p["hidden"],
+				"bomb":        is_bomb,
+				"label_mode":  _label_mode,
+				"label_theme": _label_theme,
 			})
+
+	_update_round_ui()
+
+func _update_round_ui() -> void:
+	var theme : Dictionary = LABEL_THEMES[clamp(_label_theme, 0, LABEL_THEMES.size()-1)]
+	if _p.get("free_place", false):
+		match _round:
+			1:
+				_concept_lbl.text = "Round 1 — Place 1 → 2 → 3 → 4 in order:  lowest at FRONT [0], highest at BACK  |  Press SUBMIT or Enter"
+				_hint_lbl.text    = "Drag each number from HOLDING into the queue in ascending order, then hit SUBMIT"
+			2:
+				_concept_lbl.text = "Round 2 — Random numbers! Sort ASCENDING: smallest → FRONT [0], largest → BACK  |  Press SUBMIT or Enter"
+				_hint_lbl.text    = "Drag tokens into the correct order, then press SUBMIT (or Enter)"
+			_:
+				_concept_lbl.text = "Round 3 — 🌈 %s!  %s  |  Press SUBMIT or Enter" % [theme["name"], theme["hint"]]
+				_hint_lbl.text    = "Sort by %s — drag to correct slots, then SUBMIT" % theme["name"]
+	elif _label_mode:
+		_concept_lbl.text = "Final Round — %s!  %s  |  Sort then SUBMIT" % [theme["name"], theme["hint"]]
+		_hint_lbl.text    = "Sort by %s order — %s goes to FRONT [0]" % [theme["name"], theme["labels"][0]]
+
+func _tok_display(tok: Dictionary) -> String:
+	if tok.is_empty(): return "?"
+	var val : int = tok.get("value", 0)
+	if tok.get("label_mode", false):
+		var ti   : int   = clamp(tok.get("label_theme", 0), 0, LABEL_THEMES.size()-1)
+		var lbls : Array = LABEL_THEMES[ti]["labels"]
+		return str(lbls[clamp(val - 1, 0, lbls.size() - 1)])
+	return str(val)
+
+func _do_submit() -> void:
+	if _intro_vis or not _alive or _exit_walking: return
+	if _p.get("free_place", false):
+		_action_submit_free_place()
+	else:
+		_action_submit()
 
 func _is_array_sorted(arr: Array) -> bool:
 	for i in range(1, arr.size()):
@@ -1376,21 +1446,16 @@ func _process(delta: float) -> void:
 	if _intro_vis or not _alive: return
 	_tick_peek_banner()
 
-	# Character walk animation
 	_anim_tick += delta
 	if _anim_tick >= 0.25:
 		_anim_tick  = 0.0
 		_anim_frame = (_anim_frame + 1) % 3
 
-	# Portal AnimatedSprite2D plays automatically via its own timer
-
-	# Walk-to-portal exit sequence
 	if _exit_walking:
 		_tick_exit_walk(delta)
 
 func _tick_peek_banner() -> void:
 	if _p.get("free_place", false):
-		# In free-place mode show the front slot's value if occupied
 		if _cq_slots.size() > 0 and _cq_slots[0] != -1:
 			var tok := _find_tok_by_uid(_cq_slots[0])
 			_peek_lbl.visible = not tok.is_empty()
@@ -1412,17 +1477,12 @@ func _tick_peek_banner() -> void:
 # =============================================================================
 #  WALK-TO-PORTAL EXIT SEQUENCE
 # =============================================================================
-# Each token walks from its queue position toward the portal (SUB_X, SUB_Y).
-# Tokens depart one at a time, staggered by 0.3 s so they don't pile up.
-# When a token reaches the portal it "disappears" (shrinks to 0).
-# Once all tokens have vanished, _exit_callback is fired (→ next round / end).
+const EXIT_WALK_SPEED  : float = 380.0
+const EXIT_STAGGER     : float = 0.28
 
-const EXIT_WALK_SPEED  : float = 380.0  # px per second
-const EXIT_STAGGER     : float = 0.28   # seconds between each token departing
-
-var _exit_tok_progress : Array = []   # float per token: distance walked
-var _exit_tok_started  : Array = []   # bool per token: has this one begun?
-var _exit_time         : float = 0.0  # elapsed since exit sequence began
+var _exit_tok_progress : Array = []
+var _exit_tok_started  : Array = []
+var _exit_time         : float = 0.0
 
 func _start_exit_walk(tokens_in_order: Array, callback: Callable) -> void:
 	_exit_walking    = true
@@ -1436,7 +1496,6 @@ func _start_exit_walk(tokens_in_order: Array, callback: Callable) -> void:
 		_exit_tok_progress.append(0.0)
 		_exit_tok_started.append(false)
 
-	# Clear the queue visually — tokens will be drawn by _draw_exit_walk instead
 	_cq.clear()
 	if _cq_slots.size() > 0:
 		_cq_slots.fill(-1)
@@ -1446,12 +1505,10 @@ func _tick_exit_walk(delta: float) -> void:
 	var portal_pos := Vector2(SUB_X, SUB_Y)
 
 	for i in range(_exit_tokens.size()):
-		# Stagger: token i starts after i * EXIT_STAGGER seconds
 		if _exit_time < i * EXIT_STAGGER:
 			continue
 		_exit_tok_started[i] = true
 
-		# Calculate start position of this token in the sorted queue
 		var start_x : float = LANE_X0 + i * SLOT_W + SLOT_W * 0.5
 		var start_pos := Vector2(start_x, LANE_Y_CEN)
 		var total_dist : float = start_pos.distance_to(portal_pos)
@@ -1461,12 +1518,10 @@ func _tick_exit_walk(delta: float) -> void:
 			_exit_tok_progress[i] + EXIT_WALK_SPEED * delta, total_dist)
 
 		if _exit_tok_progress[i] >= total_dist and _exit_tok_started[i]:
-			# Token reached portal — count it once
 			if _exit_tok_progress[i] < total_dist + EXIT_WALK_SPEED * delta * 0.5:
-				pass  # will count below on first frame it completes
-			_exit_tok_progress[i] = total_dist  # clamp
+				pass
+			_exit_tok_progress[i] = total_dist
 
-	# Count how many are fully done this frame
 	var done : int = 0
 	for i in range(_exit_tokens.size()):
 		var start_x : float = LANE_X0 + i * SLOT_W + SLOT_W * 0.5
@@ -1497,7 +1552,6 @@ func _draw_exit_walk(draw_node: Node2D) -> void:
 		var t : float = _exit_tok_progress[i] / total_dist
 		var cur_pos : Vector2 = start_pos.lerp(portal_pos, t)
 
-		# Shrink to 0 as they enter the portal (last 25% of walk)
 		var scale_f : float = 1.0
 		if t > 0.75:
 			scale_f = 1.0 - ((t - 0.75) / 0.25)
@@ -1510,7 +1564,6 @@ func _draw_exit_walk(draw_node: Node2D) -> void:
 		var char_key : String = _char_key(val)
 		var tex : Texture2D = _get_tex(char_key, "walk", _anim_frame)
 		if tex != null:
-			# Walk left toward portal — sprite centre = cur_pos, flipped via transform
 			draw_node.draw_set_transform(Vector2(cur_pos.x * 2.0, 0.0), 0.0, Vector2(-1.0, 1.0))
 			draw_node.draw_texture_rect(tex,
 				Rect2(Vector2(cur_pos.x - hw, cur_pos.y - hh), Vector2(hw * 2.0, hh * 2.0)),
@@ -1531,22 +1584,21 @@ func _input(event: InputEvent) -> void:
 		else:             _handle_release(event.position)
 	elif event is InputEventMouseMotion and _dragging:
 		_drag_pos = event.position
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			_do_submit()
 
 func _handle_press(pos: Vector2) -> void:
-	# Peek hidden tokens on click
 	for c in _holding + _cq:
 		if c["hidden"] and _hit(c, pos):
 			_do_peek(c); return
 
-	# Dragging from holding
 	for i in range(_holding.size()):
 		var c : Dictionary = _holding[i]
-		# Hit test against sprite visual centre, not container top
 		if _hit_pos(c, _holding_sprite_pos(i), pos):
 			_start_drag(c, "holding_%d" % i, _holding_sprite_pos(i)); return
 
 	if _p.get("free_place", false):
-		# In free-place mode: can drag any token already placed in any slot
 		for i in range(MAX_QUEUE):
 			if _cq_slots[i] == -1: continue
 			var tok : Dictionary = _find_tok_by_uid(_cq_slots[i])
@@ -1554,11 +1606,16 @@ func _handle_press(pos: Vector2) -> void:
 			if _hit_pos(tok, _queue_sprite_pos(i), pos):
 				_start_drag(tok, "queue_slot_%d" % i, _queue_sprite_pos(i)); return
 	else:
-		# Normal mode: only front [0] is draggable
 		if not _cq.is_empty():
 			var front : Dictionary = _cq[0]
 			if _hit_pos(front, _queue_sprite_pos(0), pos):
 				_start_drag(front, "queue_front", _queue_sprite_pos(0))
+			else:
+				for i in range(1, _cq.size()):
+					if _hit_pos(_cq[i], _queue_sprite_pos(i), pos):
+						_concept("FIFO — front [0] only!\nYou can only dequeue from the FRONT.\nSlot [%d] is locked until slots before it are removed." % i)
+						_sfx(false)
+						break
 
 func _hit(c: Dictionary, pos: Vector2) -> bool:
 	return pos.distance_to(_citizen_pos(c)) < _hit_radius()
@@ -1567,7 +1624,6 @@ func _hit_pos(_c: Dictionary, world_pos: Vector2, click: Vector2) -> bool:
 	return click.distance_to(world_pos) < _hit_radius()
 
 func _hit_radius() -> float:
-	# Full sprite half-size — accurate since we now test against sprite centre
 	return float(SPRITE_W * SPRITE_SCALE) * 0.5 if not _tex_cache.is_empty() else TOKEN_R
 
 func _citizen_pos(c: Dictionary) -> Vector2:
@@ -1582,12 +1638,10 @@ func _citizen_pos(c: Dictionary) -> Vector2:
 	return Vector2.ZERO
 
 func _queue_pos(i: int) -> Vector2:
-	# Returns (slot_centre_x, slot_top_y) — slot_top used by _draw_token
 	return Vector2(roundi(LANE_X0 + i * SLOT_W + SLOT_W * 0.5),
 		roundi(LANE_Y_CEN - SLOT_H * 0.5))
 
 func _queue_sprite_pos(i: int) -> Vector2:
-	# Returns the visual centre of the sprite in slot i — used for hit testing
 	var slot_top  : float = LANE_Y_CEN - SLOT_H * 0.5
 	var badge_h   : float = 20.0
 	var gap       : float = 4.0
@@ -1598,23 +1652,18 @@ func _queue_sprite_pos(i: int) -> Vector2:
 	return Vector2(roundi(LANE_X0 + i * SLOT_W + SLOT_W * 0.5), roundi(sprite_cy))
 
 func _holding_sprite_pos(i: int) -> Vector2:
-	# Returns the visual centre of the sprite in holding row i — used for hit testing
 	var badge_h   : float = 20.0
 	var gap       : float = 4.0
 	var sh        : float = float(SPRITE_H * SPRITE_SCALE)
 	var block_h   : float = badge_h + gap + sh
 	var block_half: float = block_h * 0.5
 	var row_centre: float = HOLD_Y0 + i * _dyn_hold_gap
-	# _holding_pos returns container top = row_centre - block_half
-	# sprite_cy = container_top + pad + badge_h + gap + sh*0.5
 	var container_top : float = row_centre - block_half
-	var pad : float = (SLOT_H - block_h) * 0.5  # same padding logic
+	var pad : float = (SLOT_H - block_h) * 0.5
 	var sprite_cy : float = container_top + pad + badge_h + gap + sh * 0.5
 	return Vector2(roundi(HOLD_X), roundi(sprite_cy))
 
 func _holding_pos(i: int) -> Vector2:
-	# Return the ROW CENTRE. _draw_token treats cy as container top,
-	# so offset by half the total (badge+sprite) block height to keep centred.
 	var block_half : float = (20.0 + 4.0 + float(SPRITE_H * SPRITE_SCALE)) * 0.5
 	var row_centre : float = HOLD_Y0 + i * _dyn_hold_gap
 	return Vector2(roundi(HOLD_X), roundi(row_centre - block_half))
@@ -1623,7 +1672,6 @@ func _start_drag(c: Dictionary, src: String, origin: Vector2) -> void:
 	_dragging = true; _drag_tok = c; _drag_src = src
 	_drag_origin = origin; _drag_pos = origin
 
-# Helper: find a token dict by uid across cq + holding
 func _find_tok_by_uid(uid: int) -> Dictionary:
 	for t in _cq:
 		if t["uid"] == uid: return t
@@ -1645,15 +1693,12 @@ func _handle_release(pos: Vector2) -> void:
 
 	_drag_tok = {}; _drag_src = ""
 
-# ── Free-place mode (Tier 0 ENQUEUE) ─────────────────────────────────────────
 func _handle_release_free_place(pos: Vector2) -> void:
 	var tok : Dictionary = _drag_tok
 
-	# Submit — drag anywhere near the submit zone
 	if pos.distance_to(Vector2(SUB_X, SUB_Y)) < DROP_R * 1.3:
 		_action_submit_free_place(); return
 
-	# Find the nearest queue slot
 	var best_slot := -1
 	var best_dist := DROP_R * 1.5
 	for i in range(MAX_QUEUE):
@@ -1662,43 +1707,38 @@ func _handle_release_free_place(pos: Vector2) -> void:
 			best_dist = d; best_slot = i
 
 	if best_slot == -1:
-		# Dropped outside — if it came from a queue slot, put it back to holding
 		if _drag_src.begins_with("queue_slot_"):
 			var src_slot := int(_drag_src.split("_")[2])
 			_cq_slots[src_slot] = -1
 			_holding.append(tok)
 			_cq.erase(tok)
-		return   # no-op drop, token returns visually (it was never removed from state)
+		return
 
-	# Slot is occupied by a different token — swap with holding or swap two slots
 	if _cq_slots[best_slot] != -1 and _cq_slots[best_slot] != tok["uid"]:
 		var other_uid : int = _cq_slots[best_slot]
 		var other_tok := _find_tok_by_uid(other_uid)
 
 		if _drag_src.begins_with("holding_"):
-			# FIFO rule: a token from HOLDING can only enter at the BACK (highest occupied slot + 1)
-			# Swapping into an already-occupied slot from holding is not allowed —
-			# the player must rearrange placed tokens using slot-to-slot swaps.
-			_concept("Queue is FIFO!\nYou can't insert in front of %d.\nRearrange placed tokens by dragging slot → slot." % other_tok.get("value", "?"))
+			_concept("Queue is FIFO!\nYou can't insert in front of %s.\nRearrange placed tokens by dragging slot → slot." % _tok_display(other_tok))
 			_sfx(false)
 			return
 
 		elif _drag_src.begins_with("queue_slot_"):
-			# Swap two in-queue tokens — always allowed
 			var src_slot := int(_drag_src.split("_")[2])
 			_cq_slots[src_slot]  = other_uid
 			_cq_slots[best_slot] = tok["uid"]
-			_concept("Swapped [%d]=%d  ↔  [%d]=%d" % [
-				src_slot, tok["value"], best_slot, other_tok["value"]])
+			_concept("Swapped [%d]=%s  ↔  [%d]=%s" % [
+				src_slot, _tok_display(tok), best_slot, _tok_display(other_tok)])
+			_play_pickup()
 			_sfx(true)
 		return
 
-	# Slot is empty — place the token
 	if _drag_src.begins_with("holding_"):
 		_holding.erase(tok)
 		_cq.append(tok)
 		_cq_slots[best_slot] = tok["uid"]
-		_concept("Placed %d into slot [%d]." % [tok["value"], best_slot])
+		_concept("Placed %s into slot [%d]." % [_tok_display(tok), best_slot])
+		_play_pickup()
 		_sfx(true)
 
 	elif _drag_src.begins_with("queue_slot_"):
@@ -1706,11 +1746,11 @@ func _handle_release_free_place(pos: Vector2) -> void:
 		if src_slot != best_slot:
 			_cq_slots[src_slot]  = -1
 			_cq_slots[best_slot] = tok["uid"]
-			_concept("Moved %d from [%d] → [%d]." % [tok["value"], src_slot, best_slot])
+			_concept("Moved %s from [%d] → [%d]." % [_tok_display(tok), src_slot, best_slot])
+			_play_pickup()
 			_sfx(true)
 
 func _action_submit_free_place() -> void:
-	# Build a sorted array from _cq_slots to verify order
 	var ordered : Array = []
 	for i in range(MAX_QUEUE):
 		if _cq_slots[i] == -1: continue
@@ -1720,15 +1760,20 @@ func _action_submit_free_place() -> void:
 	if ordered.is_empty():
 		_apply_wrong(0, "Queue is empty — place tokens first!"); return
 
-	# Check ascending AND that there are no gaps between filled slots
-	# (slots don't need to be at [0]..[n-1] — as long as relative order is correct)
 	for i in range(1, ordered.size()):
 		if ordered[i]["value"] < ordered[i-1]["value"]:
-			_apply_wrong(10,
-				"Not sorted! Value %d at slot [%d] should come after %d.\nRearrange and try again." % [
-				ordered[i]["value"], ordered[i]["slot"], ordered[i-1]["value"]]); return
+			if _label_mode:
+				var theme := LABEL_THEMES[clamp(_label_theme, 0, LABEL_THEMES.size()-1)]
+				var lbls  : Array = theme["labels"]
+				var cn : String = lbls[clamp(ordered[i]["value"]-1,   0, lbls.size()-1)]
+				var pp : String = lbls[clamp(ordered[i-1]["value"]-1, 0, lbls.size()-1)]
+				_apply_wrong(10, "Wrong %s order!\n%s should come AFTER %s.\nRearrange and try again." % [theme["name"], cn, pp])
+			else:
+				_apply_wrong(10,
+					"Not sorted! Value %d at slot [%d] should come after %d.\nRearrange and try again." % [
+					ordered[i]["value"], ordered[i]["slot"], ordered[i-1]["value"]])
+			return
 
-	# Also ensure all citizens are placed (holding must be empty)
 	if not _holding.is_empty():
 		_apply_wrong(0, "Place ALL tokens in the queue first!\n%d still in holding." % _holding.size())
 		return
@@ -1736,21 +1781,23 @@ func _action_submit_free_place() -> void:
 	var pts := 100 + ordered.size() * 20
 	_score += pts; _score_lbl.text = "Score: %d" % _score
 	_correct += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
-	var vals_str := " → ".join(ordered.map(func(e): return str(e["value"])))
+	var vals_str : String
+	if _label_mode:
+		var lbls : Array = LABEL_THEMES[clamp(_label_theme, 0, LABEL_THEMES.size()-1)]["labels"]
+		vals_str = " → ".join(ordered.map(func(e): return str(lbls[clamp(e["value"]-1, 0, lbls.size()-1)])))
+	else:
+		vals_str = " → ".join(ordered.map(func(e): return str(e["value"])))
 	_concept("✅ Sorted correctly!\n[%s]\n+%d pts" % [vals_str, pts])
 	_sfx(true)
-	# Build token list in slot order for walk animation
 	var walk_tokens : Array = []
 	for entry in ordered:
 		walk_tokens.append(_find_tok_by_uid(_cq_slots[entry["slot"]]))
 	_start_exit_walk(walk_tokens, _next_round_or_end)
 
-# ── Normal mode (Tiers 1–4) ───────────────────────────────────────────────────
 func _handle_release_normal(pos: Vector2) -> void:
 	var handled := false
 
 	if _drag_src.begins_with("holding"):
-		# FIFO: enqueue always goes to BACK — just check drop is inside lane area
 		var lane_left  : float = LANE_X0 - DROP_R
 		var lane_right : float = LANE_X0 + MAX_QUEUE * SLOT_W + DROP_R
 		var lane_top   : float = LANE_Y_CEN - SLOT_H * 0.5 - DROP_R
@@ -1764,7 +1811,6 @@ func _handle_release_normal(pos: Vector2) -> void:
 	elif _drag_src == "queue_front":
 		if pos.distance_to(Vector2(SUB_X, SUB_Y)) < DROP_R * 1.3:
 			_action_submit(); handled = true
-		# Dequeue: drag front token to the right (holding area) or anywhere right of lane
 		elif pos.x > LANE_X0 + MAX_QUEUE * SLOT_W:
 			_action_dequeue(); handled = true
 
@@ -1793,6 +1839,7 @@ func _action_enqueue(c: Dictionary) -> void:
 
 	_holding.erase(c); c["hidden"] = false
 	_cq.append(c)
+	_play_pickup()
 	_apply_correct(5)
 	_concept("enqueue(%d)\n→ queue.push_back()\nSize: %d / %d\nQueue: [%s]" % [
 		c["value"], _cq.size(), MAX_QUEUE, _queue_str()])
@@ -1829,7 +1876,6 @@ func _action_submit() -> void:
 		_correct += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
 		_concept("✅ Sorted correctly!\n[%s]\n+%d pts" % [_queue_str(), pts])
 		_sfx(true)
-		# Walk sorted tokens into the portal before advancing
 		var walk_tokens : Array = _cq.duplicate()
 		_start_exit_walk(walk_tokens, _next_round_or_end)
 	else:
@@ -1851,12 +1897,52 @@ func _sort_break() -> int:
 func _queue_str() -> String:
 	if _cq.is_empty(): return "empty"
 	var parts : Array = []
-	for c in _cq: parts.append(str(c["value"]))
+	for c in _cq: parts.append(_tok_display(c))
 	return " → ".join(parts)
 
 # =============================================================================
 #  FEEDBACK
 # =============================================================================
+func _setup_audio() -> void:
+	for entry in [
+		[PATH_SFX_FAIL,   "_sfx_fail_player"],
+		[PATH_SFX_PICKUP, "_sfx_pickup_player"],
+	]:
+		var path : String = entry[0]
+		var prop : String = entry[1]
+		if ResourceLoader.exists(path):
+			var player := AudioStreamPlayer.new()
+			player.stream    = load(path)
+			player.volume_db = 0.0
+			player.bus       = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
+			add_child(player)
+			set(prop, player)
+
+	var flash_cl       := CanvasLayer.new()
+	flash_cl.layer     = 99
+	add_child(flash_cl)
+	var rect           := ColorRect.new()
+	rect.color         = Color(1, 0, 0, 0)
+	rect.size          = Vector2(SW, SH)
+	rect.mouse_filter  = Control.MOUSE_FILTER_IGNORE
+	flash_cl.add_child(rect)
+	_flash_rect        = rect
+
+func _flash_red() -> void:
+	if _flash_rect == null: return
+	_flash_rect.color = Color(1, 0.05, 0.05, 0.48)
+	var tw := create_tween()
+	tw.tween_property(_flash_rect, "color:a", 0.0, 0.40)\
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+
+func _play_pickup() -> void:
+	if has_node("/root/AudioManager") and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx(PATH_SFX_PICKUP)
+		return
+	if _sfx_pickup_player:
+		_sfx_pickup_player.stop()
+		_sfx_pickup_player.play()
+
 func _apply_correct(pts: int) -> void:
 	_score += pts; _score_lbl.text = "Score: %d" % _score
 	_correct += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
@@ -1867,18 +1953,24 @@ func _apply_wrong(penalty: int, msg: String) -> void:
 	_wrong += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
 	if not msg.is_empty(): _concept(msg)
 	_sfx(false)
+	_flash_red()
 
 func _lose_life() -> void:
 	_lives -= 1; _refresh_lives()
+	_flash_red()
 	if _lives <= 0: _end_game(false)
 
 func _concept(txt: String) -> void:
 	if _concept_lbl: _concept_lbl.text = txt
 
 func _sfx(ok: bool) -> void:
-	var p := PATH_SFX_OK if ok else PATH_SFX_FAIL
+	var path := PATH_SFX_OK if ok else PATH_SFX_FAIL
 	if has_node("/root/AudioManager") and AudioManager.has_method("play_sfx"):
-		AudioManager.play_sfx(p)
+		AudioManager.play_sfx(path)
+		return
+	if not ok and _sfx_fail_player:
+		_sfx_fail_player.stop()
+		_sfx_fail_player.play()
 
 func _accuracy() -> float:
 	var t := _correct + _wrong
@@ -1904,11 +1996,91 @@ func _end_game(win: bool) -> void:
 		"success":  win,
 	}
 
+	if win:
+		await get_tree().create_timer(1.2).timeout
+		_show_ending_screen(end_stats)
+	else:
+		if has_node("/root/GameRouter"):
+			GameRouter.chapter_complete_with_stats(_chapter_id, end_stats)
+		elif has_node("/root/PlayerProfile"):
+			PlayerProfile.save_chapter_result(_chapter_id, _score, stars, _accuracy())
+			await get_tree().create_timer(3.0).timeout
+			get_tree().change_scene_to_file("res://scenes/world_map/WorldMap.tscn")
+
+func _show_ending_screen(end_stats: Dictionary) -> void:
+	var cl := CanvasLayer.new(); cl.name = "EndingScreen"; cl.layer = 20
+	add_child(cl)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.03, 0.02, 0.12, 0.97); bg.size = Vector2(SW, SH)
+	cl.add_child(bg)
+
+	var hdr := Label.new()
+	hdr.text = "🎓  Quest Complete — What You Learned"
+	if _pixel_font: hdr.add_theme_font_override("font", _pixel_font)
+	hdr.add_theme_font_size_override("font_size", 26)
+	hdr.add_theme_color_override("font_color", COL_GOLD)
+	hdr.position = Vector2(0, 24); hdr.size = Vector2(SW, 44)
+	hdr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cl.add_child(hdr)
+
+	var grade_lbl := Label.new()
+	grade_lbl.text = "Grade: %s   Score: %d   Acc: %.0f%%" % [
+		end_stats["grade"], end_stats["score"], end_stats.get("accuracy", 0.0)]
+	grade_lbl.add_theme_font_size_override("font_size", 16)
+	grade_lbl.add_theme_color_override("font_color", COL_PARCH_LT)
+	grade_lbl.position = Vector2(0, 68); grade_lbl.size = Vector2(SW, 28)
+	grade_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cl.add_child(grade_lbl)
+
+	var rows := [
+		["Ch 1 · ENQUEUE",    "Tokens enter at the BACK. Drag from HOLDING → queue. You control the ORDER.",       COL_GREEN],
+		["Ch 2 · DEQUEUE",    "Only the FRONT [0] can be removed (queue.pop_front()). No middle access — ever!",   COL_AMBER],
+		["Ch 3 · PEEK",       "peek() reads the front WITHOUT removing it. Free to use — no move cost.",           COL_BLUE],
+		["Ch 4 · BOUNDS",     "Always check isEmpty() before dequeue and isFull() before enqueue. Reject 💣 bombs.", COL_RED],
+		["Ch 5 · SCHEDULER",  "Moves are limited. Peek first (free!), plan your order, then execute perfectly.",   COL_PARCH],
+	]
+
+	var y := 108.0
+	for row in rows:
+		var panel := ColorRect.new()
+		panel.color    = Color(0.08, 0.06, 0.22, 0.80)
+		panel.position = Vector2(60, y); panel.size = Vector2(SW - 120, 74)
+		cl.add_child(panel)
+
+		var t := Label.new()
+		t.text = row[0]
+		if _pixel_font: t.add_theme_font_override("font", _pixel_font)
+		t.add_theme_font_size_override("font_size", 17)
+		t.add_theme_color_override("font_color", row[2])
+		t.position = Vector2(76, y + 6); t.size = Vector2(SW - 152, 26)
+		cl.add_child(t)
+
+		var b := Label.new()
+		b.text = row[1]
+		b.add_theme_font_size_override("font_size", 13)
+		b.add_theme_color_override("font_color", COL_PARCH_LT)
+		b.position = Vector2(76, y + 34); b.size = Vector2(SW - 152, 34)
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cl.add_child(b)
+
+		y += 84
+
+	var btn := Button.new()
+	btn.text = "🏰  Back to World Map"
+	btn.position = Vector2(SW * 0.5 - 150, SH - 68); btn.size = Vector2(300, 48)
+	_style_button(btn, true)
+	btn.pressed.connect(func():
+		cl.queue_free()
+		_do_end_route(end_stats))
+	cl.add_child(btn)
+
+func _do_end_route(end_stats: Dictionary) -> void:
 	if has_node("/root/GameRouter"):
 		GameRouter.chapter_complete_with_stats(_chapter_id, end_stats)
 	elif has_node("/root/PlayerProfile"):
-		PlayerProfile.save_chapter_result(_chapter_id, _score, stars, _accuracy())
-		await get_tree().create_timer(3.0).timeout
+		PlayerProfile.save_chapter_result(_chapter_id, end_stats["score"],
+			end_stats["stars"], end_stats.get("accuracy", 0.0))
 		get_tree().change_scene_to_file("res://scenes/world_map/WorldMap.tscn")
 
 func _calc_grade(win: bool) -> String:

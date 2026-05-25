@@ -58,40 +58,61 @@ layer = 20
 [node name="ScoreLabel" type="Label" parent="HUD"]
 offset_left = 10.0
 offset_top = 10.0
+offset_right = 230.0
+offset_bottom = 32.0
 text = "Score: 0"
 
 [node name="ComboLabel" type="Label" parent="HUD"]
 offset_left = 10.0
-offset_top = 36.0
-
-[node name="TimerLabel" type="Label" parent="HUD"]
-visible = false
-offset_left = 560.0
-offset_top = 10.0
-text = "⏱ 60"
-horizontal_alignment = 1
+offset_top = 34.0
+offset_right = 230.0
+offset_bottom = 56.0
 
 [node name="GoalLabel" type="Label" parent="HUD"]
 offset_left = 10.0
-offset_top = 62.0
+offset_top = 58.0
+offset_right = 230.0
+offset_bottom = 80.0
 text = "Goal: 8 correct"
 
 [node name="AccuracyLabel" type="Label" parent="HUD"]
 offset_left = 10.0
-offset_top = 114.0
-offset_right = 155.0
-offset_bottom = 142.0
+offset_top = 84.0
+offset_right = 230.0
+offset_bottom = 108.0
 text = "👁  Peek Top"
+
+[node name="TimerLabel" type="Label" parent="HUD"]
+visible = false
+offset_left = 480.0
+offset_top = 10.0
+offset_right = 800.0
+offset_bottom = 34.0
+text = "⏱ 60"
+horizontal_alignment = 1
 
 [node name="LivesRow" type="HBoxContainer" parent="HUD"]
 offset_left = 900.0
 offset_top = 10.0
+offset_right = 1220.0
+offset_bottom = 44.0
+
+[node name="SeqBanner" type="PanelContainer" parent="HUD"]
+visible = false
+offset_left = 240.0
+offset_top = 50.0
+offset_right = 1040.0
+offset_bottom = 86.0
+
+[node name="SeqLabel" type="Label" parent="HUD/SeqBanner"]
+layout_mode = 2
+text = "Sequence: ..."
 
 [node name="HintBox" type="PanelContainer" parent="HUD"]
-offset_left = 300.0
-offset_top = 620.0
-offset_right = 980.0
-offset_bottom = 710.0
+offset_left = 240.0
+offset_top = 590.0
+offset_right = 1040.0
+offset_bottom = 612.0
 
 [node name="HintLabel" type="Label" parent="HUD/HintBox"]
 layout_mode = 2
@@ -110,17 +131,6 @@ layout_mode = 2
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="SeqBanner" type="PanelContainer" parent="HUD"]
-visible = false
-offset_left = 240.0
-offset_top = 10.0
-offset_right = 1040.0
-offset_bottom = 46.0
-
-[node name="SeqLabel" type="Label" parent="HUD/SeqBanner"]
-layout_mode = 2
-text = "Sequence: ..."
-
 [node name="FailSummary" type="PanelContainer" parent="HUD"]
 visible = false
 z_index = 50
@@ -134,8 +144,16 @@ z_index = 60
 layout_mode = 2
 autowrap_mode = 2
 
-[node name="HUD_CodePanel#CodeLabel" type="Label" parent="."]
-autowrap_mode = 2
+[node name="PauseButton" type="Button" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -56.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 50.0
+text = "⏸"
 
 [node name="PauseMenu" parent="." instance=ExtResource("2_pause")]
 process_mode = 4
+visible = false

@@ -256,6 +256,7 @@ offset_top = 310.0
 offset_right = 170.0
 offset_bottom = 350.0
 grow_horizontal = 2
+grow_vertical = 2
 text = "👤  Play as Guest"
 
 [node name="HTTPAuth" type="HTTPRequest" parent="."]

@@ -1,6 +1,44 @@
-[gd_scene load_steps=2 format=3 uid="uid://bigdemcgf1w6j"]
+[gd_scene load_steps=5 format=3 uid="uid://bigdemcgf1w6j"]
 
 [ext_resource type="Script" uid="uid://b8r88yvxvgncx" path="res://scripts/ui/PauseMenu.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="1"]
+bg_color = Color(0.22, 0.13, 0.06, 0.97)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.72, 0.48, 0.18, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="2"]
+bg_color = Color(0.52, 0.32, 0.12, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(0.95, 0.78, 0.25, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="3"]
+bg_color = Color(0.6, 0.38, 0.14, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(1, 0.92, 0.4, 1)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
 
 [node name="PauseMenu" type="CanvasLayer"]
 layer = 90
@@ -17,36 +55,68 @@ offset_left = 440.0
 offset_top = 140.0
 offset_right = 840.0
 offset_bottom = 580.0
+theme_override_styles/panel = SubResource("1")
 
 [node name="VBox" type="VBoxContainer" parent="Overlay/Panel"]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="Overlay/Panel/VBox"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.78, 0.25, 1)
+theme_override_font_sizes/font_size = 40
 text = "PAUSED"
 horizontal_alignment = 1
 
 [node name="ResumeBtn" type="Button" parent="Overlay/Panel/VBox"]
+custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
+size_flags_horizontal = 4
+size_flags_stretch_ratio = 0.0
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_styles/normal = SubResource("2")
+theme_override_styles/pressed = SubResource("1")
+theme_override_styles/hover = SubResource("3")
+theme_override_styles/focus = SubResource("2")
+keep_pressed_outside = true
 text = "▶  Resume"
 
 [node name="RestartBtn" type="Button" parent="Overlay/Panel/VBox"]
+custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_styles/normal = SubResource("2")
+theme_override_styles/pressed = SubResource("1")
+theme_override_styles/hover = SubResource("3")
+theme_override_styles/focus = SubResource("2")
 text = "↺  Restart"
 
 [node name="HowToBtn" type="Button" parent="Overlay/Panel/VBox"]
+custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_styles/normal = SubResource("2")
+theme_override_styles/pressed = SubResource("1")
+theme_override_styles/hover = SubResource("3")
+theme_override_styles/focus = SubResource("2")
 text = "?  How to Play"
 
 [node name="VolumeRow" type="HBoxContainer" parent="Overlay/Panel/VBox"]
+custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_constants/separation = 10
+alignment = 1
 
 [node name="VolLabel" type="Label" parent="Overlay/Panel/VBox/VolumeRow"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
 text = "Volume:"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="VolSlider" type="HSlider" parent="Overlay/Panel/VBox/VolumeRow"]
 custom_minimum_size = Vector2(160, 0)
@@ -57,5 +127,12 @@ step = 0.05
 value = 0.8
 
 [node name="MapBtn" type="Button" parent="Overlay/Panel/VBox"]
+custom_minimum_size = Vector2(250, 50)
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_styles/normal = SubResource("2")
+theme_override_styles/pressed = SubResource("1")
+theme_override_styles/hover = SubResource("3")
+theme_override_styles/focus = SubResource("2")
 text = "🗺  World Map"

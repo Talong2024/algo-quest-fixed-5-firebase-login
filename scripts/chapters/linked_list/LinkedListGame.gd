@@ -73,30 +73,30 @@ const ARRAY_SLOT_H  := 70.0
 const ARRAY_Y       := 320.0
 const ARRAY_START_X := 200.0
 
-const COL_ARROW    := Color(0.35, 0.9, 1.0)
-const COL_LIVE     := Color(1.0, 1.0, 0.3, 0.7)
-const COL_SNAP     := Color(0.3, 1.0, 0.9, 0.85)
+const COL_ARROW    := Color(0.45, 0.75, 0.92)
+const COL_LIVE     := Color(0.95, 0.90, 0.55, 0.80)
+const COL_SNAP     := Color(0.45, 0.88, 0.80, 0.85)
 const COL_GHOST    := Color(0.5, 0.5, 1.0, 0.35)
 const COL_GAP      := Color(1.0, 0.8, 0.2, 0.6)
-const COL_HEAD     := Color(1.0, 0.85, 0.1)
-const COL_TAIL     := Color(0.5, 1.0, 0.5)
-const COL_CYCLE    := Color(1.0, 0.2, 0.2)
-const COL_STAGED   := Color(0.8, 0.5, 1.0)
-const COL_WRONG    := Color(1.0, 0.15, 0.15)
-const COL_OK       := Color(0.3, 1.0, 0.4)
+const COL_HEAD     := Color(0.95, 0.80, 0.35)
+const COL_TAIL     := Color(0.50, 0.82, 0.62)
+const COL_CYCLE    := Color(0.88, 0.42, 0.42)
+const COL_STAGED   := Color(0.72, 0.55, 0.88)
+const COL_WRONG    := Color(0.88, 0.40, 0.40)
+const COL_OK       := Color(0.42, 0.78, 0.55)
 const COL_WHITE    := Color.WHITE
 # Train body tint — used for mid-chain cars (Coal/Logs).
 # Pure white on dark sprites = invisible. This warm light colour
 # reads as 'white train' against the dark city background.
-const COL_TRAIN_MID := Color(0.85, 0.92, 1.0, 1.0)
-const COL_HINT     := Color(0.7, 0.7, 1.0, 0.6)
-const COL_COST     := Color(1.0, 0.45, 0.1)
-const COL_CHEAP    := Color(0.2, 1.0, 0.6)
-const COL_ARRAY_SLOT := Color(0.25, 0.25, 0.4, 0.9)
-const COL_ARRAY_HL   := Color(1.0, 0.35, 0.35, 0.85)
+const COL_TRAIN_MID := Color(0.82, 0.88, 0.95, 1.0)
+const COL_HINT     := Color(0.62, 0.68, 0.90, 0.65)
+const COL_COST     := Color(0.92, 0.60, 0.32)
+const COL_CHEAP    := Color(0.38, 0.80, 0.62)
+const COL_ARRAY_SLOT := Color(0.22, 0.24, 0.38, 0.88)
+const COL_ARRAY_HL   := Color(0.88, 0.42, 0.42, 0.85)
 # v6: hover / selection colours
-const COL_HOVER_RIM  := Color(1.0, 1.0, 1.0, 0.55)
-const COL_SELECTED   := Color(0.2, 0.85, 1.0, 1.0)   # cyan ring = selected node
+const COL_HOVER_RIM  := Color(1.0, 1.0, 1.0, 0.45)
+const COL_SELECTED   := Color(0.40, 0.78, 0.95, 1.0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  TIER PARAMS
@@ -136,20 +136,22 @@ const TIER_PARAMS: Array[Dictionary] = [
 @onready var _game_tmr:        Timer          = $GameTimer
 @onready var _cycle_dot_tmr:   Timer          = $CycleDotTimer
 @onready var _traverse_tmr:    Timer          = $TraverseTimer
-@onready var _score_lbl:       Label          = $HUD/ScoreLabel
-@onready var _combo_lbl:       Label          = $HUD/ComboLabel
-@onready var _timer_lbl:       Label          = $HUD/TimerLabel
-@onready var _goal_lbl:        Label          = $HUD/GoalLabel
-@onready var _acc_lbl:         Label          = $HUD/AccuracyLabel
-@onready var _lives_row:       HBoxContainer  = $HUD/LivesRow
-@onready var _hint_lbl:        Label          = $HUD/HintBox/HintLabel
-@onready var _hint_box:        PanelContainer = $HUD/HintBox
-@onready var _task_lbl:        Label          = $HUD/TaskLabel
-@onready var _struct_lbl:      Label          = $HUD/StructureLabel
-@onready var _cost_banner:     Label          = $HUD/CostBanner
-@onready var _replay_btn:      Button         = $HUD/ReplayBtn
-@onready var _fail_summary:    PanelContainer = $HUD/FailSummary
-@onready var _fail_lbl:        Label          = $HUD/FailSummary/FailLabel
+@onready var _score_lbl:       Label          = $HUD/Root/ScoreLabel
+@onready var _combo_lbl:       Label          = $HUD/Root/ComboLabel
+@onready var _timer_lbl:       Label          = $HUD/Root/TimerLabel
+@onready var _goal_lbl:        Label          = $HUD/Root/GoalLabel
+@onready var _acc_lbl:         Label          = $HUD/Root/AccuracyLabel
+@onready var _lives_row:       HBoxContainer  = $HUD/Root/LivesRow
+@onready var _hint_lbl:        Label          = $HUD/Root/HintBox/HintLabel
+@onready var _hint_box:        PanelContainer = $HUD/Root/HintBox
+@onready var _task_lbl:        Label          = $HUD/Root/TaskLabel
+@onready var _struct_lbl:      Label          = $HUD/Root/StructureLabel
+@onready var _cost_banner:     Label          = $HUD/Root/CostBanner
+@onready var _replay_btn:      Button         = $HUD/Root/ReplayBtn
+@onready var _fail_summary:    PanelContainer = $HUD/Root/FailSummary
+@onready var _fail_lbl:        Label          = $HUD/Root/FailSummary/FailLabel
+@onready var _pause_btn:       Button         = $HUD/Root/PauseBtn
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STATE
@@ -392,11 +394,11 @@ func _setup_hud() -> void:
 			lbl.add_theme_font_override("font", _pixel_font)
 			lbl.add_theme_font_size_override("font_size", 16)
 	# ── Neon HUD styling ─────────────────────────────────────────
-	_style_hud_bar(_score_lbl,  Color(0.0, 0.9, 1.0))   # cyan  — score
-	_style_hud_bar(_goal_lbl,   Color(1.0, 0.85, 0.0))  # gold  — goal
-	_style_hud_bar(_acc_lbl,    Color(0.3, 1.0, 0.5))   # green — accuracy
-	_style_hud_bar(_struct_lbl, Color(0.5, 0.7, 1.0))   # blue  — structure
-	_style_hud_bar(_timer_lbl,  Color(1.0, 0.4, 0.2))   # orange — timer
+	_style_hud_bar(_score_lbl,  Color(0.42, 0.72, 0.88))
+	_style_hud_bar(_goal_lbl,   Color(0.88, 0.75, 0.35))
+	_style_hud_bar(_acc_lbl,    Color(0.40, 0.76, 0.56))
+	_style_hud_bar(_struct_lbl, Color(0.55, 0.65, 0.88))
+	_style_hud_bar(_timer_lbl,  Color(0.90, 0.58, 0.35))
 
 	if is_instance_valid(_task_lbl):
 		_task_lbl.autowrap_mode       = TextServer.AUTOWRAP_WORD
@@ -428,6 +430,10 @@ func _setup_hud() -> void:
 		_replay_btn.text    = "▶ Replay Traversal"
 		_replay_btn.visible = false
 		_replay_btn.pressed.connect(_start_traversal_replay)
+
+	if is_instance_valid(_pause_btn):
+		_apply_btn_style(_pause_btn)
+		_pause_btn.pressed.connect(_on_pause_pressed)
 
 	_refresh_lives()
 
@@ -843,151 +849,145 @@ func _draw_ll_array_vs_list(ci: CanvasItem, font: Font) -> void:
 
 func _draw_slide_insert_cost(ci: CanvasItem, font: Font) -> void:
 	if not font: return
+	var total_w : float = ci.size.x if ci.size.x > 0 else 960.0
+	var col_w := total_w * 0.5 - 12.0
+	var lx    :=   8.0;  var mid_l := lx + col_w * 0.5
+	var rx    := total_w * 0.5 + 4.0;  var mid_r := rx + col_w * 0.5
 
-	# ── LEFT PANEL: Array insertion ──────────────────────────────────────────
-	_ll_box(ci, Rect2(Vector2(4, 4), Vector2(456, 242)),
-		Color(0.10, 0.03, 0.03), Color(0.75, 0.22, 0.22))
-	_ll_lblc(ci, Vector2(232, 20), "ARRAY — insert NEW at [1]", COL_WRONG, font, 14)
+	_ll_box(ci, Rect2(Vector2(lx, 2), Vector2(col_w, 314)),
+		Color(0.14, 0.10, 0.18), Color(0.55, 0.38, 0.52))
+	_ll_box(ci, Rect2(Vector2(rx, 2), Vector2(col_w, 314)),
+		Color(0.06, 0.14, 0.10), Color(0.30, 0.62, 0.42))
+	ci.draw_line(Vector2(rx - 4, 2), Vector2(rx - 4, 316), Color(0.3, 0.3, 0.55, 0.5), 2.0)
 
-	# BEFORE row — 4 boxes [0..3]
-	var bw := 78.0; var bh := 46.0; var bgap := 8.0
-	var bx0 := 36.0; var by_before := 50.0
-	var bvals: Array[String] = ["A", "B", "C", "D"]
-	_ll_lbl(ci, Vector2(bx0 - 24, by_before - 14), "BEFORE:", Color(0.85, 0.65, 0.65), font, 12)
+	_ll_lblc(ci, Vector2(mid_l, 20), "ARRAY  —  insert at [1]",       COL_WRONG, font, 13)
+	_ll_lblc(ci, Vector2(mid_r, 20), "LINKED LIST  —  insert after A", COL_CHEAP, font, 13)
+
+	# ══ LEFT PANEL — ARRAY ══
+	var bw := 72.0; var bh := 44.0; var bgap := 8.0
+	var bx0 := lx + (col_w - (4*bw + 3*bgap)) * 0.5
+
+	# Index labels row y=30, BEFORE label + boxes y=42..86
+	_ll_lbl(ci, Vector2(lx + 14, 56), "BEFORE", Color(0.76, 0.62, 0.72), font, 11)
 	for i in range(4):
 		var bx := bx0 + i * (bw + bgap)
-		_ll_box(ci, Rect2(Vector2(bx, by_before), Vector2(bw, bh)),
-			Color(0.18, 0.05, 0.05), Color(0.8, 0.28, 0.28))
-		_ll_lblc(ci, Vector2(bx + bw * 0.5, by_before - 10), "[%d]" % i, Color(0.8, 0.45, 0.45), font, 11)
-		_ll_lblc(ci, Vector2(bx + bw * 0.5, by_before + bh * 0.5 + 8), bvals[i], Color(1.0, 0.9, 0.85), font, 20)
+		var cx := bx + bw * 0.5
+		_ll_lblc(ci, Vector2(cx, 34), "[%d]" % i, Color(0.68, 0.56, 0.66), font, 11)
+		_ll_box(ci, Rect2(Vector2(bx, 42), Vector2(bw, bh)),
+			Color(0.16, 0.12, 0.20), Color(0.55, 0.38, 0.52))
+		_ll_lblc(ci, Vector2(cx, 42 + bh*0.5 + 7),
+			["A","B","C","D"][i], Color(0.92, 0.86, 0.92), font, 20)
 
-	# NEW value sitting above slot [1]
-	var new_x := bx0 + 1 * (bw + bgap)
-	_ll_box(ci, Rect2(Vector2(new_x + 4, by_before - 58), Vector2(bw - 8, bh - 8)),
-		Color(0.30, 0.15, 0.04), Color(1.0, 0.72, 0.1))
-	_ll_lblc(ci, Vector2(new_x + bw * 0.5, by_before - 30), "NEW", Color(1.0, 0.88, 0.3), font, 18)
-	# Down arrow into slot [1]
-	_ll_arrow(ci, Vector2(new_x + bw * 0.5, by_before - 16),
-		Vector2(new_x + bw * 0.5, by_before + 2), Color(1.0, 0.72, 0.1), 2.5)
+	# NEW box clearly below BEFORE row (bottom of BEFORE = 86, NEW at 98)
+	var new_cx := bx0 + 1*(bw+bgap) + bw*0.5
+	_ll_box(ci, Rect2(Vector2(new_cx - 36, 98), Vector2(72, 40)),
+		Color(0.20, 0.16, 0.08), Color(0.82, 0.68, 0.35))
+	_ll_lblc(ci, Vector2(new_cx, 98+26), "NEW", Color(0.95, 0.85, 0.40), font, 18)
+	_ll_arrow(ci, Vector2(new_cx, 96), Vector2(new_cx, 88), Color(0.82, 0.68, 0.35), 2.0)
+	_ll_lblc(ci, Vector2(new_cx, 150), "\u2191 insert here", Color(0.82, 0.68, 0.35), font, 10)
 
-	# SHIFT arrows — B, C, D all move right
-	var by_arrow := by_before + bh + 10.0
+	# Shift arrows at y=162, label at y=176
 	for i in range(1, 4):
-		var ax := bx0 + i * (bw + bgap) + bw * 0.5
-		_ll_arrow(ci, Vector2(ax, by_arrow), Vector2(ax + bw + bgap, by_arrow), COL_WRONG, 2.5)
-	_ll_lblc(ci, Vector2(bx0 + 1.5 * (bw + bgap) + bw, by_arrow + 14),
-		"B, C, D all shift right", COL_WRONG, font, 12)
+		var ax := bx0 + i*(bw+bgap) + bw*0.5
+		_ll_arrow(ci, Vector2(ax, 162), Vector2(ax + bw+bgap, 162), COL_WRONG, 2.0)
+	_ll_lblc(ci, Vector2(mid_l, 176), "B, C, D shift right  \u2192", COL_WRONG, font, 11)
 
-	# AFTER row — 5 boxes
-	var by_after := by_arrow + 36.0
-	var avals2: Array[String] = ["A", "NEW", "B", "C", "D"]
-	var aw2 := 68.0; var ax2_0 := 18.0
-	_ll_lbl(ci, Vector2(ax2_0 - 14, by_after - 14), "AFTER:", Color(0.85, 0.65, 0.65), font, 12)
+	# AFTER: 5 boxes at y=192, index labels at y=182
+	var aw2 := 58.0; var agap2 := 6.0
+	var ax2_0 := lx + (col_w - (5*aw2 + 4*agap2)) * 0.5
+	_ll_lbl(ci, Vector2(lx + 14, 192+14), "AFTER", Color(0.76, 0.62, 0.72), font, 11)
+	var avals2: Array[String] = ["A","NEW","B","C","D"]
 	for i in range(5):
-		var bx := ax2_0 + i * (aw2 + 5.0)
+		var bx := ax2_0 + i*(aw2+agap2)
+		var cx := bx + aw2*0.5
 		var is_new := (i == 1)
-		_ll_box(ci, Rect2(Vector2(bx, by_after), Vector2(aw2, bh)),
-			Color(0.28, 0.13, 0.04) if is_new else Color(0.18, 0.05, 0.05),
-			Color(1.0, 0.72, 0.1) if is_new else Color(0.8, 0.28, 0.28))
-		_ll_lblc(ci, Vector2(bx + aw2 * 0.5, by_after - 10), "[%d]" % i, Color(0.8, 0.45, 0.45), font, 11)
-		_ll_lblc(ci, Vector2(bx + aw2 * 0.5, by_after + bh * 0.5 + 8),
-			avals2[i], Color(1.0, 0.88, 0.3) if is_new else Color(1.0, 0.9, 0.85), font, 18)
-	_ll_lblc(ci, Vector2(232, by_after + bh + 16), "3 elements shifted  →  O(n) cost", COL_WRONG, font, 13)
+		_ll_lblc(ci, Vector2(cx, 182), "[%d]" % i, Color(0.68, 0.56, 0.66), font, 10)
+		_ll_box(ci, Rect2(Vector2(bx, 192), Vector2(aw2, bh)),
+			Color(0.20, 0.16, 0.08) if is_new else Color(0.16, 0.12, 0.20),
+			Color(0.82, 0.68, 0.35) if is_new else Color(0.55, 0.38, 0.52))
+		_ll_lblc(ci, Vector2(cx, 192+bh*0.5+7),
+			avals2[i], Color(0.95, 0.85, 0.40) if is_new else Color(0.92, 0.86, 0.92), font, 17)
+	_ll_lblc(ci, Vector2(mid_l, 252), "3 shifts  \u2192  O(n) cost", COL_WRONG, font, 12)
 
-	# Divider
-	ci.draw_line(Vector2(464, 4), Vector2(464, 246), Color(0.35, 0.35, 0.6, 0.6), 1.5)
+	# ══ RIGHT PANEL — LINKED LIST ══
+	var lnw := 66.0; var lnh := 38.0; var lsp := 132.0
+	var lx0 := rx + 18.0
 
-	# ── RIGHT PANEL: Linked list insertion ───────────────────────────────────
-	_ll_box(ci, Rect2(Vector2(468, 4), Vector2(456, 242)),
-		Color(0.03, 0.09, 0.03), Color(0.22, 0.72, 0.32))
-	_ll_lblc(ci, Vector2(696, 20), "LINKED LIST — insert NEW after A", COL_CHEAP, font, 14)
+	# NEW node at y=50 — its OWN row, clearly below title (y=20)
+	var new_lx := lx0 + lsp*0.5
+	_ll_node(ci, Vector2(new_lx, 50), "NEW", Color(0.42, 0.18, 0.58), font, lnw, lnh-4)
+	_ll_port(ci, Vector2(new_lx+lnw*0.5+4, 50))
+	_ll_arrow(ci, Vector2(new_lx, 50+(lnh-4)*0.5+2),
+		Vector2(new_lx, 88-lnh*0.5-2), Color(0.70, 0.48, 0.82, 0.75), 2.0)
 
-	var lnw := 66.0; var lnh := 40.0; var lsp := 148.0
-	var lx0 := 500.0; var ly_before := 70.0
-
-	# BEFORE: A → B → NULL
-	_ll_lbl(ci, Vector2(lx0 - 24, ly_before - 14), "BEFORE:", Color(0.5, 0.85, 0.6), font, 12)
+	# BEFORE row at y=88 — "BEFORE:" label at y=76
+	_ll_lbl(ci, Vector2(lx0, 76), "BEFORE:", Color(0.42, 0.72, 0.56), font, 11)
 	var lcols_b: Array[Color] = [COL_HEAD, COL_TAIL]
-	var lnames_b: Array[String] = ["A", "B"]
 	for i in range(2):
-		var p := Vector2(lx0 + i * lsp, ly_before)
-		_ll_node(ci, p, lnames_b[i], lcols_b[i], font, lnw, lnh)
-		_ll_port(ci, p + Vector2(lnw * 0.5 + 4, 0))
-		if i < 1:
-			_ll_arrow(ci, p + Vector2(lnw * 0.5 + 12, 0),
-				Vector2(lx0 + (i+1) * lsp - lnw * 0.5 - 4, ly_before),
-				Color(0.25, 0.9, 1.0), 3.0)
-	_ll_null(ci, Vector2(lx0 + 2 * lsp, ly_before), font)
-	_ll_arrow(ci, Vector2(lx0 + lsp + lnw * 0.5 + 12, ly_before),
-		Vector2(lx0 + 2 * lsp - 32, ly_before), Color(0.35, 1.0, 0.5), 2.5)
+		var p := Vector2(lx0 + i*lsp, 88)
+		_ll_node(ci, p, ["A","B"][i], lcols_b[i], font, lnw, lnh)
+		_ll_port(ci, p + Vector2(lnw*0.5+4, 0))
+		if i == 0:
+			_ll_arrow(ci, p+Vector2(lnw*0.5+12, 0),
+				Vector2(lx0+lsp-lnw*0.5-4, 88), COL_ARROW, 2.5)
+	_ll_null(ci, Vector2(lx0+2*lsp, 88), font)
+	_ll_arrow(ci, Vector2(lx0+lsp+lnw*0.5+12, 88),
+		Vector2(lx0+2*lsp-32, 88), COL_TAIL, 2.0)
 
-	# NEW node dropping in
-	var new_lx := lx0 + lsp * 0.5
-	var new_ly := ly_before - 60.0
-	_ll_node(ci, Vector2(new_lx, new_ly), "NEW", Color(0.35, 0.12, 0.50), font, lnw + 8, lnh - 4)
-	_ll_port(ci, Vector2(new_lx + lnw * 0.5 + 8, new_ly))
-	_ll_arrow(ci, Vector2(new_lx, new_ly + lnh * 0.5),
-		Vector2(new_lx, ly_before - lnh * 0.5 - 4), Color(0.9, 0.5, 1.0, 0.6), 2.0)
+	# Step labels y=140 and y=160 (BEFORE bottom=88+38=126, 14px gap)
+	_ll_lbl(ci, Vector2(lx0, 140), "\u2460 A.next   =  NEW", Color(0.78, 0.68, 0.92), font, 12)
+	_ll_lbl(ci, Vector2(lx0, 160), "\u2461 NEW.next =  B",   Color(0.78, 0.68, 0.92), font, 12)
 
-	# STEP labels
-	var step_y := ly_before + lnh * 0.5 + 22.0
-	_ll_lbl(ci, Vector2(lx0 - 24, step_y), "Step 1:", Color(1.0, 0.72, 0.1), font, 12)
-	_ll_lbl(ci, Vector2(lx0 + 46, step_y), "A.next  =  NEW", Color(0.9, 0.78, 1.0), font, 12)
-	_ll_lbl(ci, Vector2(lx0 - 24, step_y + 18), "Step 2:", Color(1.0, 0.72, 0.1), font, 12)
-	_ll_lbl(ci, Vector2(lx0 + 46, step_y + 18), "NEW.next  =  B", Color(0.9, 0.78, 1.0), font, 12)
-
-	# AFTER: A → NEW → B → NULL
-	var ly_after := step_y + 46.0
-	_ll_lbl(ci, Vector2(lx0 - 24, ly_after - 14), "AFTER:", Color(0.5, 0.85, 0.6), font, 12)
-	var lcols_a: Array[Color] = [COL_HEAD, Color(0.35, 0.12, 0.50), COL_TAIL]
-	var lnames_a: Array[String] = ["A", "NEW", "B"]
-	var lsp2 := 110.0
+	# AFTER row at y=192
+	_ll_lbl(ci, Vector2(lx0, 180), "AFTER:", Color(0.42, 0.72, 0.56), font, 11)
+	var lsp2 := 100.0
+	var lcols_a: Array[Color] = [COL_HEAD, Color(0.42, 0.18, 0.58), COL_TAIL]
 	for i in range(3):
-		var p := Vector2(lx0 + i * lsp2, ly_after)
-		_ll_node(ci, p, lnames_a[i], lcols_a[i], font, lnw - 4, lnh - 6)
-		_ll_port(ci, p + Vector2(lnw * 0.5, 0))
+		var p := Vector2(lx0 + i*lsp2, 192)
+		_ll_node(ci, p, ["A","NEW","B"][i], lcols_a[i], font, lnw-4, lnh-6)
+		_ll_port(ci, p + Vector2((lnw-4)*0.5+4, 0))
 		if i < 2:
-			_ll_arrow(ci, p + Vector2(lnw * 0.5 + 8, 0),
-				Vector2(lx0 + (i+1) * lsp2 - lnw * 0.5 + 4, ly_after),
-				Color(0.25, 0.9, 1.0), 3.0)
-	_ll_null(ci, Vector2(lx0 + 3 * lsp2, ly_after), font)
-	_ll_arrow(ci, Vector2(lx0 + 2 * lsp2 + lnw * 0.5 + 8, ly_after),
-		Vector2(lx0 + 3 * lsp2 - 32, ly_after), Color(0.35, 1.0, 0.5), 2.5)
-	_ll_lblc(ci, Vector2(696, ly_after + lnh + 14),
-		"2 pointer changes  →  O(1) cost", COL_CHEAP, font, 13)
+			_ll_arrow(ci, p+Vector2((lnw-4)*0.5+12, 0),
+				Vector2(lx0+(i+1)*lsp2-(lnw-4)*0.5-4, 192), COL_ARROW, 2.5)
+	_ll_null(ci, Vector2(lx0+3*lsp2, 192), font)
+	_ll_arrow(ci, Vector2(lx0+2*lsp2+(lnw-4)*0.5+12, 192),
+		Vector2(lx0+3*lsp2-32, 192), COL_TAIL, 2.0)
+	_ll_lblc(ci, Vector2(mid_r, 252), "2 pointer changes  \u2192  O(1) cost", COL_CHEAP, font, 12)
 
 func _draw_ll_shift_cost(ci: CanvasItem, font: Font) -> void:
-	# Left panel — ARRAY phase
-	_ll_box(ci, Rect2(Vector2(4,4), Vector2(458,222)), Color(0.09,0.04,0.04), Color(0.65,0.22,0.22))
-	_ll_lblc(ci, Vector2(233,20), "PHASE 1 — Sort as ARRAY", COL_WRONG, font, 14)
-	_ll_lbl(ci, Vector2(16,36), "Drag cars into target order.", Color(0.85,0.65,0.65), font, 12)
-	_ll_lbl(ci, Vector2(16,52), "Every car displaced = 1 SHIFT  \u2192  O(n) \u26a0", Color(0.85,0.65,0.65), font, 12)
+	var total_w : float = ci.size.x if ci.size.x > 0 else 960.0
+	var half_w  := total_w * 0.5 - 6.0
+	_ll_box(ci, Rect2(Vector2(4,4), Vector2(half_w,310)), Color(0.14, 0.10, 0.18), Color(0.55, 0.38, 0.52))
+	_ll_lblc(ci, Vector2(4+half_w*0.5, 20), "PHASE 1 — Sort as ARRAY", COL_WRONG, font, 14)
+	_ll_lbl(ci, Vector2(16, 38), "Drag cars into the target order.", Color(0.76, 0.62, 0.72), font, 12)
+	_ll_lbl(ci, Vector2(16, 56), "Each swap displaces neighbours  \u2192  O(n) cost", Color(0.76, 0.62, 0.72), font, 12)
 	var avals: Array[int] = [45, 17, 31, 10]
-	var sp_a := 96.0; var ax := 52.0; var ay := 110.0
-	var acols: Array[Color] = [Color(0.42,0.12,0.12), Color(0.42,0.12,0.12), Color(0.14,0.35,0.14), Color(0.42,0.12,0.12)]
+	var sp_a := half_w * 0.21; var ax := half_w * 0.11; var ay := 128.0
+	var acols: Array[Color] = [Color(0.28,0.18,0.32),Color(0.28,0.18,0.32),Color(0.18,0.30,0.24),Color(0.28,0.18,0.32)]
 	for i in range(4):
 		_ll_node(ci, Vector2(ax+i*sp_a, ay), str(avals[i]), acols[i], font, 72.0, 44.0)
-		_ll_lblc(ci, Vector2(ax+i*sp_a, ay-28), "[%d]" % i, Color(0.8,0.4,0.4), font, 11)
-	_ll_arrow(ci, Vector2(ax+sp_a+8, ay-16), Vector2(ax+sp_a*2-8, ay-16), COL_WRONG, 2.0)
-	_ll_arrow(ci, Vector2(ax+sp_a*2+8, ay-22), Vector2(ax+sp_a*3-8, ay-22), COL_WRONG, 2.0)
-	_ll_lblc(ci, Vector2(233, ay+36), "shifts = O(n)", COL_WRONG, font, 13)
-	ci.draw_line(Vector2(466,4), Vector2(466,226), Color(0.35,0.35,0.6,0.7), 1.5)
-	# Right panel — LIST phase
-	_ll_box(ci, Rect2(Vector2(470,4), Vector2(458,222)), Color(0.04,0.09,0.04), Color(0.22,0.65,0.32))
-	_ll_lblc(ci, Vector2(699,20), "PHASE 2 — Chain as LINKED LIST", COL_OK, font, 14)
-	_ll_lbl(ci, Vector2(482,36), "Draw pointer arrows between cars.", Color(0.6,0.85,0.6), font, 12)
-	_ll_lbl(ci, Vector2(482,52), "No shifting — just 2 pointer changes.", Color(0.6,0.85,0.6), font, 12)
+		_ll_lblc(ci, Vector2(ax+i*sp_a, ay-32), "[%d]" % i, Color(0.70, 0.55, 0.65), font, 11)
+	_ll_arrow(ci, Vector2(ax+sp_a+8, ay-20), Vector2(ax+sp_a*2-8, ay-20), COL_WRONG, 2.0)
+	_ll_arrow(ci, Vector2(ax+sp_a*2+8, ay-28), Vector2(ax+sp_a*3-8, ay-28), COL_WRONG, 2.0)
+	_ll_lblc(ci, Vector2(4+half_w*0.5, ay+42), "shifts = O(n)", COL_WRONG, font, 13)
+	var rp_x := total_w * 0.5 + 2.0
+	ci.draw_line(Vector2(rp_x-2,4), Vector2(rp_x-2,314), Color(0.35,0.35,0.6,0.7), 1.5)
+	_ll_box(ci, Rect2(Vector2(rp_x,4), Vector2(half_w,310)), Color(0.06, 0.12, 0.10), Color(0.28, 0.60, 0.42))
+	var mid_r2 := rp_x + half_w*0.5
+	_ll_lblc(ci, Vector2(mid_r2, 20), "PHASE 2 — Chain as LINKED LIST", COL_OK, font, 14)
+	_ll_lbl(ci, Vector2(rp_x+12, 38), "Draw pointer arrows between cars.", Color(0.48, 0.72, 0.58), font, 12)
+	_ll_lbl(ci, Vector2(rp_x+12, 56), "No shifting — just pointer assignments.", Color(0.48, 0.72, 0.58), font, 12)
 	var lvals2: Array[int] = [10, 17, 31]
-	var lx0 := 502.0; var sp_l := 126.0; var ly := 110.0
-	var lfills2: Array[Color] = [COL_HEAD, Color(0.12,0.42,0.25), COL_TAIL]
+	var llx0 := rp_x + half_w*0.1; var sp_l := half_w*0.28; var ly2 := 128.0
+	var lfills2: Array[Color] = [COL_HEAD, Color(0.14,0.38,0.26), COL_TAIL]
 	for i in range(3):
-		_ll_node(ci, Vector2(lx0+i*sp_l, ly), str(lvals2[i]), lfills2[i], font, 72.0, 44.0)
-		_ll_port(ci, Vector2(lx0+i*sp_l+36, ly))
+		_ll_node(ci, Vector2(llx0+i*sp_l, ly2), str(lvals2[i]), lfills2[i], font, 72.0, 44.0)
+		_ll_port(ci, Vector2(llx0+i*sp_l+36, ly2))
 	for i in range(2):
-		_ll_arrow(ci, Vector2(lx0+i*sp_l+44, ly), Vector2(lx0+(i+1)*sp_l-36, ly), Color(0.25,0.9,1.0), 3.5)
-	_ll_null(ci, Vector2(lx0+3*sp_l-16, ly), font)
-	_ll_arrow(ci, Vector2(lx0+2*sp_l+44, ly), Vector2(lx0+3*sp_l-46, ly), Color(0.35,1.0,0.5), 2.5)
-	_ll_lblc(ci, Vector2(699, ly+36), "0 shifts  =  O(1)", COL_OK, font, 13)
+		_ll_arrow(ci, Vector2(llx0+i*sp_l+44, ly2), Vector2(llx0+(i+1)*sp_l-36, ly2), COL_ARROW, 3.5)
+	_ll_null(ci, Vector2(llx0+3*sp_l-16, ly2), font)
+	_ll_arrow(ci, Vector2(llx0+2*sp_l+44, ly2), Vector2(llx0+3*sp_l-46, ly2), COL_TAIL, 2.5)
+	_ll_lblc(ci, Vector2(mid_r2, ly2+42), "0 shifts  =  O(1)", COL_OK, font, 13)
 
 func _draw_ll_node_anatomy(ci: CanvasItem, font: Font) -> void:
 	var nx := 265.0; var ny := 90.0
@@ -1462,7 +1462,7 @@ func _spawn_array_game(count: int) -> void:
 	_shift_label.add_theme_color_override("font_color", COL_COST)
 	_shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_shift_label.custom_minimum_size  = Vector2(1280, 0)
-	_shift_label.position = Vector2(0, TRAIN_Y + TRAIN_SLOT_H + 12)
+	_shift_label.position = Vector2(0, TRAIN_Y - 80)   # above index labels, clear of city
 	_shift_label.z_index  = 5
 	_array_layer.add_child(_shift_label)
 	_update_shift_label()
@@ -1477,11 +1477,7 @@ func _draw_array_target_banner() -> void:
 	var banner := PanelContainer.new()
 	banner.custom_minimum_size = Vector2(600, 52)
 	banner.z_index             = 10
-	# Anchor centered — position is resolved after layout; use offset from center
-	banner.set_anchor_and_offset(SIDE_LEFT,   0.5, -300)
-	banner.set_anchor_and_offset(SIDE_RIGHT,  0.5,  300)
-	banner.set_anchor_and_offset(SIDE_TOP,    0.0,  178)
-	banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0,  230)
+	banner.position            = Vector2(340, 260)
 	_array_layer.add_child(banner)
 
 	var hbox := HBoxContainer.new()
@@ -1716,10 +1712,7 @@ func _draw_list_target_banner() -> void:
 	var banner := PanelContainer.new()
 	banner.custom_minimum_size = Vector2(700, 52)
 	banner.z_index             = 10
-	banner.set_anchor_and_offset(SIDE_LEFT,   0.5, -350)
-	banner.set_anchor_and_offset(SIDE_RIGHT,  0.5,  350)
-	banner.set_anchor_and_offset(SIDE_TOP,    0.0,  155)
-	banner.set_anchor_and_offset(SIDE_BOTTOM, 0.0,  207)
+	banner.position            = Vector2(290, 260)
 	_array_layer.add_child(banner)
 
 	var hbox := HBoxContainer.new()
@@ -1812,8 +1805,8 @@ func _finish_list_phase() -> void:
 	AudioManager.play_sfx(PATH_SFX_HOVER)
 	_show_instruction_panel(
 		"✓ Linked list complete!  Pointer ops: %d   Earned: +%d pts" % [_list_ops, list_bonus],
-		"Array needed %d shifts.  Linked list needed 0 shifts — just %d pointer assignments.\n"
-		+ "Same cars. Same order. Completely different cost." % [_shift_count, _list_ops],
+		("Array needed %d shifts.  Linked list needed 0 shifts — just %d pointer assignments.\n"
+		+ "Same cars. Same order. Completely different cost.") % [_shift_count, _list_ops],
 		COL_HEAD)
 	_show_cost_banner("Array: %d shifts    Linked List: 0 shifts" % _shift_count, COL_CHEAP)
 	await get_tree().create_timer(3.5).timeout
@@ -1976,6 +1969,23 @@ func _array_on_rmb_down(pos: Vector2) -> void:
 			if is_instance_valid(nd) and nd.global_position.distance_to(pos) < NODE_HIT:
 				_show_cargo_tooltip(item, nd.global_position)
 				return
+	else:
+		# Right-click to unlink a list node in phase 1
+		for node: Dictionary in _list_nodes_af:
+			var spr := node["sprite"] as Node2D
+			if not is_instance_valid(spr): continue
+			if spr.global_position.distance_to(pos) < NODE_HIT:
+				if (node["next_id"] as int) != -1:
+					var arrow = node["arrow"]
+					if arrow and is_instance_valid(arrow as Node2D):
+						(arrow as Node2D).queue_free()
+					node["next_id"] = -1
+					node["arrow"]   = null
+					_float_label(spr, "link removed", COL_WRONG)
+					AudioManager.play_sfx(PATH_SFX_FAIL)
+				else:
+					_float_label(spr, "no link to remove", COL_HINT)
+				return
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  v6: DRAG GHOST helpers
@@ -2136,8 +2146,9 @@ func _spawn_nodes(count: int) -> void:
 			370.0   # fixed rail Y — sits on city floor
 		)
 		_nodes.append(_make_node(pos, false))
-	if _p["concept"] in ["CONNECT", "INSERT", "REVERSE"]:
-		_spawn_null_engine()
+	# NULL train removed — chain termination shown by pointer labels
+	#if _p["concept"] in ["CONNECT", "INSERT", "REVERSE"]:
+	#	_spawn_null_engine()
 
 func _spawn_insert_node() -> void:
 	var node := _make_node(Vector2(640, 80), true)
@@ -2152,7 +2163,7 @@ func _spawn_null_engine() -> void:
 		spr.texture = load(PATH_TRAIN_ENGINE)
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	spr.scale    = NODE_SCALE
-	spr.flip_h   = true
+	spr.flip_h   = false  # consistent with engine direction (facing left)
 	spr.modulate = COL_TAIL
 	spr.z_index  = 8
 	_node_layer.add_child(spr)
@@ -2197,6 +2208,7 @@ func _make_node(pos: Vector2, staged: bool) -> Dictionary:
 
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.scale    = NODE_SCALE
+	sprite.flip_h   = false  # face left — engine leads left, cars trail to the right
 	sprite.z_index  = 10
 	sprite.modulate = COL_TRAIN_MID   # visible against dark bg
 	_node_layer.add_child(sprite)
@@ -2453,11 +2465,11 @@ func _step_traversal() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 #  PROCESS
 # ─────────────────────────────────────────────────────────────────────────────
-const PARALLAX_SPEED := -90.0  # px/s — negative = city moves left (train moves right)
+const PARALLAX_SPEED := 90.0   # px/s — negative = city scrolls left (train moves left)
 
 func _process(delta: float) -> void:
 	if is_instance_valid(_parallax_bg):
-		_parallax_bg.scroll_offset.x += PARALLAX_SPEED * delta
+		_parallax_bg.scroll_offset.x -= PARALLAX_SPEED * delta
 	if not _alive: return
 	if _combo > 0:
 		_combo_decay -= delta
@@ -2624,7 +2636,14 @@ func _node_base_color(data: Dictionary) -> Color:
 # ─────────────────────────────────────────────────────────────────────────────
 #  INPUT
 # ─────────────────────────────────────────────────────────────────────────────
+func _on_pause_pressed() -> void:
+	if has_node("PauseMenu"):
+		get_node("PauseMenu").toggle()
+
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_pause_pressed()
+		return
 	if not _alive: return
 
 	if event is InputEventMouseButton:
@@ -3574,6 +3593,12 @@ func _end_game(success: bool) -> void:
 	_fail_summary.visible = true; _fail_lbl.text = summary
 	await get_tree().create_timer(3.0).timeout
 	var _s3 := _build_stats(success)
+	# Fix: advance DifficultyManager to the NEXT tier (current + 1) before
+	# handing off, so GameRouter always loads Hard (tier 2) after Normal (tier 1)
+	# instead of skipping to Expert (tier 3).
+	if success and has_node("/root/DifficultyManager"):
+		var next_tier: int = clamp(DifficultyManager.current_tier + 1, 0, TIER_PARAMS.size() - 1)
+		DifficultyManager.current_tier = next_tier
 	GameRouter.chapter_complete(_chapter_id, int(_s3["score"]), int(_s3["stars"]))
 
 func _calc_grade(success: bool) -> String:

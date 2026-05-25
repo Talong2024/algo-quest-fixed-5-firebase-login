@@ -183,7 +183,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .btn-export:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(22,163,74,.45)}
 .btn-export:disabled{opacity:.5;pointer-events:none}
 .export-dropdown{position:relative;display:inline-block}
-.export-menu{position:absolute;top:100%;right:0;margin-top:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);min-width:220px;z-index:500;overflow:hidden;display:none;box-shadow:0 8px 24px var(--shadow)}
+.export-menu{position:fixed;top:0;left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);min-width:240px;z-index:9000;display:none;box-shadow:0 8px 32px rgba(0,0,0,.6)}
 .export-menu.open{display:block}
 .export-menu-item{padding:12px 16px;font-size:13px;color:var(--text2);cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px;border:none;background:transparent;width:100%;text-align:left;font-family:var(--font-body)}
 .export-menu-item:hover{background:var(--bg3);color:var(--text)}
@@ -805,10 +805,22 @@ window.nav=(page)=>{
 // ── EXPORT TO EXCEL ────────────────────────────────────────────────────────
 window.toggleExportMenu = () => {
   const menu = document.getElementById("export-menu");
+  const btn  = document.getElementById("export-dropdown").querySelector(".btn-export");
+
+  // Portal pattern: position the fixed menu under the button using viewport coords.
+  // This escapes every overflow:hidden / overflow-y:auto ancestor that was clipping it.
+  const rect = btn.getBoundingClientRect();
+  const menuW = 240;
+  let left = rect.right - menuW;          // right-align to button
+  if (left < 8) left = 8;                // clamp left edge
+  menu.style.top  = (rect.bottom + 6) + "px";
+  menu.style.left = left + "px";
+
   menu.classList.toggle("open");
-  // Close when clicking outside
+
   const close = (e) => {
-    if (!document.getElementById("export-dropdown").contains(e.target)) {
+    if (!document.getElementById("export-dropdown").contains(e.target) &&
+        !menu.contains(e.target)) {
       menu.classList.remove("open");
       document.removeEventListener("click", close);
     }
@@ -991,6 +1003,14 @@ window.exportExcel = (type) => {
 
 window.handleLogout=logout;
 
+</script>
+
+<script>
+// Move #export-menu to document.body so it is never clipped by any ancestor.
+(function(){
+  const menu = document.getElementById('export-menu');
+  if(menu && menu.parentElement !== document.body) document.body.appendChild(menu);
+})();
 </script>
 </body>
 </html>

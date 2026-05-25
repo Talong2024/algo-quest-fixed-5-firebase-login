@@ -46,6 +46,15 @@ func complete_chapter(chapter_id: int, stats: Dictionary) -> void:
 	stats["action_count"] = _session_log.size()
 	if has_node("/root/SaveManager"):
 		SaveManager.save_chapter_result(chapter_id, stats)
+	# FIX: also persist to Firestore via PlayerProfile so progress survives login
+	if has_node("/root/PlayerProfile"):
+		PlayerProfile.save_chapter_result(
+			chapter_id,
+			stats.get("score",    0),
+			stats.get("stars",    0),
+			stats.get("accuracy", 0.0),
+			stats.get("mistakes", {})
+		)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  QUERIES (for adaptive difficulty or WorldMap display)

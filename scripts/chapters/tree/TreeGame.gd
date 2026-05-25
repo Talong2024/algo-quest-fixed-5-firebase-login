@@ -18,13 +18,13 @@ const PATH_SFX_OK     := "res://assets/audio/sfx/tile_place.ogg"
 const PATH_SFX_FAIL   := "res://assets/audio/sfx/fail.ogg"
 const PATH_SFX_WIN    := "res://assets/audio/sfx/level_up.ogg"
 const PATH_SFX_PICKUP := "res://assets/audio/sfx/tile_pickup.wav"
-const PATH_BGM        := "res://assets/audio/music/forest.ogg"
+const PATH_BGM        := "res://assets/audio/bgm/TheForest.ogg"
 const NODE_ICON       := "res://assets/art/tree/nodes/runeBlack_tile_036.png"
 const ROOT_ICON       := "res://assets/art/tree/nodes/runeBlack_tileOutline_036.png"
 const NODE_SCALE      := Vector2(1.2, 1.2)
 
 # ── Layout ───────────────────────────────────────────────────────────────────
-const ROOT_POS   := Vector2(640.0, 90.0)
+const ROOT_POS   := Vector2(640.0, 210.0)
 const LEVEL_H    := 85.0
 const SPREAD_MUL := 180.0
 const NODE_HIT   := 28.0
@@ -96,6 +96,7 @@ enum RoundType   { NONE, INSERT, SEARCH, INORDER, PREORDER, POSTORDER, DELETE, A
 @onready var _score_lbl:       Label          = $HUD/ScoreLabel
 @onready var _combo_lbl:       Label          = $HUD/ComboLabel
 @onready var _goal_lbl:        Label          = $HUD/GoalLabel
+@onready var _instr_lbl:       Label          = $HUD/InstrLabel
 @onready var _acc_lbl:         Label          = $HUD/AccuracyLabel
 @onready var _lives_row:       HBoxContainer  = $HUD/LivesRow
 @onready var _hint_lbl:        Label          = $HUD/HintBox/HintLabel
@@ -173,13 +174,16 @@ func _ready() -> void:
 		_tier = clamp(DifficultyManager.current_tier, 0, TIER_CONFIG.size() - 1)
 	_cfg = TIER_CONFIG[_tier]
 
+	# Tell GameRouter which chapter is active so retry/pause work correctly
+	if has_node("/root/GameRouter"):
+		GameRouter.current_chapter = 16 + _tier  # 16=Beginner … 20=Expert
+
 	_trav_banner.visible     = false
 	_complete_banner.visible = false
 	_fail_summary.visible    = false
 	_hint_box.visible        = false
 
 	_setup_hud()
-	_setup_instr_bar()
 	_setup_banner()
 	_setup_hint_overlay()
 	_setup_bg()
@@ -237,8 +241,9 @@ func _setup_bg() -> void:
 		# Scale to fill entire 1280×720 viewport
 		var sx := 1280.0 / tex.get_width()
 		var sy := 720.0  / tex.get_height()
-		sp.scale    = Vector2(sx, sy)
-		# Sprite origin is the texture centre — position at screen centre
+		# Scale by whichever axis is larger so image fills full screen in both directions
+		var s  := maxf(sx, sy)
+		sp.scale    = Vector2(s, s)
 		sp.position = Vector2(640.0, 360.0)
 		sp.set_meta("scroll_amount", layer["scroll"] as float)
 		add_child(sp)
@@ -572,6 +577,79 @@ func _close_intro() -> void:
 # =============================================================================
 #  INNER CLASSES
 # =============================================================================
+# ── AVL rotation button with hover preview animation ─────────────────────────
+class _AVLButton extends Node2D:
+	var btn_label:   String   = ""
+	var pixel_font:  Font     = null
+	var btn_color:   Color    = Color.WHITE
+	var before_vals: Array    = []
+	var after_vals:  Array    = []
+	var on_click:    Callable = Callable()
+	var _hov:        bool     = false
+	var _anim_t:     float    = 0.0   # 0=before, 1=after when hovered
+	const W := 370.0; const H := 100.0
+	const _BG  := Color(0.12, 0.10, 0.06, 0.95)
+	const _BGH := Color(0.22, 0.18, 0.08, 0.98)
+	const _BD  := Color(0.72, 0.48, 0.18, 1.0)
+	func _ready() -> void:
+		set_process_input(true); set_process(true)
+	func _process(delta: float) -> void:
+		var target := 1.0 if _hov else 0.0
+		_anim_t = move_toward(_anim_t, target, delta * 3.0)
+		queue_redraw()
+	func _draw() -> void:
+		# Background
+		draw_rect(Rect2(0,0,W,H), _BGH if _hov else _BG, true)
+		draw_rect(Rect2(0,0,W,H), btn_color if _hov else _BD, false, 2.0)
+		# Label
+		if pixel_font:
+			var sz := 14
+			var tw := pixel_font.get_string_size(btn_label,HORIZONTAL_ALIGNMENT_LEFT,-1,sz).x
+			draw_string(pixel_font, Vector2((W-tw)*0.5, 18),
+				btn_label, HORIZONTAL_ALIGNMENT_LEFT,-1, sz, btn_color)
+		# Preview: lerp between before (chain) and after (balanced triangle)
+		if before_vals.size() == 3 and after_vals.size() == 3 and pixel_font:
+			var t := _anim_t
+			# Node positions: before=vertical chain, after=balanced triangle
+			var b0 := Vector2(60, 30);  var a0 := Vector2(185, 60)  # root/mid
+			var b1 := Vector2(60, 60);  var a1 := Vector2(148, 28)  # mid/left
+			var b2 := Vector2(60, 88);  var a2 := Vector2(222, 28)  # bot/right
+			var p0 := b0.lerp(a0, t)
+			var p1 := b1.lerp(a1, t)
+			var p2 := b2.lerp(a2, t)
+			# Edges
+			draw_line(p0, p1, btn_color, 1.5)
+			draw_line(p1, p2, btn_color, 1.5)
+			if t > 0.5:  # show second edge appearing during rotation
+				draw_line(p0, p2, btn_color.lightened(0.3), 1.5 * t)
+			# Nodes
+			for pd in [[p0, before_vals[0] if t < 0.5 else after_vals[0]],
+					   [p1, before_vals[1] if t < 0.5 else after_vals[1]],
+					   [p2, before_vals[2] if t < 0.5 else after_vals[2]]]:
+				var pp: Vector2 = pd[0]; var pv: int = pd[1]
+				draw_circle(pp, 14.0, btn_color.darkened(0.2))
+				draw_arc(pp, 14.0, 0, TAU, 24, btn_color, 1.5)
+				if pixel_font:
+					var s := str(pv); var sz2 := 12
+					var tw2 := pixel_font.get_string_size(s,HORIZONTAL_ALIGNMENT_LEFT,-1,sz2).x
+					var asc := pixel_font.get_ascent(sz2)
+					draw_string(pixel_font, Vector2(pp.x-tw2*0.5, pp.y+asc*0.5-1),
+						s, HORIZONTAL_ALIGNMENT_LEFT,-1, sz2, Color(0.95,0.92,0.72))
+			# Hint text
+			var hint := "← hover to preview" if not _hov else ("rotating..." if t < 0.95 else "balanced ✓")
+			if pixel_font:
+				draw_string(pixel_font, Vector2(100, 88), hint,
+					HORIZONTAL_ALIGNMENT_LEFT,-1, 11,
+					Color(0.6,0.9,0.5) if t > 0.9 else Color(0.7,0.7,0.5,0.7))
+	func _input(e: InputEvent) -> void:
+		var r := Rect2(global_position, Vector2(W, H))
+		if e is InputEventMouseMotion:
+			_hov = r.has_point((e as InputEventMouseMotion).global_position)
+		elif e is InputEventMouseButton:
+			var mb := e as InputEventMouseButton
+			if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed and r.has_point(mb.global_position):
+				if on_click.is_valid(): on_click.call()
+
 class _DiagramDrawer extends Node2D:
 	var draw_fn:    Callable
 	var pixel_font: Font
@@ -765,10 +843,10 @@ func _start_insert() -> void:
 	_rebuild_pool_sprites()
 	_refresh_ghosts()
 	_goal_lbl.text = "Runes left: %d" % _pool.size()
-	_update_instr("Build the Tree — drag each rune to its correct slot.", "")
+	_instr_lbl.text = "Build the Tree — drag each rune to its correct slot."
 	# Hints only appear after first mistake — see _show_hint_overlay()
 	_hint_box.visible = false
-	# banner removed
+	# no banner for insert phase
 
 func _on_insert_done() -> void:
 	_flash_inorder_seq()
@@ -920,12 +998,17 @@ func _begin_trav_round(rt: RoundType) -> void:
 		RoundType.INORDER:   _collect_inorder(_root, _trav_sequence)
 		RoundType.PREORDER:  _collect_preorder(_root, _trav_sequence)
 		RoundType.POSTORDER: _collect_postorder(_root, _trav_sequence)
+	# Guard: if tree is empty skip this round
+	if _trav_sequence.is_empty():
+		_rounds_done += 1; _begin_trav_round(rt); return
 	_goal_lbl.text = "Round %d/%d  |  Tap %d nodes" % [
 		_rounds_done + 1, _cfg["trav_rounds"] as int, _trav_sequence.size()]
 	for i in _live_indices(): (_bst[i]["sprite"] as Node2D).modulate = Color(0.45, 0.45, 0.45)
 	_pulse_node(_bst[_trav_sequence[0]]["sprite"] as Node2D, _trav_col(rt))
 
 func _handle_trav_tap(pos: Vector2, rt: RoundType) -> void:
+	# Guard against empty sequence
+	if _trav_sequence.is_empty() or _trav_hi >= _trav_sequence.size(): return
 	var col := _trav_col(rt)
 	for i in _live_indices():
 		var nd := _bst[i]["sprite"] as Node2D
@@ -1113,17 +1196,37 @@ func _in_subtree(ancestor: int, target: int) -> bool:
 
 func _show_avl_buttons() -> void:
 	var ov := CanvasLayer.new(); ov.name = "AVLOv"; ov.layer = 50; add_child(ov)
+
 	var labels: Array[String] = ["LL (Right Rotate)","RR (Left Rotate)",
 		"LR (Left-Right Rotate)","RL (Right-Left Rotate)"]
-	var pos := [Vector2(200,320),Vector2(680,320),Vector2(200,420),Vector2(680,420)]
+	var pos := [Vector2(200,310),Vector2(680,310),Vector2(200,430),Vector2(680,430)]
+	var cols: Array[Color] = [COL_INORDER, COL_SEARCH_HI, COL_PREORDER, COL_POSTORDER]
+
+	# Preview diagrams: [before chain vals, after balanced vals]
+	var previews: Array = [
+		[[30,20,10],[20,10,30]],   # LL → right rotate
+		[[10,30,50],[30,10,50]],   # RR → left rotate
+		[[30,10,25],[25,10,30]],   # LR → left-right
+		[[10,30,15],[15,10,30]],   # RL → right-left
+	]
+
 	for i in range(4):
-		var btn := Button.new()
-		btn.text = labels[i]; btn.position = pos[i]; btn.size = Vector2(380,65)
-		btn.add_theme_font_override("font", _pixel_font)
-		btn.add_theme_font_size_override("font_size", 16)
-		var lbl := labels[i]
-		btn.pressed.connect(func(): _on_avl_choice(lbl, ov))
-		ov.add_child(btn)
+		var lbl_txt := labels[i]
+		var col     := cols[i]
+		var bv: Array      = previews[i][0]
+		var av: Array      = previews[i][1]
+		var btn_pos: Vector2 = pos[i]
+
+		# Use a _WoodButton-style Node2D with hover preview
+		var node := _AVLButton.new()
+		node.btn_label  = lbl_txt
+		node.pixel_font = _pixel_font
+		node.btn_color  = col
+		node.before_vals= bv
+		node.after_vals = av
+		node.position   = btn_pos
+		node.on_click   = func(): _on_avl_choice(lbl_txt, ov)
+		ov.add_child(node)
 
 func _on_avl_choice(chosen: String, ov: CanvasLayer) -> void:
 	ov.queue_free()
@@ -1148,9 +1251,9 @@ func _on_avl_choice(chosen: String, ov: CanvasLayer) -> void:
 # =============================================================================
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
-		var _mbe := event as InputEventMouseButton
-		if _mbe.button_index == MOUSE_BUTTON_LEFT and _mbe.pressed:
-			if Rect2(1224, 4, 44, 28).has_point(_mbe.position):
+		var _mb := event as InputEventMouseButton
+		if _mb.button_index == MOUSE_BUTTON_LEFT and _mb.pressed:
+			if Rect2(1220, 2, 44, 44).has_point(_mb.position):
 				var _pm := get_node_or_null("PauseMenu")
 				if _pm and _pm.has_method("toggle"): _pm.toggle()
 				return
@@ -1233,6 +1336,7 @@ func _try_drop() -> void:
 	_score += pts; _stat["inserts"] += 1; _score_lbl.text = "Score: %d" % _score
 	_float_node(sp, "+%d" % pts, COL_OK)
 	_refresh_ghosts(); _goal_lbl.text = "Runes left: %d" % _pool.size()
+	_acc_lbl.text = "Accuracy: %.0f%%" % _accuracy()
 	if _pool.is_empty():
 		await get_tree().create_timer(0.4).timeout; _on_insert_done()
 
@@ -1648,12 +1752,22 @@ func _dismiss_hint_overlay() -> void:
 #  HUD
 # =============================================================================
 func _setup_hud() -> void:
-	_score_lbl.text="Score: 0"; _combo_lbl.text=""; _goal_lbl.text=""; _acc_lbl.text=""
+	_score_lbl.text="Score: 0"; _combo_lbl.text=""; _goal_lbl.text=""; _acc_lbl.text="Accuracy: 0%"
+	# Bigger font sizes for readability
+	_score_lbl.add_theme_font_size_override("font_size", 18)
+	_goal_lbl.add_theme_font_size_override("font_size", 18)
+	_acc_lbl.add_theme_font_size_override("font_size", 18)
 	_refresh_lives()
 	_setup_pause_btn()
 
 func _setup_pause_btn() -> void:
-	# PauseButton is a ColorRect in the tscn — clicks handled in _input below
+	var btn := get_node_or_null("HUD/PauseButton") as TextureButton
+	if btn:
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.pressed.connect(func():
+			var pm2 := get_node_or_null("PauseMenu")
+			if pm2 and pm2.has_method("toggle"): pm2.toggle()
+		)
 	var pm := get_node_or_null("PauseMenu")
 	if pm and pm.has_signal("howto_requested"):
 		pm.howto_requested.connect(_reopen_intro)
@@ -1729,8 +1843,8 @@ func _setup_instr_bar() -> void:
 	_instr_rule.z_index              = 42
 	panel.add_child(_instr_rule)
 
-func _update_instr(task: String, rule: String) -> void:
-	_instr_task.text=task; _instr_rule.text=rule
+func _update_instr(task: String, _rule: String) -> void:
+	_instr_lbl.text = task
 
 # Banner state
 var _banner_pill:     ColorRect = null   # small top bar that stays visible
@@ -1749,8 +1863,8 @@ func _setup_banner() -> void:
 	# ── Wood card on the overlay ──────────────────────────────────────────────
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _wood_panel(10))
-	card.size     = Vector2(860, 120)
-	card.position = Vector2(210, 490)
+	card.size     = Vector2(860, 160)
+	card.position = Vector2(210, 270)
 	card.z_index  = 96
 	_banner_rect.add_child(card)
 
@@ -1771,13 +1885,13 @@ func _setup_banner() -> void:
 
 	_banner_lbl = Label.new()
 	_banner_lbl.add_theme_font_override("font", _pixel_font)
-	_banner_lbl.add_theme_font_size_override("font_size", 20)
+	_banner_lbl.add_theme_font_size_override("font_size", 28)
 	_banner_lbl.add_theme_color_override("font_color", WOOD_GOLD)
 	_banner_lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.7))
 	_banner_lbl.add_theme_constant_override("shadow_offset_x", 2)
 	_banner_lbl.add_theme_constant_override("shadow_offset_y", 2)
-	_banner_lbl.position             = Vector2(20, 10)
-	_banner_lbl.size                 = Vector2(820, 40)
+	_banner_lbl.position             = Vector2(20, 14)
+	_banner_lbl.size                 = Vector2(820, 60)
 	_banner_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card.add_child(_banner_lbl)
 
@@ -1785,7 +1899,7 @@ func _setup_banner() -> void:
 	_banner_sub.add_theme_font_override("font", _pixel_font)
 	_banner_sub.add_theme_font_size_override("font_size", 15)
 	_banner_sub.add_theme_color_override("font_color", WOOD_TEXT)
-	_banner_sub.position             = Vector2(20, 56)
+	_banner_sub.position             = Vector2(20, 88)
 	_banner_sub.size                 = Vector2(820, 56)
 	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner_sub.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
@@ -1862,7 +1976,10 @@ func _play_completion() -> void:
 	var grade:=_calc_grade(true); var chapter_id:int=GameRouter.current_chapter if has_node("/root/GameRouter") else 16
 	if has_node("/root/PlayerProfile"): PlayerProfile.save_chapter_result(chapter_id,_score,_grade_to_stars(grade),_accuracy())
 	await get_tree().create_timer(2.5).timeout
-	if has_node("/root/GameRouter"): GameRouter.chapter_complete(chapter_id,_score,_grade_to_stars(grade))
+	var _end_stats1 := {"score":_score,"stars":_grade_to_stars(grade),"grade":grade,"accuracy":_accuracy(),"correct":_stat["correct"],"success":true}
+	if has_node("/root/GameRouter"):
+		if GameRouter.has_method("chapter_complete_with_stats"): GameRouter.chapter_complete_with_stats(chapter_id,_end_stats1)
+		else: GameRouter.chapter_complete(chapter_id,_score,_grade_to_stars(grade))
 
 func _end_game(success: bool) -> void:
 	if _master_phase==MasterPhase.COMPLETE: return
@@ -1873,7 +1990,10 @@ func _end_game(success: bool) -> void:
 	var chapter_id:int=GameRouter.current_chapter if has_node("/root/GameRouter") else 16
 	if has_node("/root/PlayerProfile"): PlayerProfile.save_chapter_result(chapter_id,_score,_grade_to_stars(grade),_accuracy())
 	await get_tree().create_timer(3.0).timeout
-	if has_node("/root/GameRouter"): GameRouter.chapter_complete(chapter_id,_score,_grade_to_stars(grade))
+	var _end_stats2 := {"score":_score,"stars":_grade_to_stars(grade),"grade":grade,"accuracy":_accuracy(),"correct":_stat["correct"],"success":success}
+	if has_node("/root/GameRouter"):
+		if GameRouter.has_method("chapter_complete_with_stats"): GameRouter.chapter_complete_with_stats(chapter_id,_end_stats2)
+		else: GameRouter.chapter_complete(chapter_id,_score,_grade_to_stars(grade))
 
 func _accuracy() -> float:
 	# inserts + traversal correct taps all count toward accuracy
@@ -2362,42 +2482,61 @@ func _draw_s4_bf(ci: CanvasItem, font: Font) -> void:
 	_dlc(ci, Vector2(640, 386), "If |BF| > 1 after insert  →  rotate to fix!", COL_AVL_BAD, font, 13)
 
 func _draw_s4_rotations(ci: CanvasItem, font: Font) -> void:
-	# 2×2 grid — each cell is 560×130 px
-	# Cell origins: TL=(60,128) TR=(660,128) BL=(60,278) BR=(660,278)
 	var titles: Array[String] = [
 		"LL  →  Right Rotate", "RR  →  Left Rotate",
 		"LR  →  Left-Right Rotate", "RL  →  Right-Left Rotate"
 	]
 	var cell_cols: Array[Color] = [COL_INORDER, COL_SEARCH_HI, COL_PREORDER, COL_POSTORDER]
-	var ox: Array[float] = [60.0,  660.0, 60.0,  660.0]
-	var oy2: Array[float] = [130.0, 130.0, 275.0, 275.0]
 
-	# Horizontal divider between rows
-	ci.draw_line(Vector2(60, 258), Vector2(1220, 258), Color(0.3,0.3,0.45,0.4), 1.0)
-	# Vertical divider between columns
-	ci.draw_line(Vector2(620, 115), Vector2(620, 420), Color(0.3,0.3,0.45,0.4), 1.0)
+	# 4 cells in a 2x2 grid — generous spacing
+	# TL origin (100,120)  TR origin (700,120)
+	# BL origin (100,290)  BR origin (700,290)
+	var ox: Array[float]  = [100.0, 700.0, 100.0, 700.0]
+	var oy2: Array[float] = [120.0, 120.0, 290.0, 290.0]
+
+	# Real values: [top, mid, inserted]
+	var before_vals: Array = [[30,20,10], [10,30,50], [30,10,25], [10,30,15]]
+	# After rotation: [new root, left child, right child]
+	var after_vals:  Array = [[20,10,30], [30,10,50], [25,10,30], [15,10,30]]
+
+	# Dividers
+	ci.draw_line(Vector2(80, 262), Vector2(1200, 262), Color(0.5,0.4,0.2,0.5), 1.0)
+	ci.draw_line(Vector2(620, 108), Vector2(620, 430), Color(0.5,0.4,0.2,0.5), 1.0)
 
 	for i in range(4):
-		var x: float = ox[i]; var y: float = oy2[i]; var c: Color = cell_cols[i]
-		_dlc(ci, Vector2(x + 280, y - 20), titles[i], c, font, 12)
-		# Before: unbalanced 3-node chain (left-leaning for LL/LR, right-leaning for RR/RL)
-		var n1 := Vector2(x + 80,  y)
-		var n2 := Vector2(x + 80,  y + 50)
-		var n3 := Vector2(x + 120, y + 50)
-		_de(ci, n1, n2, c, 1.5); _de(ci, n2, n3, c, 1.5)
-		_dn(ci, n1, 0, c.darkened(0.25), font, 14.0)
-		_dn(ci, n2, 0, c, font, 14.0)
-		_dn(ci, n3, 0, c.darkened(0.25), font, 14.0)
+		var x: float = ox[i]
+		var y: float = oy2[i]
+		var c: Color = cell_cols[i]
+		var bv: Array = before_vals[i]
+		var av: Array = after_vals[i]
+
+		# Title
+		_dlc(ci, Vector2(x + 240, y - 18), titles[i], c, font, 13)
+
+		# ── BEFORE — straight vertical chain ──────────────────────────────
+		var b_top := Vector2(x + 60, y)
+		var b_mid := Vector2(x + 60, y + 55)
+		var b_bot := Vector2(x + 60, y + 110)
+		_de(ci, b_top, b_mid, c, 2.0)
+		_de(ci, b_mid, b_bot, c, 2.0)
+		_dn(ci, b_top, bv[0], c.darkened(0.15), font, 16.0)
+		_dn(ci, b_mid, bv[1], c,                font, 16.0)
+		_dn(ci, b_bot, bv[2], c.lightened(0.2), font, 16.0)
+		_dlc(ci, b_bot + Vector2(0, 24), "↑ new", c.lightened(0.3), font, 11)
+
 		# Arrow
-		_darrow(ci, Vector2(x + 152, y + 25), Vector2(x + 196, y + 25), c)
-		# After: balanced 3-node
-		var m := Vector2(x + 260, y + 50)
-		var ml := Vector2(x + 228, y)
-		var mr := Vector2(x + 292, y)
-		_de(ci, m, ml, c, 1.5); _de(ci, m, mr, c, 1.5)
-		_dn(ci, m,  0, c, font, 14.0)
-		_dn(ci, ml, 0, c.darkened(0.25), font, 14.0)
-		_dn(ci, mr, 0, c.darkened(0.25), font, 14.0)
+		_darrow(ci, Vector2(x + 102, y + 55), Vector2(x + 148, y + 55), c)
+
+		# ── AFTER — balanced triangle ──────────────────────────────────────
+		var a_root := Vector2(x + 230, y + 55)
+		var a_left := Vector2(x + 185, y)
+		var a_right:= Vector2(x + 275, y)
+		_de(ci, a_root, a_left,  c, 2.0)
+		_de(ci, a_root, a_right, c, 2.0)
+		_dn(ci, a_root,  av[0], c,                font, 16.0)
+		_dn(ci, a_left,  av[1], c.darkened(0.15), font, 16.0)
+		_dn(ci, a_right, av[2], c.darkened(0.15), font, 16.0)
+		_dlc(ci, a_root + Vector2(0, 28), "balanced ✓", COL_OK, font, 11)
 
 func _draw_s4_gameplay(ci: CanvasItem, font: Font) -> void:
 	# Imbalanced right-right chain: 30→50→70

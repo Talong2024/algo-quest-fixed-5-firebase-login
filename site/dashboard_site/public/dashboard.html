@@ -251,7 +251,7 @@ function applyTheme(isLight) {
         <div class="hero-stats">
           <div class="h-stat"><div class="h-stat-val" id="ov-score">—</div><div class="h-stat-lbl">Score</div></div>
           <div class="h-stat"><div class="h-stat-val" id="ov-streak">—</div><div class="h-stat-lbl">Streak</div></div>
-          <div class="h-stat"><div class="h-stat-val" id="ov-done">—</div><div class="h-stat-lbl">Chapters</div></div>
+          <div class="h-stat"><div class="h-stat-val" id="ov-done">—</div><div class="h-stat-lbl">Levels</div></div>
           <div class="h-stat"><div class="h-stat-val" id="ov-perf">—</div><div class="h-stat-lbl">Perfects</div></div>
           <div class="h-stat"><div class="h-stat-val" id="ov-section">—</div><div class="h-stat-lbl">Section</div></div>
         </div>
@@ -385,13 +385,50 @@ import { auth, db, requireAuth, logout } from "./firebase.js";
 import { doc, getDoc, setDoc, collection, getDocs, updateDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// 5 topics, each containing 5 levels (levels 1-25)
 const CHAPTERS=[
-  {id:1,name:"Kingdom Gate",   dsa:"Queue — FIFO",   icon:"🏰",col:"#6bcb77"},
-  {id:2,name:"Castle of Echoes",dsa:"Stack — LIFO",  icon:"🗼",col:"#c77dff"},
-  {id:3,name:"Chain Station",  dsa:"Linked List",    icon:"🚂",col:"#ffd93d"},
-  {id:4,name:"Oracle's Forest",dsa:"BST / Heap",     icon:"🌲",col:"#6bcb77"},
-  {id:5,name:"Kingdom Roads",  dsa:"Graph Algorithms",icon:"🗺",col:"#4d96ff"},
+  {id:1,name:"Kingdom Gate",   dsa:"Queue — FIFO",    icon:"🏰",col:"#6bcb77", levels:[1,2,3,4,5]},
+  {id:2,name:"Castle of Echoes",dsa:"Stack — LIFO",   icon:"🗼",col:"#c77dff", levels:[6,7,8,9,10]},
+  {id:3,name:"Chain Station",  dsa:"Linked List",     icon:"🚂",col:"#ffd93d", levels:[11,12,13,14,15]},
+  {id:4,name:"Oracle's Forest",dsa:"BST / Heap",      icon:"🌲",col:"#6bcb77", levels:[16,17,18,19,20]},
+  {id:5,name:"Kingdom Roads",  dsa:"Graph Algorithms",icon:"🗺",col:"#4d96ff", levels:[21,22,23,24,25]},
 ];
+
+// Helper: aggregate topic stats from per-level progress map
+// pr is keyed by level number (string or int, e.g. "1".."25")
+function topicStats(ch, pr) {
+  const lvls = ch.levels.map(n => pr[n] || pr[String(n)] || {});
+  const completedLvls = lvls.filter(l => l.completed || l.complete);
+  const totalLvls = ch.levels.length;
+  const done = completedLvls.length === totalLvls;
+  const stars = lvls.reduce((s, l) => s + (l.stars || 0), 0);
+  const best_score = lvls.reduce((s, l) => s + (l.best_score || 0), 0);
+  const accuracy = completedLvls.length
+    ? completedLvls.reduce((s, l) => s + (l.accuracy || 0), 0) / completedLvls.length
+    : 0;
+  const levelsCleared = completedLvls.length;
+  // Unlock: topic 1 always open; others need last level of previous topic done
+  return { done, stars, best_score, accuracy, levelsCleared, totalLvls };
+}
+
+// Is a specific level unlocked?
+function isLevelUnlocked(levelNum, pr) {
+  if (levelNum === 1) return true;
+  // First level of topics 2-5 requires last level of previous topic
+  if ([6, 11, 16, 21].includes(levelNum)) {
+    const prev = levelNum - 1;
+    const pd = pr[prev] || pr[String(prev)] || {};
+    return !!(pd.completed || pd.complete);
+  }
+  const prev = levelNum - 1;
+  const pd = pr[prev] || pr[String(prev)] || {};
+  return !!(pd.completed || pd.complete);
+}
+
+// Is a topic unlocked (first level accessible)?
+function isTopicUnlocked(ch, pr) {
+  return isLevelUnlocked(ch.levels[0], pr);
+}
 const MASTERY=[
   {key:"queue",label:"Queue",col:"#6bcb77"},{key:"stack",label:"Stack",col:"#c77dff"},
   {key:"linked_list",label:"Linked List",col:"#ffd93d"},{key:"tree",label:"BST / Heap",col:"#6bcb77"},
@@ -421,13 +458,13 @@ requireAuth(async(user)=>{
 function render(){
   const p=_profile,st=p.stats||{},pr=p.progress||{};
   const em=HE[p.selected_hero]||"⚔️",hn=HN[p.selected_hero]||p.selected_hero||"Unknown Hero";
-  const done=Object.values(pr).filter(x=>x.complete).length;
+  const clearedLvls=Object.values(pr).filter(x=>x.completed||x.complete).length;
   $("sb-avatar").textContent=em;$("sb-name").textContent=p.username||"Hero";$("sb-title").textContent=p.title||"";
   $("hero-emoji").textContent=em;$("h-name").textContent=p.username||"Hero";
   const htEl=$("h-title");if(p.title){htEl.textContent=p.title;htEl.style.display="";}else htEl.style.display="none";
   $("ov-score").textContent=(st.total_score||0).toLocaleString();
   $("ov-streak").textContent=(st.login_streak||0)+" 🔥";
-  $("ov-done").textContent=done+" / 5";
+  $("ov-done").textContent=clearedLvls+" / 25";
   $("ov-perf").textContent=st.perfect_clears||0;
   rStatCards("ov-statcards",st,pr);rChCards("ov-chapters",pr);
   rChCards("ch-grid",pr);rAccBars("ch-acc",pr);rMastery("ch-mastery",pr);
@@ -444,62 +481,74 @@ function render(){
 }
 
 function rStatCards(id,st,pr){
-  const done=Object.values(pr).filter(x=>x.complete).length;
+  const clearedLvls=Object.values(pr).filter(x=>x.completed||x.complete).length;
   const ts=Object.values(pr).reduce((s,x)=>s+(x.stars||0),0);
   $(id).innerHTML=[
     {icon:"🏆",val:(st.total_score||0).toLocaleString(),lbl:"Total Score",g:"#ffd93d"},
     {icon:"🔥",val:(st.login_streak||0)+"d",lbl:"Login Streak",g:"#ff6b6b"},
-    {icon:"⭐",val:ts+" / 15",lbl:"Stars Earned",g:"#c77dff"},
-    {icon:"✅",val:done+" / 5",lbl:"Chapters Done",g:"#6bcb77"},
+    {icon:"⭐",val:ts+" / 75",lbl:"Stars Earned",g:"#c77dff"},
+    {icon:"✅",val:clearedLvls+" / 25",lbl:"Levels Cleared",g:"#6bcb77"},
   ].map(c=>`<div class="stat-card"><div class="stat-glow" style="background:${c.g}"></div><span class="stat-icon">${c.icon}</span><div class="stat-val">${c.val}</div><div class="stat-lbl">${c.lbl}</div></div>`).join("");
 }
 
 function rChCards(id,pr){
   $(id).innerHTML=CHAPTERS.map(ch=>{
-    const p=pr[ch.id]||{},done=!!p.complete,stars=p.stars||0,score=p.best_score||0;
-    const unlocked=ch.id===1||!!(pr[ch.id-1]||{}).complete;
-    const sh=[1,2,3].map(s=>`<span class="${s<=stars?"star-on":"star-off"}">★</span>`).join("");
-    const b=unlocked?(done?'<span class="ch-badge badge-done">DONE</span>':'<span class="ch-badge badge-active">ACTIVE</span>'):'<span class="ch-badge badge-lock">LOCKED</span>';
-    return`<div class="ch-card${unlocked?"":" locked"}" style="--ch-col:${ch.col}">${b}<span class="ch-icon">${ch.icon}</span><div class="ch-num">CHAPTER ${ch.id}</div><div class="ch-name">${ch.name}</div><div class="ch-dsa">${ch.dsa}</div><span class="ch-stars">${sh}</span>${score>0?`<div class="ch-score">Best: ${score.toLocaleString()} pts</div>`:""}</div>`;
+    const ts=topicStats(ch,pr),unlocked=isTopicUnlocked(ch,pr);
+    const maxStars=ch.levels.length*3;
+    const sh=[1,2,3,4,5].map(i=>{
+      const ld=pr[ch.levels[i-1]]||pr[String(ch.levels[i-1])]||{};
+      const lvlDone=!!(ld.completed||ld.complete);
+      return`<span style="font-size:11px;${lvlDone?"color:var(--gold)":"color:var(--border2)"}" title="Level ${ch.levels[i-1]}">★</span>`;
+    }).join("");
+    const b=unlocked?(ts.done?'<span class="ch-badge badge-done">DONE</span>':'<span class="ch-badge badge-active">ACTIVE</span>'):'<span class="ch-badge badge-lock">LOCKED</span>';
+    const prog=`<div style="font-size:9px;color:var(--text3);margin-top:4px;font-family:var(--font-pixel)">${ts.levelsCleared}/${ts.totalLvls} levels</div>`;
+    return`<div class="ch-card${unlocked?"":" locked"}" style="--ch-col:${ch.col}">${b}<span class="ch-icon">${ch.icon}</span><div class="ch-num">CHAPTER ${ch.id}</div><div class="ch-name">${ch.name}</div><div class="ch-dsa">${ch.dsa}</div><span class="ch-stars" style="letter-spacing:1px">${sh}</span>${prog}${ts.best_score>0?`<div class="ch-score">Score: ${ts.best_score.toLocaleString()} pts</div>`:""}</div>`;
   }).join("");
 }
 
 function rAccBars(id,pr){
   $(id).innerHTML=CHAPTERS.map(ch=>{
-    const acc=Math.round((pr[ch.id]||{}).accuracy||0);
+    const ts=topicStats(ch,pr);
+    const acc=Math.round(ts.accuracy);
     return`<div class="acc-row"><div class="acc-lbl">${ch.icon} ${ch.name}</div><div class="acc-bg"><div class="acc-fill" data-pct="${acc}" style="--acc-col:${ch.col};width:0%"></div></div><div class="acc-pct">${acc?acc+"%":"—"}</div></div>`;
   }).join("");
 }
 
 function rMastery(id,pr){
-  $(id).innerHTML=MASTERY.map(m=>{
-    const ci={queue:1,stack:2,linked_list:3,tree:4,graph:5}[m.key];
-    const on=(pr[ci]||{}).stars>=3;
-    return`<div class="mastery-pill${on?" on":""}" style="--m-col:${m.col}"><div class="m-dot"></div><div class="m-label">${m.label}</div><div class="m-check">✓</div></div>`;
+  $(id).innerHTML=MASTERY.map((m,i)=>{
+    const ch=CHAPTERS[i];
+    const ts=topicStats(ch,pr);
+    const on=ts.stars>=(ch.levels.length*3);
+    return`<div class="mastery-pill${on?" on":""}" style="--m-col:${m.col}"><div class="m-dot"></div><div class="m-label">${m.label} (${ts.levelsCleared}/${ts.totalLvls})</div><div class="m-check">✓</div></div>`;
   }).join("");
 }
 
 function rMistakes(id,pr){
   const types=[{key:"fifo_violation",lbl:"FIFO Violations",col:"#ff6b6b"},{key:"service_miss",lbl:"Service Misses",col:"#ffd93d"},{key:"lane_miss",lbl:"Lane Misses",col:"#c77dff"},{key:"wrong_pop",lbl:"Wrong Pops",col:"#ff9f43"},{key:"overflow",lbl:"Overflows",col:"#ff6b6b"}];
   const totals={};
+  // Aggregate from all level entries (keyed 1-25 or by topic id)
   Object.values(pr).forEach(p=>{const s=p.mistakes||{};types.forEach(t=>{totals[t.key]=(totals[t.key]||0)+(s[t.key]||0);});});
   const max=Math.max(1,...Object.values(totals));
   $(id).innerHTML=types.map(t=>{const v=totals[t.key]||0,pct=Math.round((v/max)*100);return`<div class="acc-row"><div class="acc-lbl">${t.lbl}</div><div class="acc-bg"><div class="acc-fill" data-pct="${pct}" style="--acc-col:${t.col};width:0%"></div></div><div class="acc-pct">${v}</div></div>`;}).join("");
 }
 
 function rScoreBars(id,pr){
-  const maxS=Math.max(1,...CHAPTERS.map(ch=>(pr[ch.id]||{}).best_score||0));
-  $(id).innerHTML=CHAPTERS.map(ch=>{const score=(pr[ch.id]||{}).best_score||0,pct=Math.round((score/maxS)*100);return`<div class="acc-row"><div class="acc-lbl">${ch.icon} ${ch.name}</div><div class="acc-bg"><div class="acc-fill" data-pct="${pct}" style="--acc-col:${ch.col};width:0%"></div></div><div class="acc-pct">${score>0?score.toLocaleString():"—"}</div></div>`;}).join("");
+  const topicScores=CHAPTERS.map(ch=>topicStats(ch,pr).best_score);
+  const maxS=Math.max(1,...topicScores);
+  $(id).innerHTML=CHAPTERS.map((ch,i)=>{const score=topicScores[i],pct=Math.round((score/maxS)*100);return`<div class="acc-row"><div class="acc-lbl">${ch.icon} ${ch.name}</div><div class="acc-bg"><div class="acc-fill" data-pct="${pct}" style="--acc-col:${ch.col};width:0%"></div></div><div class="acc-pct">${score>0?score.toLocaleString():"—"}</div></div>`;}).join("");
 }
 
 function rProgress(pr,st){
-  const done=Object.values(pr).filter(x=>x.complete).length;
+  const totalLvls=25;
+  const clearedLvls=Object.values(pr).filter(x=>x.completed||x.complete).length;
   const ts=Object.values(pr).reduce((s,x)=>s+(x.stars||0),0);
-  const pct=Math.round((done/5)*100);
+  const pct=Math.round((clearedLvls/totalLvls)*100);
   setTimeout(()=>{$("ring-fill").style.strokeDashoffset=414.7-(414.7*(pct/100));},300);
   $("ring-pct").textContent=pct+"%";
+  const topicsDone=CHAPTERS.filter(ch=>topicStats(ch,pr).done).length;
   $("prog-summary").innerHTML=[
-    {l:"Chapters Complete",v:done+" / 5"},{l:"Stars Collected",v:ts+" / 15"},
+    {l:"Levels Cleared",v:clearedLvls+" / 25"},{l:"Topics Complete",v:topicsDone+" / 5"},
+    {l:"Stars Collected",v:ts+" / 75"},
     {l:"Perfect Clears",v:st.perfect_clears||0},{l:"Total Score",v:(st.total_score||0).toLocaleString()+" pts"},
     {l:"Login Streak",v:(st.login_streak||0)+" days 🔥"},
   ].map(r=>`<div class="prog-row"><span class="prog-row-label">${r.l}</span><span class="prog-row-val">${r.v}</span></div>`).join("");
@@ -508,16 +557,32 @@ function rProgress(pr,st){
   let top="default",topV=0;mkeys.forEach(k=>{if((mk[k]||0)>topV){topV=mk[k];top=k;}});
   const tipEl=$("tip-card");
   if(topV>0){tipEl.style.display="";$("tip-title").textContent="💡 Focus: "+top.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());$("tip-text").textContent=TIPS[top]||TIPS.default;}
+
+  // Build timeline: one entry per topic, expanded with level detail
   $("tl-list").innerHTML=CHAPTERS.map(ch=>{
-    const p=pr[ch.id]||{},isDone=!!p.complete,unlocked=ch.id===1||!!(pr[ch.id-1]||{}).complete;
-    const stars=p.stars||0,score=p.best_score||0,acc=Math.round(p.accuracy||0);
-    const cls=isDone?"done":(unlocked?"prog":"lock");
-    const sh=[1,2,3].map(s=>`<span class="${s<=stars?"star-on":"star-off"}">★</span>`).join("");
+    const ts2=topicStats(ch,pr),unlocked=isTopicUnlocked(ch,pr);
+    const cls=ts2.done?"done":(unlocked?"prog":"lock");
+    const topicStars=ts2.stars,maxStars=ch.levels.length*3;
+    const sh=[1,2,3,4,5].map(s=>`<span class="${s*3<=topicStars?"star-on":"star-off"}" style="font-size:11px">★</span>`).join("");
+    const acc=Math.round(ts2.accuracy),score=ts2.best_score;
     let pills="";
-    if(isDone){const ac=acc>=80?"good":acc>=60?"warn":"bad";pills+=`<span class="tl-pill ${ac}">🎯 ${acc}% accuracy</span>`;if(stars===3)pills+=`<span class="tl-pill good">⭐ Perfect clear</span>`;if(score>0)pills+=`<span class="tl-pill">🏆 ${score.toLocaleString()} pts</span>`;}
-    else if(unlocked){pills+=`<span class="tl-pill" style="color:var(--blue);border-color:rgba(77,150,255,.3)">▶ In progress</span>`;}
+    if(ts2.done){const ac=acc>=80?"good":acc>=60?"warn":"bad";pills+=`<span class="tl-pill ${ac}">🎯 ${acc}% accuracy</span>`;if(topicStars===maxStars)pills+=`<span class="tl-pill good">⭐ Perfect clear</span>`;if(score>0)pills+=`<span class="tl-pill">🏆 ${score.toLocaleString()} pts</span>`;}
+    else if(unlocked){pills+=`<span class="tl-pill" style="color:var(--blue);border-color:rgba(77,150,255,.3)">▶ In progress — ${ts2.levelsCleared}/${ts2.totalLvls} levels</span>`;}
     else{pills+=`<span class="tl-pill">🔒 Locked</span>`;}
-    return`<div class="tl-item ${cls}"><div class="tl-dot"></div><div class="tl-card"><div class="tl-top"><div class="tl-icon">${ch.icon}</div><div class="tl-info"><div class="tl-name">${ch.name}</div><div class="tl-dsa">${ch.dsa}</div></div><div class="tl-right"><div class="tl-stars">${sh}</div>${score>0?`<div class="tl-score-sm">${score.toLocaleString()} pts</div>`:""}</div></div><div class="tl-pills">${pills}</div></div></div>`;
+
+    // Per-level mini breakdown inside the card
+    const lvlRows=ch.levels.map(n=>{
+      const ld=pr[n]||pr[String(n)]||{};
+      const lvlDone=!!(ld.completed||ld.complete);
+      const lvlUnlocked=isLevelUnlocked(n,pr);
+      const lvlStars=ld.stars||0;
+      const sc=[1,2,3].map(s=>`<span style="font-size:10px;color:${s<=lvlStars?"var(--gold)":"var(--border2)"}">★</span>`).join("");
+      const dot=lvlDone?"🟢":lvlUnlocked?"🔵":"⚫";
+      const scoreStr=ld.best_score>0?`${ld.best_score.toLocaleString()} pts`:"";
+      return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)"><span style="width:16px;text-align:center;font-size:10px">${dot}</span><span style="min-width:56px;font-family:var(--font-pixel);font-size:8px;color:var(--text3)">LVL ${n}</span><span style="flex:1">${sc}</span><span style="font-family:var(--font-pixel);font-size:8px;color:var(--text3)">${scoreStr}</span></div>`;
+    }).join("");
+
+    return`<div class="tl-item ${cls}"><div class="tl-dot"></div><div class="tl-card"><div class="tl-top"><div class="tl-icon">${ch.icon}</div><div class="tl-info"><div class="tl-name">${ch.name}</div><div class="tl-dsa">${ch.dsa}</div></div><div class="tl-right"><div class="tl-stars">${sh}</div>${score>0?`<div class="tl-score-sm">${score.toLocaleString()} pts</div>`:""}</div></div><div class="tl-pills">${pills}</div>${unlocked?`<div style="margin-top:10px;padding-top:4px">${lvlRows}</div>`:""}</div></div>`;
   }).join("");
 }
 
@@ -534,9 +599,12 @@ window.loadLB=async(mode,arg)=>{
     snap.forEach(d=>{
       const u=d.data(),pr=u.progress||{},st=u.stats||{};
       rows.push({uid:d.id,username:u.username||"Hero",hero:u.selected_hero||"",
-        totalScore:st.total_score||0,totalStars:Object.values(pr).reduce((s,x)=>s+(x.stars||0),0),
-        chDone:Object.values(pr).filter(x=>x.complete).length,
-        chScore:(pr[arg]||{}).best_score||0,isMe:d.id===_uid});
+        totalScore:st.total_score||0,
+        totalStars:Object.values(pr).reduce((s,x)=>s+(x.stars||0),0),
+        chDone:Object.values(pr).filter(x=>x.completed||x.complete).length,
+        chScore:CHAPTERS.filter(ch=>ch.levels.some(n=>n==arg||String(n)==String(arg)))
+          .reduce((s,ch)=>s+topicStats(ch,pr).best_score,0)||0,
+        isMe:d.id===_uid});
     });
     _lbCache[cKey]=rows;renderLB(rows,mode,arg);
   }catch(e){$("lb-content").className="lb-empty";$("lb-content").innerHTML="Failed to load.<br><small>"+e.message+"</small>";}
@@ -551,11 +619,11 @@ function renderLB(rows,mode,arg){
   const top20=sorted.slice(0,20),myRank=sorted.findIndex(r=>r.isMe)+1;
   if(!top20.length){$("lb-content").className="lb-empty";$("lb-content").innerHTML="No players yet. Be the first!";return;}
   const medals=["🥇","🥈","🥉"],isStars=mode==="global"&&arg==="stars",isCh=mode==="ch";
-  let html=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>${isStars?"STARS":isCh?"SCORE":"TOTAL SCORE"}</th>${mode==="global"?"<th>CHAPTERS</th>":""}</tr></thead><tbody>`;
+  let html=`<table class="lb-table"><thead><tr><th>#</th><th>PLAYER</th><th>${isStars?"STARS":isCh?"SCORE":"TOTAL SCORE"}</th>${mode==="global"?"<th>LEVELS</th>":""}</tr></thead><tbody>`;
   top20.forEach((r,i)=>{
     const rank=i+1,rankHtml=rank<=3?`<span style="font-size:20px">${medals[rank-1]}</span>`:`<span class="lb-rank">#${rank}</span>`;
     const scoreHtml=isStars?`<span class="lb-stars-val">${"★".repeat(r.totalStars)}${"☆".repeat(Math.max(0,15-r.totalStars))}</span>`:`<span class="lb-score-val">${(isCh?r.chScore:r.totalScore).toLocaleString()}</span>`;
-    html+=`<tr${r.isMe?' class="me"':''}><td>${rankHtml}</td><td><div class="lb-user"><span class="lb-em">${HE[r.hero]||"⚔️"}</span><div><div class="lb-uname">${esc(r.username)}${r.isMe?'<span class="you-badge">YOU</span>':''}</div><div class="lb-hero">${HN[r.hero]||r.hero||"—"}</div></div></div></td><td>${scoreHtml}</td>${mode==="global"?`<td><span class="lb-done-val">${r.chDone}/5 ✅</span></td>`:""}</tr>`;
+    html+=`<tr${r.isMe?' class="me"':''}><td>${rankHtml}</td><td><div class="lb-user"><span class="lb-em">${HE[r.hero]||"⚔️"}</span><div><div class="lb-uname">${esc(r.username)}${r.isMe?'<span class="you-badge">YOU</span>':''}</div><div class="lb-hero">${HN[r.hero]||r.hero||"—"}</div></div></div></td><td>${scoreHtml}</td>${mode==="global"?`<td><span class="lb-done-val">${r.chDone}/25 ✅</span></td>`:""}</tr>`;
   });
   html+="</tbody></table>";
   if(myRank>20){const me=sorted[myRank-1];html+=`<div class="lb-my-rank">Your rank: <strong>#${myRank}</strong> · ${HE[me.hero]||"⚔️"} ${esc(me.username)} · ${(isStars?me.totalStars+"★":isCh?me.chScore.toLocaleString():me.totalScore.toLocaleString())}</div>`;}

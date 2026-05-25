@@ -139,13 +139,12 @@ func show_result(chapter_id: int, stats_or_score, stars_if_positional: int = -1)
 			"grade":   _stars_to_grade(raw_stars),
 		}
 
-	# ── Accuracy fix ──────────────────────────────────────────────────────────
-	# If accuracy is missing/zero but we have correct + a recognisable total,
-	# compute it ourselves so the display is never stuck at 0 %.
+	# ── Accuracy resolution ───────────────────────────────────────────────────
+	# Compute accuracy from correct/total if the key is missing or still 0.
+	# Run this FIRST — both the display and the save need the final value.
 	if not stats.has("accuracy") or float(stats.get("accuracy", 0.0)) == 0.0:
 		var correct: int = stats.get("correct", 0)
-		# Try common total keys sent by different game modules
-		var total: int = _resolve_total(stats, correct)
+		var total:   int = _resolve_total(stats, correct)
 		if total > 0:
 			stats["accuracy"] = float(correct) / float(total) * 100.0
 
@@ -201,29 +200,64 @@ func show_result(chapter_id: int, stats_or_score, stars_if_positional: int = -1)
 	if has_node("/root/AudioManager"):
 		AudioManager.play_sfx(PATH_SFX_WIN if _success else PATH_SFX_FAIL)
 
+	# ── Save progress ─────────────────────────────────────────────────────────
+	# Only save on success so a failed run never overwrites a previous best.
+	if _success and has_node("/root/PlayerProfile"):
+		var save_score:    int   = stats.get("score",    0)    as int
+		var save_stars:    int   = stats.get("stars",    0)    as int
+		var save_accuracy: float = stats.get("accuracy", 0.0)  as float
+
+		# Build the mistakes dict from every known mistake key in the stats.
+		# This is what the teacher dashboard reads to show per-tier breakdowns.
+		var save_mistakes: Dictionary = {}
+		var mistake_keys := [
+			"fifo_violation", "service_miss", "lane_miss", "overflow_count",
+			"bad_link",       "wrong_reverse","bad_insert","structural_err",
+			"array_shifts",   "wrong_bst",    "wrong_balance","wrong_delete",
+			"wrong",          "errors",
+		]
+		for mk in mistake_keys:
+			var mv = stats.get(mk, 0)
+			if (mv is int or mv is float) and int(mv) > 0:
+				save_mistakes[mk] = int(mv)
+
+		# If the game passed a top-level "mistakes" dict, merge it in too.
+		if stats.has("mistakes") and stats["mistakes"] is Dictionary:
+			for mk in (stats["mistakes"] as Dictionary):
+				var mv = (stats["mistakes"] as Dictionary)[mk]
+				if (mv is int or mv is float) and int(mv) > 0:
+					save_mistakes[mk] = int(mv)
+
+		PlayerProfile.save_chapter_result(
+			chapter_id, save_score, save_stars, save_accuracy, save_mistakes)
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  ACCURACY HELPER
 # ─────────────────────────────────────────────────────────────────────────────
 ## Returns the most plausible total-attempts count from a stats dict.
 func _resolve_total(stats: Dictionary, correct: int) -> int:
-	# Keys that different modules use for the total number of attempts/questions
 	for key in ["total", "attempts", "questions", "total_questions",
 				"total_attempts", "rounds", "total_rounds"]:
-		var v: int = stats.get(key, 0)
-		if v > 0:
+		var v = stats.get(key, 0)
+		if v is int and v > 0:
 			return v
 
-	# Fallback: correct + all known mistake counts
 	var mistakes: int = 0
 	for key in ["wrong", "mistakes", "errors", "wrong_bst", "wrong_balance",
 				"wrong_delete", "fifo_violation", "service_miss", "lane_miss",
 				"overflow_count", "bad_link", "wrong_reverse", "bad_insert",
 				"structural_err", "array_shifts"]:
-		mistakes += stats.get(key, 0)
+		var v = stats.get(key, 0)
+		if v is int:          # ← skip Dictionaries, only sum ints
+			mistakes += v
+		elif v is Dictionary: # ← sum the values inside a nested mistakes dict
+			for mk in v:
+				var mv = v[mk]
+				if mv is int:
+					mistakes += mv
 
 	if mistakes > 0 or correct > 0:
 		return correct + mistakes
-
 	return 0
 
 # ─────────────────────────────────────────────────────────────────────────────

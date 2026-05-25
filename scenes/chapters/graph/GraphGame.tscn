@@ -1,73 +1,6 @@
-[gd_scene load_steps=8 format=3 uid="uid://dayh7bmhs323m"]
+[gd_scene load_steps=2 format=3 uid="uid://dayh7bmhs323m"]
 
 [ext_resource type="Script" uid="uid://cgk5xt6717m1a" path="res://scripts/chapters/graph/GraphGame.gd" id="1_graphgame"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_bg"]
-bg_color = Color(0.04, 0.04, 0.12, 0.78)
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.25, 0.4, 0.7, 0.35)
-corner_radius_bottom_right = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
-bg_color = Color(0.05, 0.05, 0.15, 0.82)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.6, 1, 0.5)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.04, 0.04, 0.12, 0.88)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.2, 0.4, 0.8, 0.4)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_intro"]
-bg_color = Color(0.06, 0.05, 0.18, 0.97)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.55, 0.45, 0.2, 0.9)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
-bg_color = Color(0.3, 0.22, 0.08, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.75, 0.6, 0.2, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.45, 0.33, 0.1, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.95, 0.78, 0.25, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
 
 [node name="GraphGame" type="Node2D"]
 script = ExtResource("1_graphgame")
@@ -107,198 +40,215 @@ horizontal_alignment = 1
 [node name="HUD" type="CanvasLayer" parent="."]
 layer = 20
 
-[node name="LeftHUDBg" type="PanelContainer" parent="HUD"]
-offset_right = 545.0
-offset_bottom = 390.0
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hud_bg")
-
-[node name="ScoreLabel" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 8.0
-offset_right = 220.0
+[node name="TopBar" type="ColorRect" parent="HUD"]
+z_index = 1
+offset_right = 1280.0
 offset_bottom = 36.0
-text = "Score: 0"
+color = Color(0.22, 0.13, 0.06, 1)
 
-[node name="ComboLabel" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 40.0
-offset_right = 240.0
-offset_bottom = 68.0
+[node name="TopBarBorder" type="ColorRect" parent="HUD"]
+z_index = 2
+offset_top = 34.0
+offset_right = 1280.0
+offset_bottom = 36.0
+color = Color(0.95, 0.78, 0.25, 1)
+
+[node name="InstrLabel" type="Label" parent="HUD"]
+z_index = 5
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 1277.0
+offset_bottom = 34.0
+theme_override_colors/font_color = Color(0.98, 0.92, 0.72, 1)
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="TimerLabel" type="Label" parent="HUD"]
-visible = false
-offset_left = 560.0
-offset_top = 8.0
-offset_right = 720.0
-offset_bottom = 36.0
+z_index = 5
+offset_left = 557.0
+offset_top = 75.0
+offset_right = 717.0
+offset_bottom = 102.0
+theme_override_font_sizes/font_size = 14
 text = "⏱ 60"
 horizontal_alignment = 1
 
-[node name="ModeLabel" type="Label" parent="HUD"]
-offset_left = 560.0
-offset_top = 40.0
-offset_right = 720.0
-offset_bottom = 68.0
-text = "CONNECT"
+[node name="PauseButton" type="Button" parent="HUD"]
+z_index = 10
+offset_left = 1218.0
+offset_top = 18.0
+offset_right = 1266.0
+offset_bottom = 49.0
+focus_mode = 0
+text = "||"
+
+[node name="ScoreLabel" type="Label" parent="HUD"]
+z_index = 5
+offset_left = 5.0
+offset_top = 6.0
+offset_right = 299.0
+offset_bottom = 30.0
+theme_override_font_sizes/font_size = 16
+text = "Score: 0"
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ComboLabel" type="Label" parent="HUD"]
+z_index = 5
+offset_left = 1076.0
+offset_top = 81.0
+offset_right = 1268.0
+offset_bottom = 101.0
+theme_override_font_sizes/font_size = 14
 
 [node name="GoalLabel" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 72.0
-offset_right = 530.0
-offset_bottom = 100.0
+z_index = 5
+offset_left = 439.0
+offset_top = 3.0
+offset_right = 834.0
+offset_bottom = 31.0
+theme_override_font_sizes/font_size = 15
 text = "Connect all cities."
-
-[node name="TaskLabel" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 104.0
-offset_right = 530.0
-offset_bottom = 168.0
+horizontal_alignment = 1
+vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="AccuracyLabel" type="Label" parent="HUD"]
-offset_left = 10.0
-offset_top = 172.0
-offset_right = 280.0
-offset_bottom = 200.0
+z_index = 5
+offset_left = 897.0
+offset_top = 43.0
+offset_right = 1184.0
+offset_bottom = 65.0
+theme_override_font_sizes/font_size = 14
 text = "Accuracy: -"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="CostLabel" type="Label" parent="HUD"]
-visible = false
-offset_left = 10.0
-offset_top = 204.0
-offset_right = 300.0
-offset_bottom = 232.0
+z_index = 5
+offset_left = 3.0
+offset_top = 36.0
+offset_right = 296.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 14
 text = "Running cost: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ModeLabel" type="Label" parent="HUD"]
+offset_left = 468.0
+offset_top = 38.0
+offset_right = 866.0
+offset_bottom = 73.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TaskLabel" type="Label" parent="HUD"]
+z_index = 5
+offset_left = 170.0
+offset_top = -122.0
+offset_right = 457.0
+offset_bottom = -26.0
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
 
 [node name="LivesRow" type="HBoxContainer" parent="HUD"]
-offset_left = 10.0
-offset_top = 236.0
-offset_right = 160.0
-offset_bottom = 270.0
+z_index = 5
+offset_left = 984.0
+offset_top = 7.0
+offset_right = 1176.0
+offset_bottom = 25.0
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="LeftBg" type="ColorRect" parent="HUD"]
+z_index = -1
+offset_left = 2.0
+offset_top = 35.0
+offset_right = 1278.0
+offset_bottom = 72.0
+mouse_filter = 2
+color = Color(0.22, 0.13, 0.06, 0.93)
+
+[node name="LeftBorder" type="ColorRect" parent="HUD"]
+visible = false
+z_index = -1
+offset_left = 298.0
+offset_top = 36.0
+offset_right = 300.0
+offset_bottom = 355.0
+mouse_filter = 2
+color = Color(0.72, 0.48, 0.18, 1)
+
+[node name="RightBg" type="ColorRect" parent="HUD"]
+z_index = -1
+offset_left = 3.0
+offset_top = 73.0
+offset_right = 183.0
+offset_bottom = 297.0
+mouse_filter = 2
+color = Color(0.1, 0.06, 0.02, 0.93)
+
+[node name="RightBorder" type="ColorRect" parent="HUD"]
+visible = false
+z_index = -1
+offset_left = 1100.0
+offset_top = 36.0
+offset_right = 1102.0
+offset_bottom = 260.0
+mouse_filter = 2
+color = Color(0.72, 0.48, 0.18, 1)
 
 [node name="HintBox" type="PanelContainer" parent="HUD"]
 visible = false
-offset_left = 10.0
-offset_top = 276.0
-offset_right = 340.0
-offset_bottom = 370.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
+z_index = 60
+offset_left = 8.0
+offset_top = 355.0
+offset_right = 295.0
+offset_bottom = 450.0
 
 [node name="HintLabel" type="Label" parent="HUD/HintBox"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 13
 autowrap_mode = 3
 
 [node name="FailSummary" type="PanelContainer" parent="HUD"]
 visible = false
-offset_left = 340.0
-offset_top = 260.0
-offset_right = 960.0
-offset_bottom = 420.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+z_index = 50
+offset_left = 320.0
+offset_top = 200.0
+offset_right = 980.0
+offset_bottom = 440.0
 
 [node name="FailLabel" type="Label" parent="HUD/FailSummary"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="RightScroll" type="ScrollContainer" parent="HUD"]
-offset_left = 1040.0
-offset_top = 60.0
-offset_right = 1275.0
-offset_bottom = 700.0
+[node name="RightScroll" type="VBoxContainer" parent="HUD"]
+offset_left = 3.0
+offset_top = 73.0
+offset_right = 173.0
+offset_bottom = 297.0
+theme_override_constants/separation = 2
 
 [node name="RightPanel" type="VBoxContainer" parent="HUD/RightScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="AdjPanel" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
+layout_mode = 2
+theme_override_constants/separation = 1
 
 [node name="BFSQueueDisplay" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
 visible = false
-custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="AdjPanel" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
-custom_minimum_size = Vector2(220, 0)
-layout_mode = 2
-size_flags_horizontal = 3
+theme_override_constants/separation = 1
 
 [node name="DistPanel" type="VBoxContainer" parent="HUD/RightScroll/RightPanel"]
-visible = false
-custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="IntroOverlay" type="PanelContainer" parent="HUD"]
-visible = false
-z_index = 50
-offset_left = 260.0
-offset_top = 100.0
-offset_right = 1020.0
-offset_bottom = 620.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_intro")
-
-[node name="Margin" type="MarginContainer" parent="HUD/IntroOverlay"]
-layout_mode = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 50
-
-[node name="VBox" type="VBoxContainer" parent="HUD/IntroOverlay/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="TitleLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.78, 0.25, 1)
-text = "What is a Graph?"
-horizontal_alignment = 1
-
-[node name="SlideImage" type="TextureRect" parent="HUD/IntroOverlay/Margin/VBox"]
-visible = false
-custom_minimum_size = Vector2(0, 160)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-expand_mode = 1
-stretch_mode = 6
-
-[node name="BodyLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 0
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="NavRow" type="HBoxContainer" parent="HUD/IntroOverlay/Margin/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 20
-alignment = 1
-
-[node name="BackBtn" type="Button" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
-custom_minimum_size = Vector2(110, 40)
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_panel")
-disabled = true
-text = "◀ Back"
-
-[node name="PageLabel" type="Label" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
-custom_minimum_size = Vector2(70, 0)
-layout_mode = 2
-text = "1 / 3"
-horizontal_alignment = 1
-
-[node name="NextBtn" type="Button" parent="HUD/IntroOverlay/Margin/VBox/NavRow"]
-custom_minimum_size = Vector2(110, 40)
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-text = "Next ▶"
+theme_override_constants/separation = 1

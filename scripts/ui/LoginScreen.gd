@@ -257,14 +257,14 @@ func _inject_signup_fields() -> void:
 		var fsb := sb.duplicate() as StyleBoxFlat; fsb.border_color = C_ACCENT
 		le.add_theme_stylebox_override("focus", fsb)
 
-	var code_lbl := Label.new(); code_lbl.text = "Join Code (from your teacher)"
+	var code_lbl := Label.new(); code_lbl.text = "Join Code (optional — from your teacher)"
 	if _pixel_font: code_lbl.add_theme_font_override("font", _pixel_font)
 	code_lbl.add_theme_font_size_override("font_size", 12)
 	code_lbl.add_theme_color_override("font_color", C_DIM)
 	stab.add_child(code_lbl); stab.move_child(code_lbl, idx + 2)
 
 	_code_in = LineEdit.new()
-	_code_in.placeholder_text    = "Enter the join code"
+	_code_in.placeholder_text    = "Enter the join code (optional)"
 	_code_in.custom_minimum_size = Vector2(460, 44)
 	_code_in.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if _pixel_font: _code_in.add_theme_font_override("font", _pixel_font)
@@ -306,8 +306,6 @@ func _on_signup_pressed() -> void:
 		_show_err(_signup_err, "Password must be at least 6 characters."); return
 	if course_.is_empty() or section_.is_empty():
 		_show_err(_signup_err, "Please enter your course and section."); return
-	if code_.is_empty():
-		_show_err(_signup_err, "Please enter the join code\nfrom your teacher."); return
 	_set_busy(true, "signup"); _pending_action = "signup"
 	_pending_name = name_; _pending_email = email_
 	_pending_course = course_; _pending_section = section_; _pending_section_id = code_
@@ -337,8 +335,10 @@ func _on_auth_response(_r, _c, _h, body: PackedByteArray) -> void:
 		return
 	_pending_uid   = data.get("localId", "")
 	_pending_token = data.get("idToken", "")
-	if _pending_action == "signup": _find_section_by_code(_pending_section_id)
-	else:                           _read_user_from_firestore()
+	if _pending_action == "signup":
+		if _pending_section_id.is_empty(): _find_section_by_course_section()
+		else: _find_section_by_code(_pending_section_id)
+	else: _read_user_from_firestore()
 
 # ── FIND SECTION ───────────────────────────────────────────────────────────────
 func _find_section_by_code(code: String) -> void:
@@ -351,6 +351,20 @@ func _find_section_by_code(code: String) -> void:
 			"where": {"fieldFilter": {"field": {"fieldPath": "join_code"},
 				"op": "EQUAL", "value": {"stringValue": code}}}, "limit": 1}}))
 
+
+func _find_section_by_course_section() -> void:
+	_pending_action = "find_section_auto"; _set_busy(true, "signup")
+	_signup_spin.text = "⏳ Looking up your section..."
+	_http_db.request(FS_QUERY + "?key=" + FB_API_KEY,
+		JSON_HDR + ["Authorization: Bearer " + _pending_token],
+		HTTPClient.METHOD_POST,
+		JSON.stringify({"structuredQuery": {"from": [{"collectionId": "sections"}],
+			"where": {"compositeFilter": {"op": "AND", "filters": [
+				{"fieldFilter": {"field": {"fieldPath": "course"},
+					"op": "EQUAL", "value": {"stringValue": _pending_course}}},
+				{"fieldFilter": {"field": {"fieldPath": "section"},
+					"op": "EQUAL", "value": {"stringValue": _pending_section}}}
+			]}}, "limit": 1}}))
 # ── READ USER (login) ──────────────────────────────────────────────────────────
 func _read_user_from_firestore() -> void:
 	_pending_action = "read_user"
@@ -362,7 +376,8 @@ func _read_user_from_firestore() -> void:
 func _on_firestore_response(_r, _c, _h, body: PackedByteArray) -> void:
 	var data = JSON.parse_string(body.get_string_from_utf8())
 	match _pending_action:
-		"find_section": _handle_find_section(data)
+		"find_section":      _handle_find_section(data)
+		"find_section_auto": _handle_find_section_auto(data)
 		"read_user":    _handle_read_user(data)
 		"write_user":   _handle_write_user(data)
 
@@ -375,6 +390,21 @@ func _handle_find_section(data) -> void:
 	if doc == null:
 		_show_err(_signup_err, "Join code not found.\nCheck with your teacher.")
 		_delete_auth_user(); return
+	var parts: Array = (doc.get("name","") as String).split("/")
+	_pending_section_id = parts[-1]
+	_write_user_to_firestore()
+
+
+func _handle_find_section_auto(data) -> void:
+	_set_busy(false, "signup")
+	var doc = null
+	if data is Array and data.size() > 0:
+		var f = data[0]
+		if f is Dictionary and "document" in f: doc = f["document"]
+	if doc == null:
+		# Section not created yet — create account without a section
+		_write_user_to_firestore()
+		return
 	var parts: Array = (doc.get("name","") as String).split("/")
 	_pending_section_id = parts[-1]
 	_write_user_to_firestore()
@@ -405,7 +435,10 @@ func _write_user_to_firestore() -> void:
 		}}))
 
 func _handle_write_user(_data) -> void:
-	_set_busy(false, "signup"); _join_section_in_firestore()
+	_set_busy(false, "signup")
+	if _pending_section_id.is_empty():
+		_finish_login(_pending_name, _pending_uid, _pending_token, _pending_course, _pending_section, "")
+	else: _join_section_in_firestore()
 
 func _join_section_in_firestore() -> void:
 	_pending_action = "join_section"; _set_busy(true, "signup")

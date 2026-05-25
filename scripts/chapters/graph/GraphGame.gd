@@ -80,7 +80,7 @@ const CITY_ICONS: Array[String] = [
 # ─────────────────────────────────────────────────────────────────────────────
 #  LAYOUT & COLORS
 # ─────────────────────────────────────────────────────────────────────────────
-const CITY_SCALE := Vector2(0.65, 0.65)  # tallest sprite 320px * 0.65 ≈ 208px — large & readable
+const CITY_SCALE := Vector2(0.44, 0.44)  # reduced — keeps sprites readable without crowding
 const CITY_HIT   := 44.0                 # larger hit radius to match bigger sprites
 const SNAP_DIST  := 80.0
 const MAGNET_R   := 120.0
@@ -88,7 +88,7 @@ const MAGNET_R   := 120.0
 # ── Medieval color palette ────────────────────────────────────────────────────
 const EDGE_COLOR   := Color(0.72, 0.55, 0.25, 0.8)   # aged rope road
 const PATH_COLOR   := Color(0.95, 0.78, 0.20)         # gold trail
-const PATH_EDGE    := Color(0.85, 0.60, 0.10, 0.9)    # burnished gold
+const PATH_EDGE    := Color(0.10, 0.75, 1.00, 0.95)   # bright cyan-blue — clearly visible over grass
 const LIVE_COL     := Color(0.95, 0.85, 0.40, 0.65)   # glowing rune draft
 const SNAP_COL     := Color(0.90, 0.85, 0.40, 0.85)   # rune snap highlight
 const BFS_NEXT_COL := Color(0.40, 0.85, 0.45)         # enchanted green
@@ -109,31 +109,42 @@ const CITY_COLORS: Array[Color] = [
 	Color(0.60, 0.35, 0.15),  # earthy brown
 	Color(0.70, 0.70, 0.50),  # aged linen
 ]
-const CANVAS := Rect2(300, 100, 710, 490)  # left boundary past HUD column; more vertical room
+const CANVAS := Rect2(340, 80, 720, 520)  # x:340..1060 — clear of side panels; y:80..600
+
+# ── Wood UI palette (same as TreeGame) ───────────────────────────────────────
+const WOOD_DARK   := Color(0.22, 0.13, 0.06, 0.97)
+const WOOD_MID    := Color(0.34, 0.20, 0.08, 0.97)
+const WOOD_LIGHT  := Color(0.52, 0.32, 0.12, 1.00)
+const WOOD_GRAIN  := Color(0.60, 0.38, 0.14, 1.00)
+const WOOD_BORDER := Color(0.72, 0.48, 0.18, 1.00)
+const WOOD_GOLD   := Color(0.95, 0.78, 0.25, 1.00)
+const WOOD_TEXT   := Color(0.98, 0.92, 0.72, 1.00)
+const WOOD_SUBTEXT:= Color(0.82, 0.70, 0.45, 1.00)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  TIER PARAMS  (index = tier 0..4, chapter = 21..25)
 # ─────────────────────────────────────────────────────────────────────────────
 const TIER_PARAMS: Array[Dictionary] = [
-	# tier 0 — ch 21 — OBSERVE: what is a graph?
+	# tier 0 — ch 21 — OBSERVE: explore a 4-city graph
 	{"node_count":4,  "edge_count":5,  "mode":"observe",  "weighted":false,
 	 "dynamic":false, "time_limit":0.0, "penalty":0,  "hints":true,
 	 "concept":"OBSERVE"},
-	# tier 1 — ch 22 — CONNECT: draw roads to connect all cities
+	# tier 1 — ch 22 — CONNECT: draw roads between 5 cities
 	{"node_count":5,  "edge_count":3,  "mode":"connect",  "weighted":false,
 	 "dynamic":false, "time_limit":0.0, "penalty":0,  "hints":true,
 	 "concept":"CONNECT"},
-	# tier 2 — ch 23 — PATH: find a path between two cities
-	{"node_count":6,  "edge_count":8,  "mode":"path",     "weighted":false,
+	# tier 2 — ch 23 — PATH: find a route from START to END
+	{"node_count":5,  "edge_count":7,  "mode":"path",     "weighted":false,
 	 "dynamic":false, "time_limit":0.0, "penalty":10, "hints":true,
 	 "concept":"PATH"},
-	# tier 3 — ch 24 — BFS
-	{"node_count":6,  "edge_count":8,  "mode":"bfs_dfs",  "weighted":false,
-	 "dynamic":false, "time_limit":60.0,"penalty":15, "hints":false,
+	# tier 3 — ch 24 — BFS: 5-city graph, level-order traversal
+	{"node_count":5,  "edge_count":6,  "mode":"bfs_dfs",  "weighted":false,
+	 "dynamic":false, "time_limit":90.0,"penalty":15, "hints":false,
 	 "concept":"BFS"},
-	# tier 4 — ch 25 — DIJKSTRA
-	{"node_count":7,  "edge_count":10, "mode":"dijkstra", "weighted":true,
-	 "dynamic":false, "time_limit":50.0,"penalty":25, "hints":false,
+	# tier 4 — ch 25 — DIJKSTRA: 8-city weighted graph, harder
+	{"node_count":8,  "edge_count":12, "mode":"dijkstra", "weighted":true,
+	 "dynamic":false, "time_limit":60.0,"penalty":25, "hints":false,
 	 "concept":"DIJKSTRA"},
 ]
 
@@ -226,19 +237,6 @@ const CONCEPT_SLIDES: Dictionary = {
 	],
 }
 
-
-# Preloaded tutorial textures — matched to CONCEPT_SLIDES image paths
-const TUTORIAL_TEXTURES: Dictionary = {
-	"res://assets/medieval/art/tutorial/graph_intro.png":    preload("res://assets/medieval/art/tutorial/graph_intro.png"),
-	"res://assets/medieval/art/tutorial/adjacency.png":      preload("res://assets/medieval/art/tutorial/adjacency.png"),
-	"res://assets/medieval/art/tutorial/disconnected.png":   preload("res://assets/medieval/art/tutorial/disconnected.png"),
-	"res://assets/medieval/art/tutorial/connect_drag.png":   preload("res://assets/medieval/art/tutorial/connect_drag.png"),
-	"res://assets/medieval/art/tutorial/path_intro.png":     preload("res://assets/medieval/art/tutorial/path_intro.png"),
-	"res://assets/medieval/art/tutorial/bfs_levels.png":     preload("res://assets/medieval/art/tutorial/bfs_levels.png"),
-	"res://assets/medieval/art/tutorial/bfs_queue.png":      preload("res://assets/medieval/art/tutorial/bfs_queue.png"),
-	"res://assets/medieval/art/tutorial/weighted_graph.png": preload("res://assets/medieval/art/tutorial/weighted_graph.png"),
-	"res://assets/medieval/art/tutorial/dijkstra_table.png": preload("res://assets/medieval/art/tutorial/dijkstra_table.png"),
-}
 # ─────────────────────────────────────────────────────────────────────────────
 #  NODE REFS — must match GraphGame.tscn exactly
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,14 +273,6 @@ const TUTORIAL_TEXTURES: Dictionary = {
 # Completion
 @onready var _complete_banner: Label          = $CompleteBanner
 
-# Intro slide window
-@onready var _intro_overlay:   PanelContainer = $HUD/IntroOverlay
-@onready var _intro_title:     Label          = $HUD/IntroOverlay/Margin/VBox/TitleLabel
-@onready var _intro_image:     TextureRect    = $HUD/IntroOverlay/Margin/VBox/SlideImage
-@onready var _intro_body:      Label          = $HUD/IntroOverlay/Margin/VBox/BodyLabel
-@onready var _intro_page:      Label          = $HUD/IntroOverlay/Margin/VBox/NavRow/PageLabel
-@onready var _intro_back:      Button         = $HUD/IntroOverlay/Margin/VBox/NavRow/BackBtn
-@onready var _intro_next:      Button         = $HUD/IntroOverlay/Margin/VBox/NavRow/NextBtn
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STATE
@@ -335,6 +325,495 @@ var _intro_visible: bool  = false
 var _intro_slides:  Array = []
 var _intro_page_idx: int  = 0
 var _pixel_font: Font = null
+# Programmatic UI nodes (built in _ready)
+var _intro_canvas:    CanvasLayer = null
+var _conn_popup:      PanelContainer = null
+var _conn_popup_lbl:  Label          = null
+var _conn_popup_tween: Tween         = null
+var _instr_task:      Label       = null
+var _instr_rule:      Label       = null
+var _banner_rect:     ColorRect   = null
+var _banner_lbl:      Label       = null
+var _banner_sub:      Label       = null
+var _banner_pill:     ColorRect   = null
+var _banner_pill_lbl: Label       = null
+
+
+# ── Wood style helpers (same pattern as TreeGame) ─────────────────────────────
+func _wood_panel(radius: int = 6) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = WOOD_MID; s.border_color = WOOD_BORDER
+	s.border_width_left = 3; s.border_width_right = 3
+	s.border_width_top  = 3; s.border_width_bottom = 3
+	s.corner_radius_top_left    = radius; s.corner_radius_top_right    = radius
+	s.corner_radius_bottom_left = radius; s.corner_radius_bottom_right = radius
+	s.shadow_color = Color(0,0,0,0.55); s.shadow_size = 6; s.shadow_offset = Vector2(2,3)
+	return s
+
+func _wood_btn_normal() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = WOOD_LIGHT; s.border_color = WOOD_GOLD
+	s.border_width_left = 2; s.border_width_right = 2
+	s.border_width_top  = 2; s.border_width_bottom = 4
+	s.corner_radius_top_left    = 5; s.corner_radius_top_right    = 5
+	s.corner_radius_bottom_left = 5; s.corner_radius_bottom_right = 5
+	s.shadow_color = Color(0,0,0,0.45); s.shadow_size = 4; s.shadow_offset = Vector2(1,2)
+	return s
+
+func _wood_btn_hover() -> StyleBoxFlat:
+	var s := _wood_btn_normal()
+	s.bg_color = WOOD_GRAIN; s.border_color = Color(1.0, 0.92, 0.4, 1.0)
+	return s
+
+func _style_wood_btn(btn: Button) -> void:
+	var pressed := _wood_btn_normal()
+	pressed.bg_color = WOOD_DARK; pressed.shadow_size = 0; pressed.shadow_offset = Vector2.ZERO
+	btn.add_theme_stylebox_override("normal",  _wood_btn_normal())
+	btn.add_theme_stylebox_override("hover",   _wood_btn_hover())
+	btn.add_theme_stylebox_override("pressed", pressed)
+	btn.add_theme_stylebox_override("focus",   _wood_btn_hover())
+	btn.add_theme_color_override("font_color",         WOOD_TEXT)
+	btn.add_theme_color_override("font_hover_color",   Color(1.0, 0.95, 0.55))
+	btn.add_theme_color_override("font_pressed_color", WOOD_SUBTEXT)
+
+# ── HUD helper setup (left column background + instruction bar + banner) ──────
+func _setup_hud_bg() -> void:
+	# Backgrounds (LeftBg, LeftBorder, RightBg, RightBorder, TopBar, TopBarBorder)
+	# are declared directly in the tscn — nothing to do here programmatically.
+	# Wire pause button which IS in the tscn as a plain Button.
+	var btn := get_node_or_null("HUD/PauseButton") as Button
+	if btn:
+		if _pixel_font: btn.add_theme_font_override("font", _pixel_font)
+		btn.add_theme_font_size_override("font_size", 13)
+		btn.add_theme_color_override("font_color", WOOD_TEXT)
+		btn.add_theme_stylebox_override("normal", _wood_btn_normal())
+		btn.add_theme_stylebox_override("hover",  _wood_btn_hover())
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.pressed.connect(_on_pause_pressed)
+
+func _setup_instr_bar() -> void:
+	# TopBar + InstrLabel are in the tscn. Just grab InstrLabel as _instr_task.
+	_instr_task = get_node_or_null("HUD/InstrLabel") as Label
+	_instr_rule = get_node_or_null("HUD/ModeLabel")  as Label
+	if _instr_task and _pixel_font:
+		_instr_task.add_theme_font_override("font", _pixel_font)
+		_instr_task.add_theme_font_size_override("font_size", 14)
+		_instr_task.add_theme_color_override("font_color", WOOD_TEXT)
+		_instr_task.add_theme_color_override("font_shadow_color", Color(0,0,0,0.6))
+		_instr_task.add_theme_constant_override("shadow_offset_x", 1)
+		_instr_task.add_theme_constant_override("shadow_offset_y", 1)
+		# Set initial instruction text
+	_update_instr(_goal_text(), _p["mode"].to_upper())
+
+func _update_instr(task: String, rule: String = "") -> void:
+	if _instr_task: _instr_task.text = task
+	if _instr_rule: _instr_rule.text = rule
+
+func _show_connection_popup(city: Dictionary) -> void:
+	var hud := get_node_or_null("HUD") as CanvasLayer
+	if hud == null: return
+	if _conn_popup == null:
+		_conn_popup = PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color                  = Color(0.14, 0.08, 0.03, 0.97)
+		sb.border_width_left = 2; sb.border_width_right  = 2
+		sb.border_width_top  = 2; sb.border_width_bottom = 2
+		sb.border_color              = WOOD_GOLD
+		sb.corner_radius_top_left    = 4; sb.corner_radius_top_right    = 4
+		sb.corner_radius_bottom_left = 4; sb.corner_radius_bottom_right = 4
+		_conn_popup.add_theme_stylebox_override("panel", sb)
+		_conn_popup.z_index      = 60
+		_conn_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hud.add_child(_conn_popup)
+		_conn_popup_lbl = Label.new()
+		if _pixel_font: _conn_popup_lbl.add_theme_font_override("font", _pixel_font)
+		_conn_popup_lbl.add_theme_font_size_override("font_size", 14)
+		_conn_popup_lbl.add_theme_color_override("font_color", WOOD_TEXT)
+		_conn_popup_lbl.add_theme_color_override("font_shadow_color", Color(0,0,0,0.7))
+		_conn_popup_lbl.add_theme_constant_override("shadow_offset_x", 1)
+		_conn_popup_lbl.add_theme_constant_override("shadow_offset_y", 1)
+		_conn_popup.add_child(_conn_popup_lbl)
+	var nb_labels: Array = (city["neighbors"] as Array).map(
+		func(n): return (_city_by_id[n]["label"] as String) if n in _city_by_id else "?")
+	var nb_str: String = ", ".join(nb_labels) if not nb_labels.is_empty() else "none"
+	_conn_popup_lbl.text = "%s connects to:\n%s" % [city["label"], nb_str]
+	var sprite := city["sprite"] as Node2D
+	var sp: Vector2 = get_viewport().get_canvas_transform() * sprite.global_position
+	var px: float = clamp(sp.x + 24.0, 315.0, 1050.0)
+	var py: float = clamp(sp.y - 72.0, 44.0,  600.0)
+	_conn_popup.position   = Vector2(px, py)
+	_conn_popup.visible    = true
+	_conn_popup.modulate.a = 0.0
+	if _conn_popup_tween: _conn_popup_tween.kill()
+	_conn_popup_tween = _conn_popup.create_tween()
+	_conn_popup_tween.tween_property(_conn_popup, "modulate:a", 1.0, 0.15)
+	_conn_popup_tween.tween_interval(3.2)
+	_conn_popup_tween.tween_property(_conn_popup, "modulate:a", 0.0, 0.3)
+	_conn_popup_tween.tween_callback(func(): if is_instance_valid(_conn_popup): _conn_popup.visible = false)
+
+func _setup_banner() -> void:
+	_banner_rect = ColorRect.new()
+	_banner_rect.color = Color(0,0,0,0); _banner_rect.size = Vector2(1280,720)
+	_banner_rect.z_index = 95; _banner_rect.visible = false; add_child(_banner_rect)
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _wood_panel(10))
+	card.size = Vector2(860,130); card.position = Vector2(210,285); card.z_index = 96
+	_banner_rect.add_child(card)
+	var gold := ColorRect.new()
+	gold.color = WOOD_GOLD; gold.size = Vector2(860,3); gold.position = Vector2(0,0)
+	card.add_child(gold)
+	_banner_lbl = Label.new()
+	_banner_lbl.add_theme_font_override("font", _pixel_font)
+	_banner_lbl.add_theme_font_size_override("font_size", 26)
+	_banner_lbl.add_theme_color_override("font_color", WOOD_GOLD)
+	_banner_lbl.add_theme_color_override("font_shadow_color", Color(0,0,0,0.7))
+	_banner_lbl.add_theme_constant_override("shadow_offset_x", 2)
+	_banner_lbl.add_theme_constant_override("shadow_offset_y", 2)
+	_banner_lbl.position = Vector2(20,14); _banner_lbl.size = Vector2(820,50)
+	_banner_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; card.add_child(_banner_lbl)
+	_banner_sub = Label.new()
+	_banner_sub.add_theme_font_override("font", _pixel_font)
+	_banner_sub.add_theme_font_size_override("font_size", 14)
+	_banner_sub.add_theme_color_override("font_color", WOOD_TEXT)
+	_banner_sub.position = Vector2(20,70); _banner_sub.size = Vector2(820,48)
+	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; card.add_child(_banner_sub)
+	# Docked pill (stays at top after banner fades)
+	_banner_pill = ColorRect.new()
+	_banner_pill.color = WOOD_MID; _banner_pill.size = Vector2(1280,34)
+	_banner_pill.position = Vector2(0,38); _banner_pill.z_index = 94; _banner_pill.visible = false
+	add_child(_banner_pill)
+	var pill_edge := ColorRect.new()
+	pill_edge.color = WOOD_GOLD; pill_edge.size = Vector2(1280,2); pill_edge.position = Vector2(0,32)
+	_banner_pill.add_child(pill_edge)
+	_banner_pill_lbl = Label.new()
+	_banner_pill_lbl.add_theme_font_override("font", _pixel_font)
+	_banner_pill_lbl.add_theme_font_size_override("font_size", 14)
+	_banner_pill_lbl.add_theme_color_override("font_color", WOOD_GOLD)
+	_banner_pill_lbl.size = Vector2(1280,34); _banner_pill_lbl.position = Vector2(0,0)
+	_banner_pill_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_pill_lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	_banner_pill.add_child(_banner_pill_lbl)
+
+# ── Inner class: draws the wood-framed diagram panel for intro slides ─────────
+class _GraphDiagramDrawer extends Node2D:
+	var draw_fn:    Callable
+	var pixel_font: Font
+	const _DARK   := Color(0.22, 0.13, 0.06, 0.97)
+	const _MID    := Color(0.34, 0.20, 0.08, 0.97)
+	const _BORDER := Color(0.72, 0.48, 0.18, 1.00)
+	const _GOLD   := Color(0.95, 0.78, 0.25, 1.00)
+	const _GRAIN  := Color(0.60, 0.38, 0.14, 0.10)
+	func _draw() -> void:
+		# Dark base
+		draw_rect(Rect2(0,0,1280,720), Color(0.04,0.04,0.10,1.0), true)
+		# Wood board (diagram area y=0..488)
+		draw_rect(Rect2(0,0,1280,488), _MID, true)
+		# Side planks
+		draw_rect(Rect2(0,0,32,488), _MID, true)
+		for gi in range(12): draw_rect(Rect2(4,20+gi*38,24,1), _GRAIN, true)
+		draw_rect(Rect2(1248,0,32,488), _MID, true)
+		for gi in range(12): draw_rect(Rect2(1252,20+gi*38,24,1), _GRAIN, true)
+		# Top plank + gold line
+		draw_rect(Rect2(0,0,1280,14), _MID, true)
+		for gi in range(3): draw_rect(Rect2(32,2+gi*4,1216,1), _GRAIN, true)
+		draw_rect(Rect2(0,13,1280,2), _GOLD, true)
+		# Board border
+		draw_rect(Rect2(0,0,1280,488), _BORDER, false, 2.5)
+		# Corner nails
+		for cp in [Vector2(16,14),Vector2(1264,14),Vector2(16,474),Vector2(1264,474)]:
+			draw_circle(cp, 5.0, _GOLD); draw_circle(cp, 2.5, _DARK)
+		# Diagram content
+		if draw_fn.is_valid(): draw_fn.call(self, pixel_font)
+		# Footer panel (title + body area, y=488..648)
+		draw_rect(Rect2(0,488,1280,160), _DARK, true)
+		for gi in range(7): draw_rect(Rect2(16,498+gi*20,1248,1), _GRAIN, true)
+		draw_rect(Rect2(0,488,1280,2), _GOLD, true)
+		draw_rect(Rect2(0,488,1280,160), _BORDER, false, 2.0)
+		# Button tray (y=648..710)
+		draw_rect(Rect2(0,648,1280,62), _MID, true)
+		for gi in range(3): draw_rect(Rect2(16,656+gi*14,1248,1), _GRAIN, true)
+		draw_rect(Rect2(0,648,1280,2), _GOLD, true)
+		draw_rect(Rect2(0,648,1280,62), _BORDER, false, 1.5)
+
+# ── Diagram draw helpers ───────────────────────────────────────────────────────
+# Draw a graph node circle with letter label
+func _gn(ci: CanvasItem, pos: Vector2, lbl: String, col: Color, font: Font, r: float = 26.0) -> void:
+	ci.draw_circle(pos, r, col)
+	ci.draw_arc(pos, r, 0, TAU, 32, col.darkened(0.4), 2.5)
+	var sz := 17
+	var tw := font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x
+	var asc := font.get_ascent(sz)
+	ci.draw_string(font, Vector2(pos.x - tw*0.5+1, pos.y + asc*0.5+1), lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, Color(0,0,0,0.8))
+	ci.draw_string(font, Vector2(pos.x - tw*0.5,   pos.y + asc*0.5),   lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, Color(0.98,0.92,0.72))
+
+# Draw an edge between two positions
+func _ge(ci: CanvasItem, a: Vector2, b: Vector2, col: Color = Color(0.72,0.55,0.25,0.85), w: float = 3.5) -> void:
+	ci.draw_line(a, b, col, w)
+
+# Draw a weighted label on an edge midpoint
+func _gw(ci: CanvasItem, a: Vector2, b: Vector2, w: int, font: Font) -> void:
+	var mid := (a + b) * 0.5 + Vector2(-12, -6)
+	ci.draw_string(font, mid + Vector2(1,1), str(w), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0,0,0,0.8))
+	ci.draw_string(font, mid,               str(w), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0,0.9,0.4))
+
+# Draw a centred text string
+func _glc(ci: CanvasItem, pos: Vector2, text: String, col: Color, font: Font, sz: int = 14) -> void:
+	var ts := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz)
+	ci.draw_string(font, pos - Vector2(ts.x/2, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+
+# Draw a left-aligned text string
+func _gll(ci: CanvasItem, pos: Vector2, text: String, col: Color, font: Font, sz: int = 14) -> void:
+	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz, col)
+
+# ── Slide diagram draw functions ───────────────────────────────────────────────
+# OBSERVE slide 0 — "What is a Graph?"
+func _draw_observe_s0(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(380, 200); var B := Vector2(640, 130)
+	var C := Vector2(900, 200); var D := Vector2(640, 360)
+	_ge(ci, A, B); _ge(ci, B, C); _ge(ci, A, D); _ge(ci, C, D); _ge(ci, B, D)
+	_gn(ci, A, "A", Color(0.75,0.65,0.45), font)
+	_gn(ci, B, "B", Color(0.25,0.55,0.30), font)
+	_gn(ci, C, "C", Color(0.85,0.60,0.15), font)
+	_gn(ci, D, "D", Color(0.55,0.20,0.25), font)
+	var emid := A.lerp(B, 0.5) + Vector2(-12, -20)
+	_gll(ci, emid, "Edge (road)", Color(0.72,0.55,0.25), font, 13)
+	_gll(ci, A + Vector2(-100,-8), "Node (city)", Color(0.9,0.9,0.6), font, 13)
+
+# OBSERVE slide 1 — "Nodes & Edges" – highlight node A with adjacency
+func _draw_observe_s1(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(380, 200); var B := Vector2(640, 130)
+	var C := Vector2(900, 200); var D := Vector2(640, 360)
+	_ge(ci, A, B, Color(0.95,0.78,0.20,0.9), 4.0)
+	_ge(ci, A, D, Color(0.95,0.78,0.20,0.9), 4.0)
+	_ge(ci, B, C); _ge(ci, C, D); _ge(ci, B, D)
+	_gn(ci, A, "A", Color(0.95,0.78,0.20), font, 30.0)  # highlighted
+	_gn(ci, B, "B", Color(0.25,0.55,0.30), font)
+	_gn(ci, C, "C", Color(0.85,0.60,0.15), font)
+	_gn(ci, D, "D", Color(0.55,0.20,0.25), font)
+	# Adjacency box on the right
+	ci.draw_rect(Rect2(960,160,250,110), Color(0.08,0.09,0.18,0.9), true)
+	ci.draw_rect(Rect2(960,160,250,110), Color(0.4,0.4,0.65,0.6), false, 1.5)
+	_gll(ci, Vector2(970,182), "A → [B, D]", Color(0.95,0.78,0.20), font, 16)
+	_gll(ci, Vector2(970,208), "B → [A, C, D]", Color(0.9,0.9,0.7), font, 14)
+	_gll(ci, Vector2(970,230), "C → [B, D]", Color(0.9,0.9,0.7), font, 14)
+	_gll(ci, Vector2(970,252), "D → [A, B, C]", Color(0.9,0.9,0.7), font, 14)
+
+# OBSERVE slide 2 — "Your Task"
+func _draw_observe_s2(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(380, 200); var B := Vector2(640, 130)
+	var C := Vector2(900, 200); var D := Vector2(640, 360)
+	_ge(ci, A, B); _ge(ci, B, C); _ge(ci, A, D); _ge(ci, C, D); _ge(ci, B, D)
+	_gn(ci, A, "A", Color(0.75,0.65,0.45), font)
+	_gn(ci, B, "B", Color(0.25,0.55,0.30), font)
+	_gn(ci, C, "C", Color(0.85,0.60,0.15), font)
+	_gn(ci, D, "D", Color(0.55,0.20,0.25), font)
+	# Pulsing ring on A to show interactivity
+	ci.draw_arc(A, 40.0, 0, TAU, 32, Color(0.95,0.78,0.20,0.7), 2.0)
+	_glc(ci, Vector2(640, 430), "Click any city to highlight its neighbours!", Color(0.95,0.78,0.20), font, 16)
+
+# CONNECT slide 0 — "Connecting a Graph"
+func _draw_connect_s0(ci: CanvasItem, font: Font) -> void:
+	# Group 1: A-B connected (left side)
+	var A := Vector2(310, 240); var B := Vector2(490, 200)
+	_ge(ci, A, B)
+	_gn(ci, A, "A", Color(0.75,0.65,0.45), font)
+	_gn(ci, B, "B", Color(0.25,0.55,0.30), font)
+	_glc(ci, Vector2(400, 310), "Group 1", Color(0.6,0.6,0.5), font, 13)
+	# Disconnect symbol
+	_glc(ci, Vector2(640, 240), "✕", Color(0.9,0.3,0.3), font, 36)
+	_glc(ci, Vector2(640, 290), "not connected", Color(0.9,0.3,0.3), font, 13)
+	# Group 2: C-D connected (right side)
+	var C := Vector2(790, 200); var D := Vector2(970, 240)
+	_ge(ci, C, D)
+	_gn(ci, C, "C", Color(0.85,0.60,0.15), font)
+	_gn(ci, D, "D", Color(0.55,0.20,0.25), font)
+	_glc(ci, Vector2(880, 310), "Group 2", Color(0.6,0.6,0.5), font, 13)
+	_glc(ci, Vector2(640, 420), "Draw roads to merge them into ONE connected graph.", Color(0.9,0.85,0.6), font, 14)
+
+# CONNECT slide 1 — "Draw Roads"
+func _draw_connect_s1(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(310, 240); var B := Vector2(490, 200)
+	var C := Vector2(790, 200); var D := Vector2(970, 240)
+	_ge(ci, A, B); _ge(ci, C, D)
+	# Dashed arrow from B toward C (the road being drawn)
+	var step := 18.0
+	var dir := (C - B).normalized(); var dist := B.distance_to(C)
+	var cur := B + dir * 36.0
+	while cur.distance_to(B) < dist - 36.0:
+		ci.draw_line(cur, cur + dir * step, Color(0.95,0.78,0.20,0.85), 2.5)
+		cur += dir * step * 2
+	# Arrow head
+	var tip := C - dir * 36.0
+	var perp := Vector2(-dir.y, dir.x) * 10.0
+	ci.draw_line(tip, tip - dir*20 + perp, Color(0.95,0.78,0.20), 2.5)
+	ci.draw_line(tip, tip - dir*20 - perp, Color(0.95,0.78,0.20), 2.5)
+	_gn(ci, A, "A", Color(0.75,0.65,0.45), font)
+	_gn(ci, B, "B", Color(0.25,0.55,0.30), font)
+	_gn(ci, C, "C", Color(0.85,0.60,0.15), font)
+	_gn(ci, D, "D", Color(0.55,0.20,0.25), font)
+	_glc(ci, (B + C)*0.5 + Vector2(0,-32), "Drag from city to city", Color(0.95,0.78,0.20), font, 14)
+
+# PATH slide 0 — "What is a Path?"
+func _draw_path_s0(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(200, 260); var B := Vector2(400, 180)
+	var C := Vector2(620, 260); var D := Vector2(840, 180)
+	var E := Vector2(1040, 260)
+	_ge(ci, A, B); _ge(ci, B, C); _ge(ci, C, D); _ge(ci, D, E)
+	_ge(ci, A, C); _ge(ci, B, D)
+	# Highlight path A→C→E
+	_ge(ci, A, C, Color(0.20, 1.00, 0.35, 0.95), 5.0)
+	_ge(ci, C, E, Color(0.20, 1.00, 0.35, 0.95), 5.0)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font)  # start (green)
+	_gn(ci, B, "B", Color(0.45,0.45,0.45), font)
+	_gn(ci, C, "C", Color(0.20, 1.00, 0.35), font)  # on path
+	_gn(ci, D, "D", Color(0.45,0.45,0.45), font)
+	_gn(ci, E, "E", Color(1.00,0.30,0.30), font)  # end (red)
+	_glc(ci, Vector2(640, 380), "Path: A → C → E  (2 hops)", Color(0.20, 1.00, 0.35), font, 16)
+	_glc(ci, Vector2(640, 418), "You can only travel along existing roads.", Color(0.9,0.85,0.6), font, 14)
+
+# PATH slide 1 — "Find the Path"
+func _draw_path_s1(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(200, 260); var B := Vector2(400, 180)
+	var C := Vector2(620, 260); var D := Vector2(840, 180)
+	var E := Vector2(1040, 260)
+	_ge(ci, A, B); _ge(ci, B, C); _ge(ci, C, D); _ge(ci, D, E); _ge(ci, A, C); _ge(ci, B, D)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font, 30.0)  # START
+	_gn(ci, B, "B", Color(0.40,0.50,0.65), font)
+	_gn(ci, C, "C", Color(0.40,0.50,0.65), font)
+	_gn(ci, D, "D", Color(0.40,0.50,0.65), font)
+	_gn(ci, E, "E", Color(1.00,0.30,0.30), font, 30.0)  # END
+	_glc(ci, A + Vector2(0,-44), "START", Color(0.30,1.00,0.30), font, 13)
+	_glc(ci, E + Vector2(0,-44), "END",   Color(1.00,0.30,0.30), font, 13)
+	_glc(ci, Vector2(640, 400), "Click START then trace connected cities to END.", Color(0.9,0.85,0.6), font, 14)
+
+# BFS slide 0 — "Breadth-First Search"
+func _draw_bfs_s0(ci: CanvasItem, font: Font) -> void:
+	var src := Vector2(640, 150)
+	var L1 := [Vector2(440,250), Vector2(840,250)]
+	var L2 := [Vector2(330,370), Vector2(560,370), Vector2(720,370), Vector2(950,370)]
+	for nb in L1: _ge(ci, src, nb, Color(0.40,0.85,0.45,0.9), 3.5)
+	for i in range(L2.size()):
+		_ge(ci, L1[i/2], L2[i], Color(0.4,0.85,0.45,0.6), 3.0)
+	_gn(ci, src, "A", Color(0.95,0.78,0.20), font, 28.0)
+	_glc(ci, src + Vector2(0,-42), "Level 0", Color(0.95,0.78,0.20), font, 12)
+	var l1_letters := ["B", "C"]
+	for i in range(L1.size()):
+		_gn(ci, L1[i], l1_letters[i], Color(0.40,0.85,0.45), font, 24.0)
+		_glc(ci, L1[i] + Vector2(0,-38), "Level 1", Color(0.40,0.85,0.45), font, 11)
+	var l2_letters := ["D","E","F","G"]
+	for i in range(L2.size()):
+		_gn(ci, L2[i], l2_letters[i], Color(0.40,0.50,0.65), font, 22.0)
+		_glc(ci, L2[i] + Vector2(0,-36), "Level 2", Color(0.40,0.50,0.65), font, 10)
+
+# BFS slide 1 — "The Queue"
+func _draw_bfs_s1(ci: CanvasItem, font: Font) -> void:
+	var src := Vector2(640, 200)
+	var L1 := [Vector2(440,310), Vector2(840,310)]
+	_ge(ci, src, L1[0]); _ge(ci, src, L1[1])
+	_gn(ci, src, "A", Color(0.6,0.6,0.6), font, 26.0)  # visited
+	ci.draw_line(src - Vector2(0,26), src + Vector2(0,26), Color(0.3,1.0,0.4,0.5), 30.0)  # visited stripe
+	_gn(ci, L1[0], "B", Color(0.40,0.85,0.45), font, 24.0)
+	_gn(ci, L1[1], "C", Color(0.40,0.85,0.45), font, 24.0)
+	# Queue boxes
+	var qx := 260.0; var qy := 400.0
+	_glc(ci, Vector2(640, qy - 26), "Queue (First-In First-Out):", Color(0.7,0.7,1.0), font, 14)
+	var labels := ["B", "C"]
+	var cols   := [Color(0.40,0.85,0.45), Color(0.40,0.85,0.45)]
+	for i in range(2):
+		var bx := qx + 200.0 + i * 90.0
+		ci.draw_rect(Rect2(bx, qy, 74, 54), Color(0.08,0.18,0.10,0.9), true)
+		ci.draw_rect(Rect2(bx, qy, 74, 54), cols[i], false, 2.0)
+		_glc(ci, Vector2(bx+37, qy+34), labels[i], cols[i], font, 20)
+	# Arrow showing dequeue direction
+	ci.draw_string(font, Vector2(qx+150, qy+34), "←  dequeue", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95,0.78,0.20))
+	ci.draw_string(font, Vector2(qx+560, qy+34), "enqueue  →", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.95,0.78,0.20))
+
+# BFS slide 2 — "Your Task"
+func _draw_bfs_s2(ci: CanvasItem, font: Font) -> void:
+	var src := Vector2(640, 180)
+	var L1 := [Vector2(440,290), Vector2(840,290)]
+	var L2 := [Vector2(330,400), Vector2(560,400), Vector2(720,400), Vector2(950,400)]
+	for nb in L1: _ge(ci, src, nb)
+	for i in range(L2.size()): _ge(ci, L1[i/2], L2[i])
+	_gn(ci, src, "A", Color(0.95,0.78,0.20), font, 28.0)
+	# Number the BFS order
+	var order := [src] + L1 + L2
+	var nums  := ["1","2","3","4","5","6","7"]
+	var letters := ["A","B","C","D","E","F","G"]
+	var node_cols := [Color(0.95,0.78,0.20), Color(0.40,0.85,0.45), Color(0.40,0.85,0.45),
+		Color(0.40,0.50,0.65), Color(0.40,0.50,0.65), Color(0.40,0.50,0.65), Color(0.40,0.50,0.65)]
+	for i in range(order.size()):
+		_gn(ci, order[i], letters[i], node_cols[i], font, 22.0)
+		_glc(ci, order[i] + Vector2(0,-34), nums[i], node_cols[i], font, 12)
+
+# DIJKSTRA slide 0 — "Weighted Graphs"
+func _draw_dijkstra_s0(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(200, 260); var B := Vector2(480, 160)
+	var C := Vector2(640, 320); var D := Vector2(840, 160)
+	var E := Vector2(1060, 260)
+	_ge(ci, A, B); _ge(ci, A, C); _ge(ci, B, C); _ge(ci, B, D); _ge(ci, C, D); _ge(ci, D, E); _ge(ci, C, E)
+	_gw(ci, A, B, 4, font); _gw(ci, A, C, 8, font); _gw(ci, B, C, 2, font)
+	_gw(ci, B, D, 5, font); _gw(ci, C, D, 3, font); _gw(ci, D, E, 6, font); _gw(ci, C, E, 9, font)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font)
+	_gn(ci, B, "B", Color(0.40,0.50,0.65), font)
+	_gn(ci, C, "C", Color(0.40,0.50,0.65), font)
+	_gn(ci, D, "D", Color(0.40,0.50,0.65), font)
+	_gn(ci, E, "E", Color(1.00,0.30,0.30), font)
+	_glc(ci, Vector2(640, 420), "Each road has a COST — find the cheapest path!", Color(0.9,0.85,0.6), font, 14)
+
+# DIJKSTRA slide 1 — "Algorithm & Distance Table"
+func _draw_dijkstra_s1(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(200, 220); var B := Vector2(480, 140); var C := Vector2(640, 300)
+	_ge(ci, A, B, Color(0.72,0.55,0.25,0.6)); _ge(ci, A, C, Color(0.72,0.55,0.25,0.6))
+	_ge(ci, B, C, Color(0.72,0.55,0.25,0.6))
+	_gw(ci, A, B, 4, font); _gw(ci, A, C, 8, font); _gw(ci, B, C, 2, font)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font)
+	_gn(ci, B, "B", Color(0.95,0.78,0.20), font)  # cheapest so far
+	_gn(ci, C, "C", Color(0.40,0.50,0.65), font)
+	# Distance table
+	var tx := 760.0; var ty := 140.0
+	ci.draw_rect(Rect2(tx, ty, 240, 160), Color(0.06,0.08,0.18,0.92), true)
+	ci.draw_rect(Rect2(tx, ty, 240, 160), Color(0.35,0.35,0.6,0.6), false, 1.5)
+	_gll(ci, Vector2(tx+10, ty+22), "Distance Table:", Color(0.7,0.7,1.0), font, 13)
+	var rows := [["A", "0", Color(0.30,1.00,0.30)], ["B", "4", Color(0.95,0.78,0.20)], ["C", "6", Color(0.9,0.9,0.7)]]
+	for i in range(rows.size()):
+		var row := rows[i] as Array
+		_gll(ci, Vector2(tx+14, ty+50+i*34), row[0] as String + " :", row[2] as Color, font, 15)
+		_gll(ci, Vector2(tx+80, ty+50+i*34), row[1] as String, row[2] as Color, font, 15)
+	_glc(ci, Vector2(640, 420), "Pick the unvisited city with LOWEST known cost.", Color(0.9,0.85,0.6), font, 14)
+
+# DIJKSTRA slide 2 — "Your Task"
+func _draw_dijkstra_s2(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(200, 260); var B := Vector2(480, 160)
+	var C := Vector2(640, 320); var D := Vector2(840, 160); var E := Vector2(1060, 260)
+	_ge(ci, A, B); _ge(ci, A, C); _ge(ci, B, C); _ge(ci, B, D); _ge(ci, C, D); _ge(ci, D, E); _ge(ci, C, E)
+	_gw(ci, A, B, 4, font); _gw(ci, A, C, 8, font); _gw(ci, B, C, 2, font)
+	_gw(ci, B, D, 5, font); _gw(ci, C, D, 3, font); _gw(ci, D, E, 6, font); _gw(ci, C, E, 9, font)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font, 30.0)
+	_gn(ci, B, "B", Color(0.40,0.50,0.65), font)
+	_gn(ci, C, "C", Color(0.40,0.50,0.65), font)
+	_gn(ci, D, "D", Color(0.40,0.50,0.65), font)
+	_gn(ci, E, "E", Color(1.00,0.30,0.30), font, 30.0)
+	_glc(ci, A + Vector2(0,-44), "START", Color(0.30,1.00,0.30), font, 13)
+	_glc(ci, E + Vector2(0,-44), "END",   Color(1.00,0.30,0.30), font, 13)
+	_glc(ci, Vector2(640, 418), "Build the cheapest path from START to END.", Color(0.9,0.85,0.6), font, 14)
+
+# EXPERT slide 0 — "Dynamic Roads"
+func _draw_expert_s0(ci: CanvasItem, font: Font) -> void:
+	var A := Vector2(320, 240); var B := Vector2(620, 160)
+	var C := Vector2(920, 240); var D := Vector2(620, 380)
+	_ge(ci, A, B); _ge(ci, B, C); _ge(ci, A, D); _ge(ci, C, D)
+	# Closed road X mark
+	var ex := (B + C) * 0.5
+	ci.draw_line(ex + Vector2(-18,-18), ex + Vector2(18,18), Color(0.9,0.2,0.2,0.9), 4.0)
+	ci.draw_line(ex + Vector2(18,-18),  ex + Vector2(-18,18), Color(0.9,0.2,0.2,0.9), 4.0)
+	_glc(ci, ex + Vector2(0, -32), "Road closed!", Color(0.9,0.2,0.2), font, 12)
+	_gn(ci, A, "A", Color(0.30,1.00,0.30), font)
+	_gn(ci, B, "B", Color(0.40,0.50,0.65), font)
+	_gn(ci, C, "C", Color(0.40,0.50,0.65), font)
+	_gn(ci, D, "D", Color(1.00,0.30,0.30), font)
+	_glc(ci, Vector2(640, 420), "Roads change every 8 seconds — adapt your route!", Color(0.9,0.85,0.6), font, 14)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  READY
@@ -357,6 +836,9 @@ func _ready() -> void:
 	# ── Scene setup ─────────────────────────────────────────────────────────
 	_setup_bg()
 	_setup_hud()
+	_setup_instr_bar()
+	_setup_banner()
+	_setup_hud_bg()
 	_spawn_cities(_p["node_count"])
 	await get_tree().process_frame  # ensure sprites are in scene tree before drawing edges
 	_generate_edges(_p["edge_count"])
@@ -377,6 +859,12 @@ func _ready() -> void:
 
 	if _p["mode"] == "bfs_dfs":
 		_start_bfs_auto()
+
+	if _p["mode"] == "path" and _cities.size() >= 2:
+		var pair := _find_distant_pair(2)
+		_src_id = pair[0]
+		_dst_id = pair[1]
+		_mark_endpoints()
 
 	if _p["mode"] == "dijkstra" and _cities.size() >= 2:
 		# Enforce minimum hop distance so START and END are never trivially adjacent.
@@ -414,7 +902,7 @@ func _ready() -> void:
 	_show_intro()
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  INTRO OVERLAY
+#  INTRO OVERLAY  (full-screen, programmatic — matches TreeGame style)
 # ─────────────────────────────────────────────────────────────────────────────
 func _show_intro() -> void:
 	var concept: String = _p["concept"]
@@ -422,35 +910,172 @@ func _show_intro() -> void:
 	_intro_slides   = CONCEPT_SLIDES[concept]
 	_intro_page_idx = 0
 	_intro_visible  = true
-	_intro_overlay.visible = true
-	# Wire buttons
-	_intro_back.pressed.connect(_on_intro_back)
-	_intro_next.pressed.connect(_on_intro_next)
-	_apply_font(_intro_title)
-	_apply_font(_intro_body)
-	_apply_font(_intro_page)
-	_intro_title.add_theme_font_size_override("font_size", 20)
-	_intro_body.add_theme_font_size_override("font_size", 16)
-	_intro_page.add_theme_font_size_override("font_size", 14)
+
+	_intro_canvas       = CanvasLayer.new()
+	_intro_canvas.layer = 100
+	add_child(_intro_canvas)
+
+	# Full-screen dimmer behind everything
+	var bg := ColorRect.new()
+	bg.color = Color(0.0, 0.0, 0.0, 0.68)
+	bg.size  = Vector2(1280, 720)
+	_intro_canvas.add_child(bg)
+
+	# Concept badge (top-left)
+	var badge := Label.new()
+	badge.name = "Badge"
+	badge.add_theme_font_override("font", _pixel_font)
+	badge.add_theme_font_size_override("font_size", 13)
+	badge.add_theme_color_override("font_color", WOOD_GOLD)
+	badge.text     = concept
+	badge.position = Vector2(60, 26)
+	badge.z_index  = 5
+	_intro_canvas.add_child(badge)
+
+	# Slide counter (top-centre)
+	var ctr := Label.new()
+	ctr.name = "Counter"
+	ctr.add_theme_font_override("font", _pixel_font)
+	ctr.add_theme_font_size_override("font_size", 13)
+	ctr.add_theme_color_override("font_color", WOOD_SUBTEXT)
+	ctr.position             = Vector2(480, 26)
+	ctr.size                 = Vector2(320, 24)
+	ctr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ctr.z_index              = 5
+	_intro_canvas.add_child(ctr)
+
+	# Title (above footer area)
+	var ttl := Label.new()
+	ttl.name = "Title"
+	ttl.add_theme_font_override("font", _pixel_font)
+	ttl.add_theme_font_size_override("font_size", 22)
+	ttl.add_theme_color_override("font_color", WOOD_GOLD)
+	ttl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	ttl.add_theme_constant_override("shadow_offset_x", 2)
+	ttl.add_theme_constant_override("shadow_offset_y", 2)
+	ttl.position             = Vector2(60, 496)
+	ttl.size                 = Vector2(1160, 40)
+	ttl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ttl.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
+	ttl.z_index              = 5
+	_intro_canvas.add_child(ttl)
+
+	# Gold divider
+	var div := ColorRect.new()
+	div.color    = WOOD_GOLD
+	div.size     = Vector2(880, 2)
+	div.position = Vector2(200, 540)
+	div.z_index  = 5
+	_intro_canvas.add_child(div)
+
+	# Body text
+	var body := Label.new()
+	body.name = "Body"
+	body.add_theme_font_override("font", _pixel_font)
+	body.add_theme_font_size_override("font_size", 15)
+	body.add_theme_color_override("font_color", WOOD_TEXT)
+	body.position             = Vector2(80, 546)
+	body.size                 = Vector2(1120, 96)
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.autowrap_mode        = TextServer.AUTOWRAP_WORD_SMART
+	body.z_index              = 5
+	_intro_canvas.add_child(body)
+
+	# Back button
+	var back := Button.new()
+	back.name = "Back"
+	back.text = "◀  Back"
+	back.position = Vector2(60, 656)
+	back.size     = Vector2(160, 44)
+	back.add_theme_font_override("font", _pixel_font)
+	back.add_theme_font_size_override("font_size", 14)
+	back.pressed.connect(_on_intro_back)
+	_style_wood_btn(back)
+	back.z_index = 5
+	_intro_canvas.add_child(back)
+
+	# Next / Begin button
+	var nxt := Button.new()
+	nxt.name = "Next"
+	nxt.text = "Next  ▶"
+	nxt.position = Vector2(1060, 656)
+	nxt.size     = Vector2(160, 44)
+	nxt.add_theme_font_override("font", _pixel_font)
+	nxt.add_theme_font_size_override("font_size", 14)
+	nxt.pressed.connect(_on_intro_next)
+	_style_wood_btn(nxt)
+	nxt.z_index = 5
+	_intro_canvas.add_child(nxt)
+
+	# Dot indicators
+	for i in range(_intro_slides.size()):
+		var dot := ColorRect.new()
+		dot.name     = "Dot%d" % i
+		dot.size     = Vector2(10, 10)
+		dot.position = Vector2(608 + i * 22, 668)
+		dot.color    = WOOD_SUBTEXT
+		dot.z_index  = 5
+		_intro_canvas.add_child(dot)
+
 	_refresh_intro_slide()
 
 func _refresh_intro_slide() -> void:
 	var slide: Dictionary = _intro_slides[_intro_page_idx]
-	_intro_title.text = slide["title"]
-	_intro_body.text  = slide["body"]
-	var img_path: String = slide["image"]
-	if img_path != "" and img_path in TUTORIAL_TEXTURES:
-		_intro_image.texture = TUTORIAL_TEXTURES[img_path]
-		_intro_image.visible = true
-	else:
-		_intro_image.visible = false
-	_intro_page.text  = "%d / %d" % [_intro_page_idx + 1, _intro_slides.size()]
-	_intro_back.disabled = (_intro_page_idx == 0)
-	_intro_next.text  = "Begin!" if _intro_page_idx == _intro_slides.size() - 1 else "Next ▶"
+	var total := _intro_slides.size()
+	(_intro_canvas.get_node("Counter") as Label).text = "%d / %d" % [_intro_page_idx + 1, total]
+	(_intro_canvas.get_node("Title")   as Label).text = slide["title"] as String
+	(_intro_canvas.get_node("Body")    as Label).text = slide["body"]  as String
+	(_intro_canvas.get_node("Back")    as Button).visible = _intro_page_idx > 0
+	(_intro_canvas.get_node("Next")    as Button).text = \
+		"Begin!  ▶" if _intro_page_idx == total - 1 else "Next  ▶"
+	for i in range(total):
+		(_intro_canvas.get_node("Dot%d" % i) as ColorRect).color = \
+			WOOD_GOLD if i == _intro_page_idx else WOOD_SUBTEXT
+	# Remove old diagram, add new one
+	var old := _intro_canvas.get_node_or_null("Diagram")
+	if old: old.name = "Dead"; old.free()
+	var concept: String = _p["concept"]
+	var fn := _get_slide_draw_fn(concept, _intro_page_idx)
+	var diag := _GraphDiagramDrawer.new()
+	diag.name       = "Diagram"
+	diag.draw_fn    = fn
+	diag.pixel_font = _pixel_font
+	diag.z_index    = 2
+	_intro_canvas.add_child(diag)
+
+func _get_slide_draw_fn(concept: String, idx: int) -> Callable:
+	match concept:
+		"OBSERVE":
+			match idx:
+				0: return _draw_observe_s0
+				1: return _draw_observe_s1
+				_: return _draw_observe_s2
+		"CONNECT":
+			match idx:
+				0: return _draw_connect_s0
+				_: return _draw_connect_s1
+		"PATH":
+			match idx:
+				0: return _draw_path_s0
+				_: return _draw_path_s1
+		"BFS":
+			match idx:
+				0: return _draw_bfs_s0
+				1: return _draw_bfs_s1
+				_: return _draw_bfs_s2
+		"DIJKSTRA":
+			match idx:
+				0: return _draw_dijkstra_s0
+				1: return _draw_dijkstra_s1
+				_: return _draw_dijkstra_s2
+		_:
+			return _draw_expert_s0
+	return _draw_observe_s0
 
 func _on_intro_back() -> void:
-	_intro_page_idx = max(0, _intro_page_idx - 1)
-	_refresh_intro_slide()
+	if _intro_page_idx > 0:
+		_intro_page_idx -= 1
+		_refresh_intro_slide()
 
 func _on_intro_next() -> void:
 	if _intro_page_idx < _intro_slides.size() - 1:
@@ -460,8 +1085,10 @@ func _on_intro_next() -> void:
 		_dismiss_intro()
 
 func _dismiss_intro() -> void:
-	_intro_visible         = false
-	_intro_overlay.visible = false
+	_intro_visible = false
+	var bg := _intro_canvas.get_child(0) as ColorRect
+	_intro_canvas.create_tween().tween_property(bg, "color:a", 0.0, 0.3)\
+		.finished.connect(func(): _intro_canvas.queue_free(); _intro_canvas = null)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SETUP
@@ -474,21 +1101,22 @@ func _setup_bg() -> void:
 	_bg.z_index        = -10
 
 func _setup_hud() -> void:
+	# Apply pixel font to every HUD label that exists
 	var labels: Array = [
 		_score_lbl, _combo_lbl, _timer_lbl, _goal_lbl, _acc_lbl,
 		_hint_lbl, _task_lbl, _mode_lbl, _cost_lbl, _fail_lbl,
 		_complete_banner,
 	]
 	for lbl in labels:
-		if is_instance_valid(lbl):
-			_apply_font(lbl)
-			lbl.add_theme_font_size_override("font_size", 20)
+		if is_instance_valid(lbl): _apply_font(lbl)
 
+	# Texts
 	_score_lbl.text    = "Score: 0"
 	_combo_lbl.text    = ""
 	_acc_lbl.text      = "Accuracy: -"
-	_goal_lbl.text     = _goal_text()
-	_task_lbl.text     = _goal_text()
+	_goal_lbl.visible  = false  # InstrLabel (top bar) already shows this — avoid duplicate
+	_task_lbl.text     = ""
+	_cost_lbl.visible  = _p.get("weighted", false)
 	_timer_lbl.visible = _p["time_limit"] > 0
 	if _p["time_limit"] > 0:
 		_timer_lbl.text = "⏱ %d" % int(_p["time_limit"])
@@ -536,7 +1164,7 @@ func _spawn_cities(count: int) -> void:
 		var lbl := Label.new()
 		lbl.text = char(65 + i)
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 22)   # compact but readable
+		lbl.add_theme_font_size_override("font_size", 20)   # compact but readable
 		lbl.add_theme_color_override("font_color", COL_WHITE)
 		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.95))
 		lbl.add_theme_constant_override("shadow_offset_x", 3)
@@ -677,13 +1305,24 @@ func _draw_weight_labels() -> void:
 		var pa  := _cities[e["a"]]["pos"] as Vector2
 		var pb  := _cities[e["b"]]["pos"] as Vector2
 		var mid := (pa + pb) * 0.5
+		# Dark pill background so numbers are readable over any background
+		var bg := ColorRect.new()
+		bg.color = Color(0.05, 0.05, 0.10, 0.88)
+		bg.size  = Vector2(30, 22)
+		_wt_layer.add_child(bg)
+		bg.global_position = mid + Vector2(-15, -14)
 		var lbl := Label.new()
 		lbl.text = str(e["weight"])
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 18)
-		lbl.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
+		lbl.add_theme_font_size_override("font_size", 16)
+		lbl.add_theme_color_override("font_color", Color(1.0, 0.95, 0.25))
+		lbl.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 1.0))
+		lbl.add_theme_constant_override("shadow_offset_x", 2)
+		lbl.add_theme_constant_override("shadow_offset_y", 2)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.size = Vector2(30, 22)
 		_wt_layer.add_child(lbl)
-		lbl.global_position = mid + Vector2(-8, -18)
+		lbl.global_position = mid + Vector2(-15, -14)
 
 # Returns BFS hop count between two nodes (-1 if unreachable)
 func _bfs_hop_distance(from_id: int, to_id: int) -> int:
@@ -737,7 +1376,7 @@ func _build_adj_panel() -> void:
 	var title := Label.new()
 	title.text = "Adjacency list"
 	_apply_font(title)
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 13)
 	title.add_theme_color_override("font_color", Color(0.7, 0.9, 1))
 	_adj_panel.add_child(title)
 
@@ -748,9 +1387,16 @@ func _build_adj_panel() -> void:
 		var lbl := Label.new()
 		lbl.text = "%s → [%s]" % [city["label"], ", ".join(nb_labels)]
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 16)
+		lbl.add_theme_font_size_override("font_size", 12)
 		lbl.add_theme_color_override("font_color", COL_WHITE)
 		_adj_panel.add_child(lbl)
+	# Resize the right bg to match content height (defer one frame so layout is settled)
+	var rows: int = _adj_panel.get_child_count()
+	var bg := get_node_or_null("HUD/RightBg") as ColorRect
+	var bd := get_node_or_null("HUD/RightBorder") as ColorRect
+	var new_h: float = 42.0 + rows * 18.0 + 8.0
+	if bg:  bg.set_deferred("size", Vector2(180.0, new_h)); bg.set_deferred("offset_bottom",  36.0 + new_h)
+	if bd:  bd.set_deferred("size", Vector2(2.0,   new_h)); bd.set_deferred("offset_bottom",  36.0 + new_h)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  DIJKSTRA DISTANCE TABLE  (teaching widget)
@@ -768,7 +1414,7 @@ func _refresh_dist_panel() -> void:
 	var title := Label.new()
 	title.text = "Distance table"
 	_apply_font(title)
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 13)
 	title.add_theme_color_override("font_color", Color(0.7, 0.9, 1))
 	_dist_panel.add_child(title)
 
@@ -780,9 +1426,16 @@ func _refresh_dist_panel() -> void:
 		var lbl := Label.new()
 		lbl.text = "%s: %s" % [city["label"], ds]
 		_apply_font(lbl)
-		lbl.add_theme_font_size_override("font_size", 16)
+		lbl.add_theme_font_size_override("font_size", 12)
 		lbl.add_theme_color_override("font_color", col)
 		_dist_panel.add_child(lbl)
+	# Resize bg for dist table
+	var rows: int = _dist_panel.get_child_count()
+	var bg := get_node_or_null("HUD/RightBg") as ColorRect
+	var bd := get_node_or_null("HUD/RightBorder") as ColorRect
+	var new_h: float = 42.0 + rows * 18.0 + 8.0
+	if bg:  bg.size = Vector2(180.0, new_h)
+	if bd:  bd.size = Vector2(2.0,   new_h)
 
 func _relax_from(node_id: int) -> void:
 	# Update dist_table from node_id's known cost — for teaching display only.
@@ -820,7 +1473,7 @@ func _process(delta: float) -> void:
 		if not is_instance_valid(sp): continue
 		# Convert world position to screen position for CanvasLayer
 		var screen_pos := get_viewport().get_canvas_transform() * sp.global_position
-		lbl_node.position = screen_pos + Vector2(-9, 46)  # below sprite, tighter
+		lbl_node.position = screen_pos + Vector2(-9, 46)
 
 func _update_snap_glow(mouse_pos: Vector2) -> void:
 	var best_d  := MAGNET_R
@@ -842,6 +1495,23 @@ func _update_snap_glow(mouse_pos: Vector2) -> void:
 			_live_edge.set_point_position(
 				1, (_cities[best_id]["sprite"] as Node2D).global_position
 			)
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  PAUSE
+# ─────────────────────────────────────────────────────────────────────────────
+func _on_pause_pressed() -> void:
+	var pm := get_node_or_null("PauseMenu")
+	if pm != null and pm.has_method("toggle"): pm.toggle(); return
+	for p in ["res://scenes/ui/PauseMenu.tscn", "res://PauseMenu.tscn"]:
+		if ResourceLoader.exists(p):
+			var inst := (load(p) as PackedScene).instantiate()
+			inst.name = "PauseMenu"; add_child(inst)
+			if inst.has_method("toggle"): inst.toggle()
+			return
+	get_tree().paused = not get_tree().paused
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"): _on_pause_pressed()
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  INPUT
@@ -935,10 +1605,7 @@ func _on_observe_click(id: int) -> void:
 	# Start pulsing glow on all adjacent neighbors
 	for nb: int in _cities[id]["neighbors"]:
 		_start_glow(nb)
-	_task_lbl.text = "%s connects to: %s" % [
-		_cities[id]["label"],
-		", ".join((_cities[id]["neighbors"] as Array).map(func(n): return (_city_by_id[n]["label"] as String) if n in _city_by_id else "?"))
-	]
+	_show_connection_popup(_cities[id])
 	# Award points for each new city discovered
 	if not id in _observe_clicked:
 		_observe_clicked.append(id)
@@ -987,10 +1654,13 @@ func _count_components() -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 func _on_path_click(id: int) -> void:
 	if _selected_path.is_empty():
+		if _src_id >= 0 and id != _src_id:
+			_apply_wrong(_cities[id]["sprite"] as Node2D, 0,
+				"Start at %s (green) — the marked START city!" % _cities[_src_id]["label"])
+			return
 		_selected_path.append(id)
 		(_cities[id]["sprite"] as Node2D).modulate = PATH_COLOR
-		_task_lbl.text = "Start at %s — now click a destination city." % _cities[id]["label"]
-		# Glow adjacent cities so player can see valid next steps
+		_task_lbl.text = "Now reach %s (red) — the END city." % _cities[_dst_id]["label"]
 		_stop_all_glows()
 		for nb: int in _cities[id]["neighbors"]:
 			_start_glow(nb)
@@ -1019,10 +1689,10 @@ func _on_path_click(id: int) -> void:
 		if nb not in _selected_path:
 			_start_glow(nb)
 
-	if id != _selected_path[0]:
+	var is_complete: bool = (_dst_id >= 0 and id == _dst_id) or (_dst_id < 0 and id != _selected_path[0])
+	if is_complete:
 		for cid: int in _selected_path:
 			_apply_correct(_cities[cid]["sprite"] as Node2D, 15)
-		# Length bonus — shorter paths score more
 		var length_bonus: int = max(0, (8 - _selected_path.size()) * 20)
 		_score += length_bonus
 		_score_lbl.text = "Score: %d" % _score
@@ -1101,12 +1771,26 @@ func _on_dijkstra_click(id: int) -> void:
 		else:
 			_stat["wrong_cost"] += 1
 			for cid: int in _selected_path:
-				_apply_wrong(_cities[cid]["sprite"] as Node2D, _p["penalty"], "")
-			_task_lbl.text = (
-				"Not the cheapest path!\nYour cost: %d  |  Optimal: %d\n" +
-				"Dijkstra always picks the minimum-cost next step."
-			) % [int(_running_cost), int(optimal)]
-			await get_tree().create_timer(1.8).timeout
+				(_cities[cid]["sprite"] as Node2D).modulate = COL_WRONG
+			_apply_wrong(_cities[id]["sprite"] as Node2D, _p["penalty"],
+				"Not the cheapest path!\nYour cost: %d  |  Optimal: %d" % [
+					int(_running_cost), int(optimal)])
+			await get_tree().create_timer(1.2).timeout
+			var opt_path := _dijkstra_path(_src_id, _dst_id)
+			_task_lbl.text = "Optimal: " + _path_label(opt_path) + \
+				"  (cost %d)" % int(optimal)
+			for c: Dictionary in _cities:
+				(c["sprite"] as Node2D).modulate = c["color"]
+			for cid: int in opt_path:
+				(_cities[cid]["sprite"] as Node2D).modulate = Color(0.20, 1.00, 0.35)
+			for ln in _path_lines:
+				if is_instance_valid(ln): (ln as Node2D).queue_free()
+			_path_lines.clear()
+			for i in range(opt_path.size() - 1):
+				_draw_path_edge(opt_path[i], opt_path[i + 1])
+			for ln in _path_lines:
+				if is_instance_valid(ln): (ln as Line2D).default_color = Color(0.20, 1.00, 0.35)
+			await get_tree().create_timer(2.4).timeout
 			_reset_path()
 
 func _update_cost_label() -> void:
@@ -1210,7 +1894,7 @@ func _update_bfs_display() -> void:
 		var vlbl := Label.new()
 		vlbl.text = "  ✓ %s" % _cities[cid]["label"]
 		_apply_font(vlbl)
-		vlbl.add_theme_font_size_override("font_size", 14)
+		vlbl.add_theme_font_size_override("font_size", 12)
 		vlbl.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		_bfs_display.add_child(vlbl)
 
@@ -1294,7 +1978,7 @@ func _draw_path_edge(a: int, b: int) -> void:
 	var pb := _cities[b]["pos"] as Vector2
 	var ln := Line2D.new()
 	ln.default_color = PATH_EDGE
-	ln.width   = 10.0
+	ln.width   = 14.0
 	ln.z_index = 5
 	ln.add_point(pa)
 	ln.add_point(pb)
@@ -1346,6 +2030,31 @@ func _dijkstra_cost(s: int, t: int) -> float:
 			var alt: float = dist[u] + float(e["weight"])
 			if alt < dist[nb]: dist[nb] = alt
 	return dist.get(t, INF)
+
+func _dijkstra_path(s: int, t: int) -> Array:
+	var dist: Dictionary = {}
+	var prev: Dictionary = {}
+	for c: Dictionary in _cities:
+		dist[c["id"]] = INF; prev[c["id"]] = -1
+	dist[s] = 0.0
+	var unvis: Array = _cities.map(func(c): return c["id"])
+	while not unvis.is_empty():
+		unvis.sort_custom(func(a, b): return dist.get(a, INF) < dist.get(b, INF))
+		var u: int = unvis.pop_front()
+		if u == t: break
+		for e: Dictionary in _edges:
+			var nb := -1
+			if   e["a"] == u: nb = e["b"]
+			elif e["b"] == u: nb = e["a"]
+			if nb < 0 or nb not in unvis: continue
+			var alt: float = dist[u] + float(e["weight"])
+			if alt < dist[nb]: dist[nb] = alt; prev[nb] = u
+	var path: Array = []
+	var cur := t
+	while cur != -1 and cur != s:
+		path.push_front(cur); cur = prev.get(cur, -1)
+	path.push_front(s)
+	return path
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  DYNAMIC EDGES (Expert tier 4)
@@ -1408,6 +2117,10 @@ func _play_completion() -> void:
 	if has_node("/root/PlayerProfile"):
 		var s := _build_stats(true)
 		PlayerProfile.save_chapter_result(_chapter_id, int(s["score"]), _grade_to_stars(_calc_grade(true)), float(s.get("accuracy", 0.0)))
+	# SaveManager drives WorldMap unlock gates — must be updated alongside PlayerProfile
+	if has_node("/root/SaveManager"):
+		var s := _build_stats(true)
+		SaveManager.save_chapter_result(_chapter_id, s)
 
 	await get_tree().create_timer(2.5).timeout
 	_end_game(true)
@@ -1416,8 +2129,8 @@ func _play_completion() -> void:
 #  GLOW PULSE  (adjacent-node animation on CanvasLayer — no green tint)
 # ─────────────────────────────────────────────────────────────────────────────
 # Pulsing colors: a warm amber-gold that fades in/out to give a clear magical glow.
-const GLOW_COLOR_A := Color(1.00, 0.85, 0.20, 1.0)   # bright gold peak
-const GLOW_COLOR_B := Color(0.55, 0.35, 0.05, 0.55)  # dim amber trough
+const GLOW_COLOR_A := Color(0.10, 0.85, 1.00, 1.0)   # bright cyan peak
+const GLOW_COLOR_B := Color(0.05, 0.30, 0.55, 0.55)  # dim blue trough
 
 func _start_glow(city_id: int) -> void:
 	if city_id < 0 or city_id >= _cities.size(): return
@@ -1570,11 +2283,17 @@ func _log(_action: String, _value: int) -> void:
 	pass   # analytics stub — wire to your own system if needed
 
 func _build_stats(success: bool) -> Dictionary:
+	var wrong_total: int = (
+		int(_stat["wrong_order"]) + int(_stat["wrong_cost"]) + int(_stat["non_neighbor"])
+	)
+	var correct_total: int = int(_stat["correct"])
 	return {
 		"score":         _score,
 		"grade":         _calc_grade(success),
 		"accuracy":      _accuracy(),
-		"correct":       _stat["correct"],
+		"correct":       correct_total,
+		"wrong":         wrong_total,
+		"total":         correct_total + wrong_total,
 		"wrong_order":   _stat["wrong_order"],
 		"wrong_cost":    _stat["wrong_cost"],
 		"non_neighbor":  _stat["non_neighbor"],
@@ -1603,10 +2322,24 @@ func _end_game(success: bool) -> void:
 	if has_node("/root/PlayerProfile"):
 		var s := _build_stats(success)
 		PlayerProfile.save_chapter_result(_chapter_id, int(s["score"]), _grade_to_stars(grade), float(s.get("accuracy", 0.0)))
+	# SaveManager drives WorldMap unlock gates — must be updated alongside PlayerProfile
+	if has_node("/root/SaveManager"):
+		var s := _build_stats(success)
+		SaveManager.save_chapter_result(_chapter_id, s)
 
 	await get_tree().create_timer(3.0).timeout
 
 	# ── Route back through GameRouter ───────────────────────────────────────
+	var full_s := _build_stats(success)
+	# Pass the full stats dict directly to ChapterCompleteScreen if it exists
+	# so accuracy, correct, wrong counts are all available for display.
+	# GameRouter.chapter_complete only forwards score+stars (no accuracy),
+	# so we feed the screen ourselves first, then let GameRouter handle scene routing.
+	var ccs := get_tree().get_first_node_in_group("chapter_complete_screen")
+	if not ccs:
+		ccs = get_node_or_null("/root/ChapterCompleteScreen")
+	if ccs and ccs.has_method("show_result"):
+		ccs.show_result(_chapter_id, full_s)
 	if has_node("/root/GameRouter"):
 		GameRouter.chapter_complete(_chapter_id, _score, _grade_to_stars(grade))
 	else:

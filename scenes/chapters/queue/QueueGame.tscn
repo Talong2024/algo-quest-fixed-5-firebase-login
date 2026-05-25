@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://bq47xmcneua0h"]
+[gd_scene load_steps=7 format=3 uid="uid://bq47xmcneua0h"]
 
 [ext_resource type="Script" uid="uid://cv74xdaqn8bu7" path="res://scripts/chapters/queue/QueueGame.gd" id="1_qgame"]
 [ext_resource type="PackedScene" uid="uid://bigdemcgf1w6j" path="res://scenes/ui/PauseMenu.tscn" id="2_3iqc4"]
+[ext_resource type="Texture2D" uid="uid://52nhd8gu5am2" path="res://assets/art/ui/pause_icon.png" id="2_rwfn8"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.06, 0.05, 0.16, 0.9)
@@ -90,10 +91,11 @@ horizontal_alignment = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -160.0
-offset_top = 6.0
-offset_right = -10.0
-offset_bottom = 40.0
+offset_left = -216.0
+offset_top = 7.0
+offset_right = -66.0
+offset_bottom = 41.0
+grow_horizontal = 0
 alignment = 2
 
 [node name="PeekLabel" type="Label" parent="HUD"]
@@ -115,7 +117,11 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -90.0
+offset_left = 365.0
+offset_top = -80.0
+offset_right = -374.0
+grow_horizontal = 2
+grow_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_concept")
 
 [node name="ConceptLabel" type="Label" parent="HUD/ConceptBar"]
@@ -123,7 +129,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.35, 1, 0.55, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 17
 text = "Sort the queue:  lowest value → FRONT [0]  →  highest at BACK"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -134,19 +140,34 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -120.0
-offset_bottom = -90.0
+offset_left = -3.0
+offset_top = -662.0
+offset_right = 1.0
+offset_bottom = -615.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
 
 [node name="HintLabel" type="Label" parent="HUD/HintBar"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 4
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.72, 0.9, 0.72, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 text = "Drag token from HOLDING → queue  =  enqueue()"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="PauseButton" type="TextureButton" parent="HUD"]
+z_index = 210
+offset_left = 1226.0
+offset_top = 10.0
+offset_right = 1270.0
+offset_bottom = 54.0
+texture_normal = ExtResource("2_rwfn8")
+ignore_texture_size = true
+
 [node name="PauseMenu" parent="." instance=ExtResource("2_3iqc4")]
 process_mode = 4
+visible = false

@@ -33,7 +33,7 @@ const PATH_FONT    := "res://assets/fonts/freepixel.ttf"
 # How-to text per chapter (set by chapter script or inferred from scene name)
 const HOW_TO := {
 	"QueueGame":      "FIFO Queue:\n• Citizens auto-join the line\n• Select the correct SERVICE type\n• DRAG the front citizen to the window\n• Clicking non-front = FIFO violation!",
-	"StackGame":      "LIFO Stack:\n• DRAG staged rune → column to PUSH\n• CLICK top rune to POP\n• Only the TOP rune is accessible\n• Follow task cards for sequence goals",
+	"StackGame":      "LIFO Stack — Last In, First Out:\n• Click any tray item to PUSH onto the column\n• Click the ♛ crown on the TOP item to POP\n\nTier 0 — Push & Pop: learn the basics\nTier 1 — Rainbow: push colours in REVERSE\n  (Violet first → Red last, so Red pops first)\nTier 2 — Peek: runes land as dark silhouettes\n  Click top rune to reveal its colour, then answer\nTier 3 — Undo: words auto-push one by one\n  Pop them all in reverse to undo your history\nTier 4 — Brackets: open ( [ { → drag to PUSH\n  close ) ] } → click crown to POP and match",
 	"LinkedListGame": "Linked List:\n• DRAG from ▶ port to connect nodes\n• DRAG node body to reposition\n• RIGHT-CLICK to delete (Normal+)\n• Build one chain: HEAD → ... → TAIL → NULL",
 	"TreeGame":       "Binary Search Tree:\n• DRAG numbers from pool to tree\n• Left child < Parent < Right child\n• Green slots = valid positions\n• CLICK leaf to delete (Expert)",
 	"GraphGame":      "Graph Algorithms:\n• DRAG between cities to connect\n• Select mode (BFS/Dijkstra) in HUD\n• Click nodes in correct traversal order\n• Find shortest weighted path",
@@ -123,11 +123,14 @@ func _close() -> void:
 	_howto_btn.visible   = true
 	_map_btn.visible     = true
 	_title_lbl.text      = "PAUSED"
-	# Defer the unpause by one frame so the button's pressed signal
-	# fully propagates before the tree resumes — prevents frozen callbacks
-	call_deferred("_unpause_tree")
+	# Unpause immediately — before any scene change happens.
+	# Using call_deferred here caused get_tree() to be null when the deferred
+	# call fired after a scene transition (e.g. "Return to Map").
+	_unpause_tree()
 
 func _unpause_tree() -> void:
+	# Guard: node may no longer be in the tree if a scene change already ran.
+	if not is_inside_tree(): return
 	var t := get_tree()
 	if t != null:
 		t.paused = false
@@ -155,7 +158,13 @@ func _on_howto() -> void:
 
 func _on_map() -> void:
 	_play_sfx(PATH_SFX_BTN)
-	_close()
+	# Unpause the tree BEFORE changing scenes.
+	# If we call _close() (which calls _unpause_tree via deferred) and then
+	# immediately change scene, the node leaves the tree and get_tree() is null
+	# by the time the deferred call runs — causing the error on line 131.
+	_unpause_tree()
+	visible  = false
+	_is_open = false
 	GameRouter.go_to_world_map()
 
 func _on_volume(val: float) -> void:

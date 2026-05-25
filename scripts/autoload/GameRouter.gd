@@ -3,12 +3,12 @@
 # Autoload Singleton — Registered as "GameRouter" in Project > Autoload
 # File: scripts/autoload/GameRouter.gd
 #
-# Chapter layout:
-#   1–5   → QueueGame      (tiers 0–4)
-#   6–10  → StackGame      (tiers 0–4)
-#   11–15 → LinkedListGame (tiers 0–4)
-#   16–20 → TreeGame       (tiers 0–4)
-#   21–25 → GraphGame      (tiers 0–4)
+# Chapter layout (5 tiers per chapter family, Beginner → Expert):
+#   1–5   → QueueGame      (tier 0=Beginner … tier 4=Expert)
+#   6–10  → StackGame      (tier 0=Beginner … tier 4=Expert)
+#   11–15 → LinkedListGame (tier 0=Beginner … tier 4=Expert)
+#   16–20 → TreeGame       (tier 0=Beginner … tier 4=Expert)
+#   21–25 → GraphGame      (tier 0=Beginner … tier 4=Expert)
 # =============================================================================
 
 extends Node
@@ -105,6 +105,15 @@ func chapter_complete(chapter_id: int, score: int, stars: int) -> void:
 	# Save result to PlayerProfile (Firestore) before showing the screen
 	if has_node("/root/PlayerProfile"):
 		PlayerProfile.save_chapter_result(chapter_id, score, stars)
+	# FIX: also save to SaveManager (local + RTDB) so both systems stay in sync
+	if has_node("/root/SaveManager"):
+		SaveManager.save_chapter_result(chapter_id, {
+			"score":    score,
+			"stars":    stars,
+			"grade":    _stars_to_grade(stars),
+			"success":  stars > 0,
+			"accuracy": 0.0,
+		})
 
 	var screen_scene := "res://scenes/ui/ChapterCompleteScreen.tscn"
 	if not ResourceLoader.exists(screen_scene):
@@ -138,6 +147,9 @@ func chapter_complete_with_stats(chapter_id: int, stats: Dictionary) -> void:
 			stats.get("stars",    0),
 			stats.get("accuracy", 0.0)
 		)
+	# FIX: also save to SaveManager (local + RTDB) so both systems stay in sync
+	if has_node("/root/SaveManager"):
+		SaveManager.save_chapter_result(chapter_id, stats)
 
 	var screen_scene := "res://scenes/ui/ChapterCompleteScreen.tscn"
 	if not ResourceLoader.exists(screen_scene):
@@ -171,12 +183,30 @@ func family_end(chapter_id: int) -> int:
 func tier_in_family(chapter_id: int) -> int:
 	return chapter_id - family_start(chapter_id)
 
-# Next chapter — allows cross-family routing (Ch5→Ch6, Ch10→Ch11, etc.)
-# Returns -1 only at the very last chapter (25).
+# Next chapter — stays within the same chapter FAMILY (same DSA topic).
+# Returns -1 when the player has finished the last tier (Expert, tier 4)
+# of the current family, which tells ChapterCompleteScreen to go back to
+# the world map so the player can choose the next chapter themselves.
+#
+# Tier layout per family (5 chapters each):
+#   family_start+0 = Beginner (tier 0)
+#   family_start+1 = Easy     (tier 1)
+#   family_start+2 = Normal   (tier 2)
+#   family_start+3 = Hard     (tier 3)
+#   family_start+4 = Expert   (tier 4)  ← last tier
+#
+# Example (Queue family, chapters 1–5):
+#   next_chapter(1) → 2  (Beginner → Easy)
+#   next_chapter(3) → 4  (Normal   → Hard)
+#   next_chapter(4) → 5  (Hard     → Expert)
+#   next_chapter(5) → -1 (Expert is last → return to world map)
 func next_chapter(chapter_id: int) -> int:
-	var next := chapter_id + 1
-	if next in CHAPTER_SCENES:
+	var fam_end: int = family_end(chapter_id)
+	var next:    int = chapter_id + 1
+	# Only advance if still inside the same family
+	if next <= fam_end and next in CHAPTER_SCENES:
 		return next
+	# Expert tier (last in family) — caller returns player to world map
 	return -1
 
 func queue_tier_to_chapter(tier: int) -> int:
