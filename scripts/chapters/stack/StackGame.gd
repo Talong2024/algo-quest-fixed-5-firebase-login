@@ -219,9 +219,9 @@ stack.pop()   # -> "Fire"
 stack = ["Fire","Ice","Wind"]
 top = stack[-1]       # peek -> "Wind" (unchanged)
 if stack:             # isEmpty check first!
-    val = stack.pop() # safe pop -> "Wind"
+	val = stack.pop() # safe pop -> "Wind"
 else:
-    print("Underflow!")
+	print("Underflow!")
 """,
 	"OVERFLOW":
 """# Rainbow stack -- push in reverse of pop goal
@@ -792,6 +792,13 @@ const POP_DRAG_THRESHOLD:=55.0        # pixels upward needed to trigger pop
 var _crown_drag_active:bool=false      # true while dragging crown
 var _crown_drag_start:Vector2=Vector2.ZERO
 
+# ── TILE DRAG-TO-POP ──────────────────────────────────────────────────────────
+# Clicking any tile (top card) picks it up; dragging it outside the column
+# counts as a pop. Works in ALL modes including face-down peek tier.
+var _tile_drag_active:bool=false       # true while dragging a stack tile
+var _tile_drag_nd:Node2D=null          # the node being dragged
+var _tile_drag_origin:Vector2=Vector2.ZERO  # where to snap back on cancel
+
 # state
 var _p:Dictionary={}; var _chapter_id:int=6; var _item_type:int=ItemType.RUNE
 var _stack_a:Array=[]
@@ -892,34 +899,47 @@ func _input(event:InputEvent)->void:
 				_challenge_nd.modulate=Color(1.0,1.0,1.0,0.55)
 		if _crown_drag_active and is_instance_valid(_crown_a):
 			_crown_a.global_position.y=m.position.y
+		# Tile drag-to-pop: tile follows cursor freely
+		if _tile_drag_active and is_instance_valid(_tile_drag_nd):
+			_tile_drag_nd.global_position=m.position
 		return
 
 	if not (event is InputEventMouseButton): return
 	var e:=event as InputEventMouseButton
 	if e.button_index!=MOUSE_BUTTON_LEFT: return
 
-	# ── Face-down hold-to-peek mode ─────────────────────────────────────────
-	if _p.get("face_down",false):
-		if e.pressed:
-			if _can_pop(_stack_a) and \
-			   _top_nd(_stack_a).global_position.distance_to(e.position)<HIT_R:
-				if not _peek_awaiting_answer:
-					_start_peek_hold()
-		else:
-			# Released — hide the card again
-			if _peek_hold_active:
-				_end_peek_hold()
-		return
-
-	# ── RELEASE: finish tray drag or crown drag ───────────────────────────────
+	# ── RELEASE: finish any active drag ─────────────────────────────────────
 	if not e.pressed:
+		# Tile drag-to-pop: release outside column = pop; inside = cancel
+		if _tile_drag_active:
+			_finish_tile_drag(e.position); return
 		if _tray_drag_active:
 			_finish_tray_drag(e.position); return
 		if _crown_drag_active:
 			_finish_crown_drag(e.position); return
+		# Face-down: releasing without a tile drag = end peek hold
+		if _p.get("face_down",false) and _peek_hold_active:
+			_end_peek_hold()
 		return
 
-	# ── PRESS: start crown drag or check non-top click ───────────────────────
+	# ── PRESS: pick up top tile, start crown drag, or check non-top click ────
+	var top_pos:=_top_nd(_stack_a).global_position if _can_pop(_stack_a) else Vector2(-9999,-9999)
+	var hit_top:=_can_pop(_stack_a) and e.position.distance_to(top_pos)<HIT_R
+
+	if hit_top:
+		# Clicking the top tile picks it up and follows the cursor (drag-to-pop).
+		# In face-down peek mode, also trigger the peek reveal while held.
+		var nd_top:=_top_nd(_stack_a)
+		_tile_drag_active=true
+		_tile_drag_nd=nd_top
+		_tile_drag_origin=nd_top.global_position
+		nd_top.z_index=50
+		nd_top.create_tween().tween_property(nd_top,"scale",Vector2(1.15,1.15),.08)
+		if _p.get("face_down",false) and not _peek_awaiting_answer:
+			_start_peek_hold()
+		_show_hint("Drag the tile OUT of the column to pop it — or drop it back to cancel.")
+		return
+
 	# Crown drag: clicking crown node (or close to its rendered position)
 	var crown_pos:=Vector2(COL_A_X, _col_slot_pos(_stack_a.size()-1).y-55) if not _stack_a.is_empty() else Vector2(-999,-999)
 	if _can_pop(_stack_a) and e.position.distance_to(crown_pos)<HIT_R*1.4:
@@ -1029,6 +1049,28 @@ func _finish_crown_drag(release_pos:Vector2)->void:
 		# Not far enough — show hint
 		_show_hint("Drag the ♛ crown further UP to pop!\n(Drag upward %d px)" % int(POP_DRAG_THRESHOLD))
 		if has_node("/root/AudioManager"): AudioManager.play_sfx(PATH_SFX_FAIL)
+
+# ── TILE DRAG-TO-POP FINISH ──────────────────────────────────────────────────
+# Drop anywhere outside the column snap zone = pop. Drop inside = cancel/snap back.
+func _finish_tile_drag(release_pos:Vector2)->void:
+	if not _tile_drag_active: return
+	_tile_drag_active=false
+	var nd:=_tile_drag_nd; _tile_drag_nd=null
+	if not is_instance_valid(nd): return
+	nd.z_index=0
+	nd.create_tween().tween_property(nd,"scale",Vector2.ONE,.08)
+	# End peek hold if it was triggered by this drag
+	if _peek_hold_active: _end_peek_hold()
+	# Determine if dropped outside the column (= intended pop)
+	var col_rect:=Rect2(COL_A_X-SNAP_DIST,0,SNAP_DIST*2,BASE_Y+80)
+	if not col_rect.has_point(release_pos):
+		# Popped by dragging out — execute pop
+		_pop(_stack_a)
+	else:
+		# Dropped back inside — snap tile to its original slot
+		nd.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT) \
+			.tween_property(nd,"global_position",_tile_drag_origin,.2)
+		_show_hint("Drag the tile OUTSIDE the column to pop it.")
 
 func _input_brackets(event:InputEvent)->void:
 	# Motion: move dragging bracket staged node or crown
@@ -1304,9 +1346,13 @@ func _start_game()->void:
 			_show_hint("Drag items from the tray onto the column to PUSH.\nDrag the ♛ crown UPWARD to POP.")
 			_fill_tray()
 		"peek":
-			_show_hint("Items land FACE-DOWN.\nPress and HOLD the top card to reveal it. Release to hide and answer!")
+			_show_hint("Items land FACE-DOWN.\nClick and hold the top card to peek its colour — drag it OUT to pop!")
 			_fill_tray()
-			_issue_peek_riddle()
+			# BUG FIX: do NOT call _issue_peek_riddle() here. The stack is empty
+			# at this point; _issue_peek_riddle() would detect that, call _fill_tray()
+			# again (double-fill), and open the riddle panel before any tiles land.
+			# The riddle is issued by _end_peek_hold() after the player releases
+			# the first peek, or by _check_win_condition() after each correct push.
 		"overflow":
 			_rainbow_goal=RAINBOW_COLORS.duplicate(); _rainbow_pop_idx=0
 			_seq_banner.visible=true; _update_rainbow_banner()
@@ -2041,6 +2087,11 @@ func _update_stack_visuals()->void:
 	for i in range(_stack_a.size()):
 		var nd:=_stack_a[i]["node"] as Node2D; if not is_instance_valid(nd): continue
 		nd.modulate=Color.WHITE if i==_stack_a.size()-1 else Color(.55,.55,.55,1.0)
+		# BUG FIX: re-apply silhouette after modulate reset so face-down cards
+		# never show their true colour between rounds or after _update_stack_visuals.
+		if _p.get("face_down",false) and not _peek_hold_active:
+			var spr:=nd.get_child(0) if nd.get_child_count()>0 else null
+			if is_instance_valid(spr): spr.modulate=SILHOUETTE_COLOR
 	if is_instance_valid(_crown_a):
 		_crown_a.visible=not _stack_a.is_empty()
 		if not _stack_a.is_empty():

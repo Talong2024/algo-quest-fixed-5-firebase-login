@@ -144,7 +144,11 @@ func _ready() -> void:
 		_build_world()
 
 func _load_profile_data() -> void:
-	_map_data   = PlayerProfile.progress
+	# FIX: use duplicate(true) so _map_data is a deep copy, not a shared
+	# reference. Without this, mutations to PlayerProfile.progress after
+	# _map_data is assigned are reflected immediately — but more importantly,
+	# stale keys from the previous scene-load linger and confuse _build_world().
+	_map_data   = PlayerProfile.progress.duplicate(true)
 	_is_teacher = PlayerProfile.is_teacher()
 	if "light_mode" in PlayerProfile:
 		_light_mode = PlayerProfile.light_mode as bool
@@ -162,6 +166,15 @@ func _load_profile_data() -> void:
 			if last_ch >= fam_start and last_ch <= fam_end:
 				_avatar_pos = ch["pos"] as Vector2
 				break
+
+	# FIX: clear any previously-built chapter nodes so _build_world() always
+	# starts with a clean slate. Without this, returning from a chapter leaves
+	# ghost nodes that prevent the updated stars/locks from being drawn.
+	if is_instance_valid(_chapter_root):
+		for child in _chapter_root.get_children():
+			child.queue_free()
+	_sprite_nodes.clear()
+	_tier_nodes.clear()
 
 func _on_profile_ready() -> void:
 	# Called once when Firestore fetch completes after login.

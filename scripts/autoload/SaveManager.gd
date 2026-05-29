@@ -77,11 +77,23 @@ var _session_start: int = 0
 
 signal save_completed
 signal chapter_unlocked(chapter_id: int)
+signal synced_to_firebase
+
+const PENDING_PATH := "user://algoquest_pending_sync.json"
+var _pending_syncs: Array = []
+var _sync_timer: Timer = null
+var _sync_in_flight: bool = false
 
 # ─────────────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_session_start = Time.get_ticks_msec()
 	load_game()
+	_load_pending_syncs()
+	_sync_timer = Timer.new()
+	_sync_timer.wait_time = 30.0
+	_sync_timer.autostart = true
+	_sync_timer.timeout.connect(_try_flush_pending)
+	add_child(_sync_timer)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  LOAD / SAVE
@@ -115,11 +127,14 @@ func save_game() -> void:
 	var elapsed: int = (Time.get_ticks_msec() - _session_start) / 1000
 	_data["total_playtime_sec"] = _data.get("total_playtime_sec", 0) + elapsed
 	_session_start = Time.get_ticks_msec()
-	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	f.store_string(JSON.stringify(_data, "\t"))
-	f.close()
-	save_completed.emit()
+	_write_local()
 	_push_to_firebase()
+
+# Write _data to disk immediately — no network needed.
+func _write_local() -> void:
+	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if f: f.store_string(JSON.stringify(_data, "\t")); f.close()
+	save_completed.emit()
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  CHAPTER RESULTS
@@ -160,7 +175,10 @@ func save_chapter_result(chapter_id: int, stats: Dictionary) -> void:
 	ch["stats_history"] = history
 
 	_data["total_score"] = _data.get("total_score", 0) + new_score
-	save_game()
+	# Save locally first — instant, no network needed
+	_write_local()
+	# Queue Firebase push — retries automatically if offline
+	_queue_and_push(chapter_id, new_score, new_stars, stats.get("accuracy", 0.0))
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  UNLOCK LOGIC
@@ -233,17 +251,56 @@ func reset_all() -> void:
 const _FB_DB := "https://algoquest-3f812-default-rtdb.asia-southeast1.firebasedatabase.app"
 
 func _push_to_firebase() -> void:
-	var uid:   String = _data.get("uid", "")
+	var uid: String = _data.get("uid", "")
 	var token: String = _data.get("id_token", "")
 	if uid.is_empty() or token.is_empty(): return
-	var http := HTTPRequest.new()
-	add_child(http)
-	var url    := "%s/players/%s/save.json?auth=%s" % [_FB_DB, uid, token]
-	var upload := _data.duplicate()
-	upload.erase("id_token")
+	var http := HTTPRequest.new(); add_child(http)
+	var url := "%s/players/%s/save.json?auth=%s" % [_FB_DB, uid, token]
+	var upload := _data.duplicate(); upload.erase("id_token")
 	http.request(url, ["Content-Type: application/json"],
 		HTTPClient.METHOD_PUT, JSON.stringify(upload))
 	http.request_completed.connect(func(_r,_c,_h,_b): http.queue_free())
+
+func _queue_and_push(chapter_id: int, score: int, stars: int, accuracy: float) -> void:
+	_pending_syncs.append({"chapter_id": chapter_id, "score": score,
+		"stars": stars, "accuracy": accuracy,
+		"ts": Time.get_unix_time_from_system()})
+	_save_pending_syncs()
+	_try_flush_pending()
+
+func _try_flush_pending() -> void:
+	if _pending_syncs.is_empty() or _sync_in_flight: return
+	var uid: String = _data.get("uid", "")
+	var token: String = _data.get("id_token", "")
+	if uid.is_empty() or token.is_empty(): return
+	_sync_in_flight = true
+	var entry: Dictionary = _pending_syncs[0] as Dictionary
+	var http := HTTPRequest.new(); add_child(http)
+	http.timeout = 10.0
+	var url := "%s/players/%s/chapter_results/%s.json?auth=%s" % [
+		_FB_DB, uid, str(int(entry["ts"])), token]
+	http.request_completed.connect(_on_sync_response.bind(http))
+	var err := http.request(url, ["Content-Type: application/json"],
+		HTTPClient.METHOD_PUT, JSON.stringify(entry))
+	if err != OK: _sync_in_flight = false; http.queue_free()
+
+func _on_sync_response(result: int, code: int, _h, _b, http: HTTPRequest) -> void:
+	http.queue_free(); _sync_in_flight = false
+	if result == HTTPRequest.RESULT_SUCCESS and (code == 200 or code == 201):
+		if not _pending_syncs.is_empty(): _pending_syncs.pop_front(); _save_pending_syncs()
+		if not _pending_syncs.is_empty(): _try_flush_pending()
+		else: synced_to_firebase.emit()
+
+func _load_pending_syncs() -> void:
+	if not FileAccess.file_exists(PENDING_PATH): return
+	var f := FileAccess.open(PENDING_PATH, FileAccess.READ)
+	if not f: return
+	var r = JSON.parse_string(f.get_as_text()); f.close()
+	if r is Array: _pending_syncs = r
+
+func _save_pending_syncs() -> void:
+	var f := FileAccess.open(PENDING_PATH, FileAccess.WRITE)
+	if f: f.store_string(JSON.stringify(_pending_syncs)); f.close()
 
 func push_action_log(chapter: String, action: String, payload: Dictionary) -> void:
 	var uid:   String = _data.get("uid", "")

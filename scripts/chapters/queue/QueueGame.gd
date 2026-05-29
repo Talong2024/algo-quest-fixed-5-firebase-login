@@ -1948,12 +1948,21 @@ func _apply_correct(pts: int) -> void:
 	_correct += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
 	_sfx(true)
 
-func _apply_wrong(penalty: int, msg: String) -> void:
+func _apply_wrong(penalty: int, msg: String, lose_life: bool = true) -> void:
 	if penalty > 0: _score = max(0, _score - penalty); _score_lbl.text = "Score: %d" % _score
 	_wrong += 1; _acc_lbl.text = "Acc: %.0f%%" % _accuracy()
 	if not msg.is_empty(): _concept(msg)
 	_sfx(false)
 	_flash_red()
+	# Deduct a life on real mistakes (penalty > 0) — matches StackGame,
+	# LinkedListGame, TreeGame, and GraphGame behaviour.
+	# Soft warnings (penalty == 0, e.g. "queue is empty") skip life loss so
+	# players aren't punished for informational nudges, only true errors.
+	# Pass lose_life=false at call sites that already call _lose_life() directly.
+	if lose_life and penalty > 0:
+		_lives -= 1
+		_refresh_lives()
+		if _lives <= 0: _end_game(false)
 
 func _lose_life() -> void:
 	_lives -= 1; _refresh_lives()

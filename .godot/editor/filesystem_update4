@@ -1,13 +1,2 @@
-res://scenes/ui/PauseMenu.tscn
-res://scripts/chapters/stack/StackGame.gd
-res://scenes/chapters/stack/StackGame.tscn
-res://scenes/chapters/linked_list/LinkedListGame.tscn
-res://scripts/chapters/linked_list/LinkedListGame.gd
-res://scripts/ui/ChapterCompleteScreen.gd
-res://scenes/chapters/tree/TreeGame.tscn
-res://scripts/chapters/tree/TreeGame.gd
-res://scripts/autoload/AdaptiveDifficulty.gd
+res://scenes/ui/LoginScreen.tscn
 res://scripts/autoload/PlayerProfile.gd
-res://scripts/world_map/WorldMap.gd
-res://scripts/autoload/ProgressTracker.gd
-res://scripts/autoload/GameRouter.gd

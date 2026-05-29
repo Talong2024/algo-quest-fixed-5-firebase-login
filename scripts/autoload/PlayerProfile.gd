@@ -57,15 +57,41 @@ var stats: Dictionary = {
 #  HTTP NODE
 # ─────────────────────────────────────────────────────────────────────────────
 var _http:           HTTPRequest = null
+var _http_save:      HTTPRequest = null
 var _pending_action: String      = ""
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
 	add_child(_http)
 	_http.request_completed.connect(_on_http_response)
-	# NOTE: _http_result removed — game_results writes now use _http_write_once()
-	# which spawns a fresh HTTPRequest per call so rapid completions never get
-	# dropped with ERR_BUSY.
+	_http_save = HTTPRequest.new()
+	add_child(_http_save)
+	_http_save.request_completed.connect(_on_save_response)
+	get_tree().set_auto_accept_quit(false)
+
+var _quitting: bool = false
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_WM_CLOSE_REQUEST: return
+	if _quitting: return
+	_quitting = true
+	if uid.is_empty() or id_token.is_empty(): get_tree().quit(); return
+	_flush_and_quit()
+
+func _flush_and_quit() -> void:
+	var http := HTTPRequest.new(); add_child(http)
+	http.timeout = 5.0
+	http.request_completed.connect(func(_r,_c,_h,_b): get_tree().quit())
+	var mask := "updateMask.fieldPaths=username&updateMask.fieldPaths=email"\
+		+ "&updateMask.fieldPaths=title&updateMask.fieldPaths=course"\
+		+ "&updateMask.fieldPaths=section&updateMask.fieldPaths=section_id"\
+		+ "&updateMask.fieldPaths=light_mode&updateMask.fieldPaths=progress"\
+		+ "&updateMask.fieldPaths=stats"
+	var url := "%s/users/%s?key=%s&%s" % [FS_BASE, uid, FB_API_KEY, mask]
+	var err := http.request(url,
+		JSON_HEADERS + ["Authorization: Bearer " + id_token],
+		HTTPClient.METHOD_PATCH, JSON.stringify(_build_firestore_doc()))
+	if err != OK: get_tree().quit()
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  INIT — called by LoginScreen after successful auth
@@ -104,12 +130,17 @@ func _load_from_firestore() -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 func save_profile() -> void:
 	if uid.is_empty() or id_token.is_empty(): return
-	_pending_action = "save"
-	var url := "%s/users/%s?key=%s" % [FS_BASE, uid, FB_API_KEY]
-	var doc := _build_firestore_doc()
-	_http.request(url,
+	if _http_save.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
+		_http_save.cancel_request()
+	var mask := "updateMask.fieldPaths=username&updateMask.fieldPaths=email"\
+		+ "&updateMask.fieldPaths=title&updateMask.fieldPaths=course"\
+		+ "&updateMask.fieldPaths=section&updateMask.fieldPaths=section_id"\
+		+ "&updateMask.fieldPaths=light_mode&updateMask.fieldPaths=progress"\
+		+ "&updateMask.fieldPaths=stats"
+	var url := "%s/users/%s?key=%s&%s" % [FS_BASE, uid, FB_API_KEY, mask]
+	_http_save.request(url,
 		JSON_HEADERS + ["Authorization: Bearer " + id_token],
-		HTTPClient.METHOD_PATCH, JSON.stringify(doc))
+		HTTPClient.METHOD_PATCH, JSON.stringify(_build_firestore_doc()))
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SAVE CHAPTER RESULT
@@ -129,7 +160,6 @@ func save_chapter_result(chapter_id: int, score: int, stars: int,
 		"stars":      max(stars, existing.get("stars", 0) as int),
 		"complete":   true,
 		"accuracy":   accuracy,
-		"mistakes":   mistakes,
 	}
 
 	# Update aggregate stats
@@ -142,7 +172,7 @@ func save_chapter_result(chapter_id: int, score: int, stars: int,
 	if not is_teacher():
 		var next := chapter_id + 1
 		if next <= 25 and not progress.has(next):
-			progress[next] = { "best_score": 0, "stars": 0, "complete": false }
+			progress[next] = { "best_score": 0, "stars": 0, "complete": false, "accuracy": 0.0 }
 
 	_check_title_unlock()
 	save_profile()
@@ -250,7 +280,12 @@ func _on_http_response(_result: int, _code: int, _headers: PackedStringArray, bo
 	var data = JSON.parse_string(body.get_string_from_utf8())
 	match _pending_action:
 		"load": _handle_load(data)
-		"save": emit_signal("profile_saved")
+
+func _on_save_response(_r: int, code: int, _h, body: PackedByteArray) -> void:
+	if code == 200 or code == 201:
+		emit_signal("profile_saved")
+	else:
+		push_error("PlayerProfile SAVE FAILED HTTP %d: %s" % [code, body.get_string_from_utf8()])
 
 func _handle_load(data) -> void:
 	if not data is Dictionary:
@@ -312,14 +347,13 @@ func _build_firestore_doc() -> Dictionary:
 			"best_score": {"integerValue": str(p.get("best_score", 0))},
 			"stars":      {"integerValue": str(p.get("stars",      0))},
 			"complete":   {"booleanValue": p.get("complete", false)},
-			"accuracy":   {"doubleValue":  p.get("accuracy", 0.0)},
+			"accuracy":   {"doubleValue":  float(p.get("accuracy", 0.0))},
 		}}}
 
 	return {
 		"fields": {
 			"username":    {"stringValue": username},
 			"email":       {"stringValue": email},
-			"role":        {"stringValue": role},
 			"title":       {"stringValue": title},
 			"course":      {"stringValue": course},
 			"section":     {"stringValue": section},
