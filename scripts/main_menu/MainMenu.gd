@@ -183,7 +183,7 @@ func _on_credits() -> void:
 func _on_quit() -> void:
 	get_tree().quit()
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if _credits_panel.visible and event is InputEventMouseButton:
 		if (event as InputEventMouseButton).pressed:
 			_credits_panel.visible = false

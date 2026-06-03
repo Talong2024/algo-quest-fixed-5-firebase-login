@@ -1,2 +1,4 @@
 res://scenes/chapters/queue/QueueGame.tscn
 res://scripts/chapters/queue/QueueGame.gd
+res://scenes/main_menu/MainMenu.tscn
+res://scripts/main_menu/MainMenu.gd
