@@ -1,2 +1,2 @@
-res://scenes/ui/LoginScreen.tscn
-res://scripts/autoload/PlayerProfile.gd
+res://scenes/chapters/queue/QueueGame.tscn
+res://scripts/chapters/queue/QueueGame.gd

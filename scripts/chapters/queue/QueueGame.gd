@@ -194,6 +194,8 @@ const TIER_PARAMS : Array[Dictionary] = [
 @onready var _hint_lbl   : Label          = $HUD/HintBar/HintLabel
 @onready var _peek_lbl   : Label          = $HUD/PeekLabel
 @onready var _drag_ghost : Node2D         = $DragGhost
+@onready var _pause_btn  : TextureButton  = $HUD/PauseButton
+@onready var _pause_menu : Node           = $PauseMenu
 
 # ── Runtime state ─────────────────────────────────────────────────────────────
 var _p           : Dictionary = {}
@@ -221,6 +223,7 @@ var _moves_left  : int   = 0
 var _round       : int   = 0
 var _correct     : int   = 0
 var _wrong       : int   = 0
+var _combo       : int   = 0
 
 var _label_mode  : bool = false
 var _label_theme : int  = 0
@@ -284,6 +287,9 @@ func _ready() -> void:
 
 	if has_node("/root/AudioManager") and AudioManager.has_method("play_bgm"):
 		AudioManager.play_bgm(PATH_BGM)
+
+	if _pause_btn and not _pause_btn.pressed.is_connected(_on_pause_pressed):
+		_pause_btn.pressed.connect(_on_pause_pressed)
 
 	_alive = true
 	_show_intro()
@@ -380,6 +386,12 @@ func _setup_hud() -> void:
 	btn.pressed.connect(_do_submit)
 	hud_cl.add_child(btn)
 
+func _on_pause_pressed() -> void:
+	var paused := not get_tree().paused
+	get_tree().paused = paused
+	if _pause_menu:
+		_pause_menu.visible = paused
+
 func _hint_text() -> String:
 	match _p["mode"]:
 		"enqueue":
@@ -416,13 +428,29 @@ func _build_world_chrome() -> void:
 	cl.add_child(chrome)
 
 	var portal_cl := CanvasLayer.new()
-	portal_cl.layer = 8
+	portal_cl.layer = 2  # behind chrome/lane (layer 5) — cave stays behind queue lane
 	add_child(portal_cl)
 
 	var portal := AnimatedSprite2D.new()
 	portal.name     = "PortalSprite"
 	portal.position = Vector2(SUB_X, SUB_Y)
-	portal.z_index  = 10
+	portal.z_index  = 0
+
+	# Shader to discard near-black pixels (sprite sheet has no alpha on black bg)
+	var shader_code := """
+shader_type canvas_item;
+void fragment() {
+	vec4 col = texture(TEXTURE, UV);
+	float brightness = dot(col.rgb, vec3(0.299, 0.587, 0.114));
+	if (brightness < 0.08) discard;
+	COLOR = col;
+}
+"""
+	var shader := Shader.new()
+	shader.code = shader_code
+	var mat := ShaderMaterial.new()
+	mat.shader = shader
+	portal.material = mat
 
 	var sprite_frames := SpriteFrames.new()
 	sprite_frames.add_animation("idle")

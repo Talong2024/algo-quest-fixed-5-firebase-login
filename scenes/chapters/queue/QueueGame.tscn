@@ -171,3 +171,5 @@ ignore_texture_size = true
 [node name="PauseMenu" parent="." instance=ExtResource("2_3iqc4")]
 process_mode = 4
 visible = false
+
+[connection signal="pressed" from="HUD/PauseButton" to="." method="_on_pause_pressed"]
