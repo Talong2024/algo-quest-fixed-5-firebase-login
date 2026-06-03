@@ -411,7 +411,7 @@ func _setup_hud() -> void:
 
 	_score_lbl.text  = "Score: 0"
 	_combo_lbl.text  = ""
-	_acc_lbl.text    = "Accuracy: -"
+	_acc_lbl.text    = "Accuracy: 100%"
 	_goal_lbl.text   = _goal_text()
 	_timer_lbl.visible = _p["time_limit"] > 0
 	if _p["time_limit"] > 0:
@@ -1477,7 +1477,7 @@ func _draw_array_target_banner() -> void:
 	var banner := PanelContainer.new()
 	banner.custom_minimum_size = Vector2(600, 52)
 	banner.z_index             = 10
-	banner.position            = Vector2(340, 260)
+	banner.position            = Vector2(340, 195)
 	_array_layer.add_child(banner)
 
 	var hbox := HBoxContainer.new()
@@ -1574,6 +1574,9 @@ func _finish_array_phase() -> void:
 	var sort_bonus: int = max(0, 100 - _shift_count * 5)
 	_score += sort_bonus
 	_score_lbl.text = "Score: %d" % _score
+	# Count the sort as one correct action so accuracy is meaningful
+	_stat["correct"] += 1
+	_acc_lbl.text = "Accuracy: %.0f%%" % _accuracy()
 	_clear_instruction_panel()
 	_show_instruction_panel(
 		"✓ Array sorted!  Shifts used: %d   Bonus earned: +%d" % [_shift_count, sort_bonus],
@@ -1802,6 +1805,9 @@ func _finish_list_phase() -> void:
 	var list_bonus: int = 50 + _list_ops * 10
 	_score += list_bonus
 	_score_lbl.text = "Score: %d" % _score
+	# Count the linked-list completion as a correct action
+	_stat["correct"] += 1
+	_acc_lbl.text = "Accuracy: %.0f%%" % _accuracy()
 	AudioManager.play_sfx(PATH_SFX_HOVER)
 	_show_instruction_panel(
 		"✓ Linked list complete!  Pointer ops: %d   Earned: +%d pts" % [_list_ops, list_bonus],
@@ -2126,9 +2132,12 @@ func _check_array_completion() -> void:
 	await get_tree().create_timer(3.2).timeout
 	if has_node("/root/GameRouter"):
 		var _s1 := _build_stats(true)
-		GameRouter.chapter_complete(_chapter_id, int(_s1["score"]), int(_s1["stars"]))
+		GameRouter.chapter_complete_with_stats(_chapter_id, _s1)
 	else:
 		get_tree().change_scene_to_file("res://scenes/chapters/linked_list/LinkedListGame.tscn")
+
+# GameRouter.chapter_complete_with_stats handles showing ChapterCompleteScreen
+# with the full stats dict (accuracy, correct, mistakes). No patch needed.
 
 func _show_cost_banner(text: String, color: Color) -> void:
 	_cost_banner.visible = true
@@ -3193,7 +3202,8 @@ func _play_completion() -> void:
 		if not hd.is_empty(): _apply_correct(hd["sprite"] as Node2D, 60)
 
 	_task_lbl.text = "✓ Valid linked list built!"
-	# Drive cars off the right edge one at a time, like a real train departing.
+	# Drive cars off the LEFT edge — engine faces left, so train departs
+	# in the direction it is pointing.
 	# Each car waits for the previous to clear, then accelerates out.
 	var head_ord := _find_head()
 	var cur_id := head_ord
@@ -3210,12 +3220,12 @@ func _play_completion() -> void:
 		if is_instance_valid(car):
 			var tw_car := car.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 			tw_car.tween_interval(departure_delay)
-			tw_car.tween_property(car, "global_position:x", 1500.0, CAR_TRAVEL_TIME)
+			tw_car.tween_property(car, "global_position:x", -300.0, CAR_TRAVEL_TIME)
 			# Port container moves with the car
 			if dd.has("port") and is_instance_valid(dd["port"] as Node2D):
 				var tw_p := (dd["port"] as Node2D).create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 				tw_p.tween_interval(departure_delay)
-				tw_p.tween_property(dd["port"] as Node2D, "global_position:x", 1500.0, CAR_TRAVEL_TIME)
+				tw_p.tween_property(dd["port"] as Node2D, "global_position:x", -300.0, CAR_TRAVEL_TIME)
 			# Arrow fades out just before the car leaves
 			if dd.has("arrow") and is_instance_valid(dd["arrow"] as Node2D):
 				var tw_a := (dd["arrow"] as Node2D).create_tween()
@@ -3226,7 +3236,7 @@ func _play_completion() -> void:
 		cur_id = (dd["next_id"] as int)
 	await get_tree().create_timer(1.2).timeout
 	var _s2 := _build_stats(true)
-	GameRouter.chapter_complete(_chapter_id, int(_s2["score"]), int(_s2["stars"]))
+	GameRouter.chapter_complete_with_stats(_chapter_id, _s2)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  VALIDATION
@@ -3599,7 +3609,7 @@ func _end_game(success: bool) -> void:
 	if success and has_node("/root/DifficultyManager"):
 		var next_tier: int = clamp(DifficultyManager.current_tier + 1, 0, TIER_PARAMS.size() - 1)
 		DifficultyManager.current_tier = next_tier
-	GameRouter.chapter_complete(_chapter_id, int(_s3["score"]), int(_s3["stars"]))
+	GameRouter.chapter_complete_with_stats(_chapter_id, _s3)
 
 func _calc_grade(success: bool) -> String:
 	var acc := _accuracy()

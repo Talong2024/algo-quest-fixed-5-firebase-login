@@ -1,4 +1,3 @@
-res://scenes/chapters/queue/QueueGame.tscn
-res://scripts/chapters/queue/QueueGame.gd
-res://scenes/main_menu/MainMenu.tscn
-res://scripts/main_menu/MainMenu.gd
+res://scripts/chapters/linked_list/LinkedListGame.gd
+res://scenes/chapters/linked_list/LinkedListGame.tscn
+res://scripts/autoload/GameRouter.gd

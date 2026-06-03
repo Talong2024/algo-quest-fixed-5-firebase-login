@@ -86,10 +86,12 @@ func go_to_chapter(chapter_id: int) -> void:
 	current_chapter = chapter_id
 
 	var target_tier: int = CHAPTER_TIER.get(chapter_id, 0)
-	if has_node("/root/DifficultyManager"):
-		DifficultyManager.set_tier(target_tier)
+	# Evaluate adaptive difficulty FIRST (uses old tier for context),
+	# then lock in the chapter's real tier so it always wins last.
 	if has_node("/root/AdaptiveDifficulty"):
 		AdaptiveDifficulty.evaluate(chapter_id)
+	if has_node("/root/DifficultyManager"):
+		DifficultyManager.set_tier(target_tier)
 
 	get_tree().change_scene_to_file(CHAPTER_SCENES[chapter_id])
 
@@ -112,7 +114,7 @@ func chapter_complete(chapter_id: int, score: int, stars: int) -> void:
 			"stars":    stars,
 			"grade":    _stars_to_grade(stars),
 			"success":  stars > 0,
-			"accuracy": 0.0,
+			"accuracy": PlayerProfile.progress.get(chapter_id, {}).get("accuracy", 0.0),
 		})
 
 	var screen_scene := "res://scenes/ui/ChapterCompleteScreen.tscn"
@@ -141,11 +143,19 @@ func chapter_complete(chapter_id: int, score: int, stars: int) -> void:
 # stats dict keys: score, stars, grade, accuracy, correct, success
 func chapter_complete_with_stats(chapter_id: int, stats: Dictionary) -> void:
 	if has_node("/root/PlayerProfile"):
+		var mistakes: Dictionary = {}
+		for key: String in ["bad_link", "wrong_reverse", "bad_insert", "structural_err",
+				"array_shifts", "cycle_missed", "fifo_violation", "service_miss",
+				"lane_miss", "overflow_count", "wrong_bst", "wrong_balance", "wrong_delete"]:
+			var v = stats.get(key, 0)
+			if v is int and v > 0:
+				mistakes[key] = v
 		PlayerProfile.save_chapter_result(
 			chapter_id,
 			stats.get("score",    0),
 			stats.get("stars",    0),
-			stats.get("accuracy", 0.0)
+			stats.get("accuracy", 0.0),
+			mistakes
 		)
 	# FIX: also save to SaveManager (local + RTDB) so both systems stay in sync
 	if has_node("/root/SaveManager"):

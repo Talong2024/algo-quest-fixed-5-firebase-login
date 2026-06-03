@@ -26,7 +26,14 @@ func evaluate(chapter_id: int) -> void:
 	if not has_node("/root/PlayerProfile"): return
 	if not has_node("/root/DifficultyManager"): return
 
+	# Teachers preview levels at the exact assigned tier — never adjust.
+	if PlayerProfile.is_teacher(): return
+
 	var old_tier := DifficultyManager.current_tier
+
+	# Never auto-downgrade Expert (tier 4). If a teacher or the chapter map
+	# assigned Expert the player should experience it as intended.
+	if old_tier >= 4: return
 
 	if _should_lower_difficulty(chapter_id):
 		var new_tier: int = max(0, old_tier - 1)

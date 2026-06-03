@@ -232,6 +232,16 @@ var _sfx_fail_player   : AudioStreamPlayer = null
 var _sfx_pickup_player : AudioStreamPlayer = null
 var _flash_rect        : ColorRect         = null
 
+# ── Bomb pulse ────────────────────────────────────────────────────────────────
+# Right-click on a holding token reveals whether it is a bomb for 2 seconds.
+# _bomb_peek_uid  — uid of the token being peeked (-1 = none)
+# _bomb_peek_timer — seconds remaining on the reveal
+var _bomb_peek_uid   : int   = -1
+var _bomb_peek_timer : float = 0.0
+const BOMB_PEEK_DURATION : float = 2.0
+# Pulse phase drives the animated red ring (0 → TAU every ~0.6 s)
+var _bomb_pulse_phase : float = 0.0
+
 var _dragging    : bool       = false
 var _drag_tok    : Dictionary = {}
 var _drag_src    : String     = ""
@@ -401,7 +411,7 @@ func _hint_text() -> String:
 		"peek":
 			return "Click token to peek (FREE)  |  Then drag to sort"
 		"bounds":
-			return "Watch isEmpty / isFull  |  Drag 💣 → Reject Zone"
+			return "Watch isEmpty / isFull  |  Bomb stays in HOLDING — never enqueue it!  |  Right-click any token to SCAN"
 		"scheduler":
 			return "Peek first (FREE)  |  Each drag = 1 move  |  Budget: %d" % _p["move_budget"]
 	return ""
@@ -569,9 +579,30 @@ class _ChromeDrawer extends Node2D:
 		var ts  := fnt.get_string_size(ttl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
 		draw_string(fnt, Vector2(gd.HOLD_X - ts.x * 0.5, hy - 20),
 			ttl, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, gd.COL_AMBER)
+		# In bomb mode: warn that a bomb is lurking here
+		if gd._p.get("bombs", false):
+			var has_bomb := false
+			for tok in gd._holding:
+				if tok.get("bomb", false): has_bomb = true; break
+			if has_bomb:
+				var warn := "⚠ 💣 Bomb inside — do NOT enqueue!"
+				var wts  := fnt.get_string_size(warn, HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+				draw_string(fnt, Vector2(gd.HOLD_X - wts.x * 0.5, hy - 6),
+					warn, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.90, 0.20, 0.20, 0.90))
 
 	func _draw_submit_zone() -> void:
-		pass
+		# Cave entrance is rendered by the AnimatedSprite2D (_portal_sprite).
+		# Draw only the "SUBMIT" label and drag hint below it.
+		var fnt     := _get_font()
+		var sub_pos := Vector2(gd.SUB_X, gd.SUB_Y)
+		var sub_ts  := fnt.get_string_size("SUBMIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
+		draw_string(fnt, Vector2(sub_pos.x - sub_ts.x * 0.5, sub_pos.y + gd.SUB_R + 18.0),
+			"SUBMIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.88, 0.80, 0.45, 0.90))
+		var drag_ts := fnt.get_string_size("← Drag [0] here", HORIZONTAL_ALIGNMENT_LEFT, -1, 11)
+		draw_string(fnt, Vector2(sub_pos.x - drag_ts.x * 0.5, sub_pos.y + gd.SUB_R + 34.0),
+			"← Drag [0] here", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.70, 0.62, 0.35, 0.75))
+
+
 
 	func _draw_tokens() -> void:
 		if gd._p.get("free_place", false) and gd._cq_slots.size() == gd.MAX_QUEUE:
@@ -662,6 +693,31 @@ class _ChromeDrawer extends Node2D:
 		draw_string(fnt, Vector2(cx - ts.x * 0.5, by2 + badge_h - 3.0),
 			txt, HORIZONTAL_ALIGNMENT_LEFT, -1, fnt_sz, badge_col)
 
+		# ── Bomb visuals ─────────────────────────────────────────────────────────
+		# Bombs always get a dark crimson overlay + 💣 emoji so they look menacing.
+		# When the player right-clicks (bomb peek), an animated pulsing red ring
+		# confirms the identity for BOMB_PEEK_DURATION seconds.
+		if tok.get("bomb", false):
+			# Dark red tint over the sprite
+			draw_circle(Vector2(cx, sprite_cy), gd.TOKEN_R + 2.0,
+				Color(0.70, 0.05, 0.05, 0.55))
+			draw_arc(Vector2(cx, sprite_cy), gd.TOKEN_R + 4.0, 0, TAU, 48,
+				Color(0.90, 0.10, 0.10, 0.85), 3.0)
+			# 💣 emoji centred on the sprite
+			var bomb_ts := fnt.get_string_size("💣",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 22)
+			draw_string(fnt,
+				Vector2(cx - bomb_ts.x * 0.5, sprite_cy + bomb_ts.y * 0.35),
+				"💣", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+			# Pulsing ring when the player right-clicks to peek
+			if gd._bomb_peek_uid == tok.get("uid", -1) and gd._bomb_peek_timer > 0.0:
+				var pulse_alpha : float = (sin(gd._bomb_pulse_phase) * 0.5 + 0.5) * 0.85 + 0.15
+				var pulse_r : float = gd.TOKEN_R + 10.0 + sin(gd._bomb_pulse_phase * 0.5) * 5.0
+				draw_arc(Vector2(cx, sprite_cy), pulse_r, 0, TAU, 64,
+					Color(1.0, 0.05, 0.05, pulse_alpha), 5.0)
+				draw_arc(Vector2(cx, sprite_cy), pulse_r + 8.0, 0, TAU, 64,
+					Color(1.0, 0.40, 0.05, pulse_alpha * 0.5), 2.0)
+
 	func _draw_drag_ghost_chrome() -> void:
 		if not gd._dragging or gd._drag_tok.is_empty(): return
 		var tok    : Dictionary = gd._drag_tok
@@ -729,10 +785,10 @@ func _build_slides() -> void:
 			  "body": "enqueue() adds a value to the queue.\n\nPlace tokens ANYWHERE in the lane — but they MUST be\nin ASCENDING ORDER (lowest number first).\nSmallest → FRONT [0]      Largest → BACK",
 			  "draw": Callable(self, "_slide_enqueue") },
 			{ "title": "Your Task — Sort Ascending!",
-			  "body": "① Drag tokens from HOLDING into the queue slots\n② Place them in ORDER:  1 → 2 → 3 → 4  left to right\n   FRONT [0] must hold the SMALLEST value\n   BACK  [N] must hold the LARGEST value\n③ Once ALL tokens are placed IN THE RIGHT ORDER\n   drag to the SUBMIT portal on the left!\n\n⚠  Wrong order = points deducted. Plan before you drag!",
+			  "body": "① Drag tokens from HOLDING into the queue slots\n② Place them in ORDER:  1 → 2 → 3 → 4  left to right\n   FRONT [0] must hold the SMALLEST value\n   BACK  [N] must hold the LARGEST value\n③ Once ALL tokens are placed IN THE RIGHT ORDER\n   drag the FRONT token into the CAVE ENTRANCE on the left!\n\n⚠  Wrong order = points deducted. Plan before you drag!",
 			  "draw": Callable(self, "_slide_task_enqueue") },
-			{ "title": "The Submit Portal",
-			  "body": "When ALL tokens are placed in ascending order:\n① The queue must have NO gaps — every slot filled\n② Drag the FRONT token [0] onto the Submit Portal\n③ The portal checks the whole queue automatically!\n\n✅ Sorted correctly  →  Score + next round!\n❌ Wrong order       →  Penalty + try again!",
+			{ "title": "The Cave Entrance",
+			  "body": "When ALL tokens are placed in ascending order:\n① The queue must have NO gaps — every slot filled\n② Drag the FRONT token [0] into the Cave Entrance\n③ The cave checks the whole queue automatically!\n\n✅ Sorted correctly  →  Score + next round!\n❌ Wrong order       →  Penalty + try again!",
 			  "draw": Callable(self, "_slide_submit_portal") },
 		],
 		"DEQUEUE": [
@@ -746,7 +802,7 @@ func _build_slides() -> void:
 			  "body": "The queue starts filled in random order.\nDrag slot [0] → HOLDING  =  dequeue()\nDrag HOLDING  → queue     =  enqueue() (joins BACK)\nSort ascending, then drag [0] → SUBMIT.",
 			  "draw": Callable(self, "_slide_task_dequeue") },
 			{ "title": "Controls Quick Reference",
-			  "body": "All the actions you can perform this chapter:\n\ndequeue()  — Drag slot [0] → Holding area\nenqueue()  — Drag Holding token → Queue lane\npeek()     — Click any token (always FREE)\nsubmit()   — Drag slot [0] → Submit Portal",
+			  "body": "All the actions you can perform this chapter:\n\ndequeue()  — Drag slot [0] → Holding area\nenqueue()  — Drag Holding token → Queue lane\npeek()     — Click any token (always FREE)\nsubmit()   — Drag slot [0] → Cave Entrance",
 			  "draw": Callable(self, "_slide_controls_dequeue") },
 		],
 		"PEEK": [
@@ -765,10 +821,10 @@ func _build_slides() -> void:
 			  "body": "isEmpty() → true when queue has no items.\nCalling dequeue() on an empty queue = ERROR!\n\nisFull() → true when queue is at capacity.\nCalling enqueue() on a full queue = ERROR!",
 			  "draw": Callable(self, "_slide_bounds") },
 			{ "title": "Bomb tokens!",
-			  "body": "💣 Bomb tokens must NEVER be enqueued.\nDrag bombs to the REJECT ZONE (bottom-left).\nIf a bomb enters the queue you lose a life!\nWatch isEmpty and isFull before every move.",
+			  "body": "💣 Bomb tokens must NEVER be enqueued.\nLeave the bomb in the HOLDING area — it is safe there!\nIf a bomb enters the queue you lose a life!\n\n🔍 Right-click any token to SCAN it:\n   → Bomb = pulsing RED ring + confirmation\n   → Safe = green confirmation\nScanning is FREE — use it before every enqueue!\nWatch isEmpty and isFull before every move.",
 			  "draw": Callable(self, "_slide_bombs") },
 			{ "title": "Your Task — Guard the Boundaries!",
-			  "body": "① Check isEmpty() before every dequeue\n   → empty queue crash = life lost!\n② Check isFull() before every enqueue\n   → overflow crash = life lost!\n③ Spot the 💣 bomb — drag it to the REJECT ZONE\n④ Sort the rest ascending, then SUBMIT!",
+			  "body": "① Right-click every token to SCAN it (FREE!)\n   → Pulsing RED ring = 💣 BOMB — leave it in Holding!\n   → No ring = safe to enqueue\n② Check isEmpty() before every dequeue\n   → empty queue crash = life lost!\n③ Check isFull() before every enqueue\n   → overflow crash = life lost!\n④ Sort the rest ascending, then SUBMIT — bomb in Holding = bonus pts!",
 			  "draw": Callable(self, "_slide_task_bounds") },
 		],
 		"SCHEDULER": [
@@ -1189,10 +1245,10 @@ func _slide_bombs(ci: CanvasItem, _font: Font) -> void:
 	ci.draw_string(_get_draw_font(), Vector2(bx-16,by+10), "💣",
 		HORIZONTAL_ALIGNMENT_LEFT,-1,36,COL_WHITE)
 	_dlc(ci, bx, by+68, "BOMB", COL_RED, 14)
-	_darrow(ci, bx+56, by, 740, COL_RED)
-	_dbox(ci, 740, by-40, 980, by+40, Color(0.12,0.03,0.03,0.9), COL_RED)
-	_dlc(ci, 860, by-18, "REJECT ZONE", COL_RED, 16)
-	_dlc(ci, 860, by+6,  "Drag bomb here!", COL_PARCH, 13)
+	_darrow(ci, bx+56, by, 740, COL_GREEN)
+	_dbox(ci, 740, by-40, 980, by+40, Color(0.03,0.10,0.03,0.9), COL_GREEN)
+	_dlc(ci, 860, by-18, "HOLDING", COL_GREEN, 16)
+	_dlc(ci, 860, by+6,  "Leave it here — safe!", COL_PARCH, 13)
 
 func _slide_scheduler(ci: CanvasItem, _font: Font) -> void:
 	_dlc(ci, 640, 112, "Move Budget — Plan Every Move!", COL_GOLD, 18)
@@ -1232,7 +1288,7 @@ func _slide_efficient(ci: CanvasItem, _font: Font) -> void:
 		_dl(ci, 636, 201.0+i*38, mg[i][1], COL_PARCH, 11)
 
 func _slide_submit_portal(ci: CanvasItem, _font: Font) -> void:
-	_dlc(ci, 640, 112, "The Submit Portal — check your sort!", COL_GOLD, 18)
+	_dlc(ci, 640, 112, "The Cave Entrance — check your sort!", COL_GOLD, 18)
 	_draw_queue_row(ci, [1,2,3,4], 230, 230, 110)
 	var px := 96.0; var py := 230.0
 	ci.draw_circle(Vector2(px, py), 50, Color(0.30, 0.05, 0.55, 0.75))
@@ -1256,7 +1312,7 @@ func _slide_controls_dequeue(ci: CanvasItem, _font: Font) -> void:
 		["dequeue()", "Drag slot [0]  →  Holding area",    "removes FRONT token",    COL_RED],
 		["enqueue()", "Drag Holding   →  Queue lane",       "joins the BACK",         COL_AMBER],
 		["peek()",    "Click any token",                    "reveals value  (FREE!)", COL_GOLD],
-		["submit()",  "Drag slot [0]  →  Submit Portal",   "checks ascending order", COL_GREEN],
+		["submit()",  "Drag slot [0]  →  Cave Entrance",   "checks ascending order", COL_GREEN],
 	]
 	for i in range(4):
 		var ry := 155.0 + i * 70.0
@@ -1271,7 +1327,7 @@ func _slide_task_peek(ci: CanvasItem, _font: Font) -> void:
 		["① Click every token",         "= peek()   reveals hidden value  (FREE — no limit!)", COL_GOLD],
 		["② Find the lowest value",     "= that token goes to FRONT [0] of the queue",         COL_AMBER],
 		["③ Drag in ascending order",   "= enqueue() lowest → highest left to right",          COL_GREEN],
-		["④ Drag slot [0] → SUBMIT",   "= portal checks sort and awards score!",               COL_GREEN],
+		["④ Drag slot [0] → SUBMIT",   "= cave checks sort and awards score!",               COL_GREEN],
 	]
 	for i in range(4):
 		var ry := 150.0 + i * 70.0
@@ -1283,18 +1339,19 @@ func _slide_task_peek(ci: CanvasItem, _font: Font) -> void:
 func _slide_task_bounds(ci: CanvasItem, _font: Font) -> void:
 	_dlc(ci, 640, 112, "Your Task — Guard the Boundaries!", COL_GOLD, 22)
 	var steps := [
-		["① Spot the 💣 bomb",            "= drag it to the REJECT ZONE (bottom-left!) immediately",  COL_RED],
-		["② Check isEmpty()",             "= never dequeue if the queue is empty — crash!",           COL_RED],
-		["③ Check isFull()",              "= never enqueue when the queue is full — crash!",          COL_AMBER],
-		["④ Sort ascending → SUBMIT",    "= all non-bomb tokens placed lowest→highest",              COL_GREEN],
+		["① Right-click every token",     "= SCAN for bomb — pulsing RED ring = 💣  |  no ring = safe", COL_RED],
+		["② Leave 💣 in HOLDING",          "= bomb is safe in Holding — never drag it to the queue!",    COL_RED],
+		["③ Check isEmpty()",             "= never dequeue if the queue is empty — crash!",              COL_AMBER],
+		["④ Check isFull()",              "= never enqueue when the queue is full — crash!",             COL_AMBER],
+		["⑤ Sort ascending → SUBMIT",    "= all non-bomb tokens placed lowest → highest",               COL_GREEN],
 	]
-	for i in range(4):
-		var ry := 150.0 + i * 70.0
-		_dbox(ci, 60, ry, 1200, ry + 62, Color(0.06, 0.05, 0.02), COL_SCROLL_BD)
-		_dl(ci, 76, ry + 10, steps[i][0], steps[i][2] as Color, 15)
-		_dl(ci, 76, ry + 34, steps[i][1], COL_PARCH, 13)
-	_dbox(ci, 60, 432, 560, 430, Color(0.14, 0.03, 0.03, 0.85), COL_RED)
-	_dlc(ci, 310, 430, "REJECT ZONE  (bottom-left)", COL_RED, 13)
+	for i in range(5):
+		var ry := 130.0 + i * 58.0
+		_dbox(ci, 60, ry, 1200, ry + 50, Color(0.06, 0.05, 0.02), COL_SCROLL_BD)
+		_dl(ci, 76, ry + 8,  steps[i][0], steps[i][2] as Color, 14)
+		_dl(ci, 76, ry + 28, steps[i][1], COL_PARCH, 12)
+	_dbox(ci, 60, 425, 1200, 455, Color(0.03, 0.08, 0.02, 0.85), COL_GREEN)
+	_dlc(ci, 630, 438, "✅  Bomb left in HOLDING at submit = +30 bonus points!", COL_GREEN, 12)
 
 func _slide_task_scheduler(ci: CanvasItem, _font: Font) -> void:
 	_dlc(ci, 640, 112, "Your Task — Minimum Moves Wins!", COL_GOLD, 22)
@@ -1403,9 +1460,15 @@ func _start_round() -> void:
 		_dyn_hold_gap = dyn_gap
 		_cq_slots = []
 
+		# When bombs are enabled, guarantee exactly ONE bomb per round.
+		# Pick a random slot index so the bomb isn't always in the same position.
+		var bomb_slot : int = -1
+		if _p["bombs"]:
+			bomb_slot = randi() % count
+
 		for i in range(count):
 			_uid += 1
-			var is_bomb : bool = _p["bombs"] and i == count - 1 and randf() < 0.5
+			var is_bomb : bool = _p["bombs"] and i == bomb_slot
 			_holding.append({
 				"uid":         _uid,
 				"value":       vals[i] as int,
@@ -1478,6 +1541,13 @@ func _process(delta: float) -> void:
 	if _anim_tick >= 0.25:
 		_anim_tick  = 0.0
 		_anim_frame = (_anim_frame + 1) % 3
+
+	# Bomb peek pulse timer
+	if _bomb_peek_timer > 0.0:
+		_bomb_peek_timer -= delta
+		_bomb_pulse_phase += delta * TAU / 0.6
+		if _bomb_peek_timer <= 0.0:
+			_bomb_peek_uid = -1
 
 	if _exit_walking:
 		_tick_exit_walk(delta)
@@ -1610,11 +1680,29 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed: _handle_press(event.position)
 		else:             _handle_release(event.position)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT \
+			and event.pressed and _p["bombs"]:
+		_handle_bomb_peek(event.position)
 	elif event is InputEventMouseMotion and _dragging:
 		_drag_pos = event.position
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
 			_do_submit()
+
+# Right-click peek: temporarily reveal whether a holding token is a 💣 bomb.
+func _handle_bomb_peek(pos: Vector2) -> void:
+	for i in range(_holding.size()):
+		var c : Dictionary = _holding[i]
+		if _hit_pos(c, _holding_sprite_pos(i), pos):
+			_bomb_peek_uid   = c["uid"]
+			_bomb_peek_timer = BOMB_PEEK_DURATION
+			if c.get("bomb", false):
+				_concept("💣 BOMB detected!\nRight-click again to keep checking.\nLeave it in HOLDING — do NOT enqueue it!")
+				_sfx(false)
+			else:
+				_concept("✅ Not a bomb — safe to enqueue.\nDrag to the queue when ready.")
+				_sfx(true)
+			return
 
 func _handle_press(pos: Vector2) -> void:
 	for c in _holding + _cq:
@@ -1832,9 +1920,7 @@ func _handle_release_normal(pos: Vector2) -> void:
 		var lane_bot   : float = LANE_Y_CEN + SLOT_H * 0.5 + DROP_R
 		if pos.x > lane_left and pos.x < lane_right and pos.y > lane_top and pos.y < lane_bot:
 			_action_enqueue(_drag_tok); handled = true
-		if not handled and _p["bombs"]:
-			if pos.distance_to(Vector2(90, 620)) < DROP_R:
-				_action_reject(_drag_tok); handled = true
+		# Bombs stay in holding — no reject zone needed.
 
 	elif _drag_src == "queue_front":
 		if pos.distance_to(Vector2(SUB_X, SUB_Y)) < DROP_R * 1.3:
@@ -1852,8 +1938,8 @@ func _do_peek(c: Dictionary) -> void:
 
 func _action_enqueue(c: Dictionary) -> void:
 	if c.get("bomb", false):
-		_apply_wrong(0, "💣 BOMB! Never enqueue a bomb!\nDrag it to the Reject Zone.")
-		_holding.erase(c); return
+		_apply_wrong(0, "💣 BOMB! Never enqueue a bomb!\nLeave it in the Holding area — only enqueue safe tokens!")
+		return  # Token stays in holding
 
 	if _cq.size() >= MAX_QUEUE:
 		_apply_wrong(0,
@@ -1887,17 +1973,24 @@ func _action_dequeue() -> void:
 	_concept("dequeue()\n→ queue.pop_front()\nReturned: %d  (back to holding)\nQueue: [%s]" % [
 		front["value"], _queue_str()])
 
-func _action_reject(c: Dictionary) -> void:
-	_holding.erase(c)
-	if c.get("bomb", false):
-		_apply_correct(30)
-		_concept("💣 BOMB rejected!\nCorrect — never enqueue a bomb.\n+30 pts")
-	else:
-		_apply_wrong(5, "Rejected %d — only reject bombs!" % c["value"])
+# _action_reject removed — bombs stay in holding, not dragged to a reject zone.
 
 func _action_submit() -> void:
 	if _cq.is_empty():
 		_apply_wrong(0, "Queue is empty — enqueue first!"); return
+	# Check that any bomb is still safely in holding (not somehow in queue)
+	for tok in _cq:
+		if tok.get("bomb", false):
+			_apply_wrong(20, "💣 BOMB is in the queue!\nDequeue it back to Holding immediately!\n-20 pts")
+			return
+	# Award points for correctly leaving the bomb in holding
+	var bomb_in_holding := false
+	for tok in _holding:
+		if tok.get("bomb", false):
+			bomb_in_holding = true; break
+	if _p["bombs"] and bomb_in_holding:
+		_apply_correct(30)
+		_concept("💣 Bomb safely left in Holding — good call!\n+30 pts")
 	if _is_sorted():
 		var pts := 100 + _cq.size() * 20
 		_score += pts; _score_lbl.text = "Score: %d" % _score
